@@ -1,34 +1,48 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import Home from './pages/Home'
+import AboutUs from './pages/AboutUs'
+import Products from './pages/Products'
+import News from './pages/News'
+import Register from './components/Register'
+import AddProduct from './components/AddProduct'
+import EditProduct from './components/EditProduct'
+import Login from './components/Login'
+import NewsComposer from './components/NewsComposer'
+import AccountPage from './pages/AccountPage'
+import AdminUserPage from './pages/AdminUserPage'
+
+const useAuthCheck = () => {
+  useEffect(() => {
+    const checkToken = async () => {
+      const token = localStorage.getItem('token')
+      if (!token && window.location.pathname !== '/login') {
+        window.location.href = '/login'
+        // Validate token
+      }
+    }
+    checkToken()
+  }, [])
+}
 
 function App() {
-  const [count, setCount] = useState(0)
-
+  useAuthCheck()
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/news" element={<News />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/add-product" element={<AddProduct />} />
+        <Route path='/edit-product/:id' element={<EditProduct />} />
+        <Route path='/login' element={<Login />} />
+        <Route path='/news-composer' element={<NewsComposer />} />
+        <Route path='/account' element={<AccountPage />} />
+        <Route path='/admin' element={<AdminUserPage />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
