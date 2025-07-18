@@ -34,6 +34,7 @@ backend/
 ├── manage.py            # Django entry point
 └── README.md            # You’re here!
 
+```bash
 
 🛠️ **Initial Setup**
 
