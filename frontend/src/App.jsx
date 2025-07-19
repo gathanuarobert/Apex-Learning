@@ -12,21 +12,21 @@ import NewsComposer from './components/NewsComposer'
 import AccountPage from './pages/AccountPage'
 import AdminUserPage from './pages/AdminUserPage'
 
-const useAuthCheck = () => {
-  useEffect(() => {
-    const checkToken = async () => {
-      const token = localStorage.getItem('token')
-      if (!token && window.location.pathname !== '/login') {
-        window.location.href = '/login'
-        // Validate token
-      }
-    }
-    checkToken()
-  }, [])
-}
+// const useAuthCheck = () => {
+//   useEffect(() => {
+//     const checkToken = async () => {
+//       const token = localStorage.getItem('token')
+//       if (!token && window.location.pathname !== '/login') {
+//         window.location.href = '/login'
+//         // Validate token
+//       }
+//     }
+//     checkToken()
+//   }, [])
+// }
 
 function App() {
-  useAuthCheck()
+  // useAuthCheck()
   return (
     <BrowserRouter>
       <Routes>
