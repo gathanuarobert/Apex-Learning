@@ -32,7 +32,7 @@ class NoteViewSet(viewsets.ModelViewSet):
 class PastPaperViewSet(viewsets.ModelViewSet):
     queryset = PastPaper.objects.all()
     serializer_class = PastPaperSerializer
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser,FormParser]
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:

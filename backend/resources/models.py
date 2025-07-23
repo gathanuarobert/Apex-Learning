@@ -17,7 +17,7 @@ class Grade(models.Model):
 class Note(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     title = models.CharField(max_length=150)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, null=True, blank=True)
+    subject = models.ForeignKey(Subject,on_delete=models.CASCADE, null=True, blank=True)
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE, null=True, blank=True)
     content = models.TextField()
     file = models.FileField(upload_to='notes_files/', blank=True, null=True)

@@ -22,7 +22,7 @@ class PastPaperSerializer(serializers.ModelSerializer):
 
     def get_file_url(self, obj):
         request = self.context.get('request')
-        if obj.file and hasattr(obj.file, 'url'):
+        if obj.file and hasattr(obj.file,'url'):
             return request.build_absolute_uri(obj.file.url)
         return None
 

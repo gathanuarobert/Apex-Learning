@@ -23,7 +23,7 @@ class ExamAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at',)
 
 class NewsAdmin(admin.ModelAdmin):
-    list_display = ('headline', 'published_at')
+    list_display = ('headline','published_at')
     search_fields = ('headline',)
     ordering = ('-published_at',)
     readonly_fields = ('published_at',)        

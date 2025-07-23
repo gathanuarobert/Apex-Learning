@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('resources', '0002_grade_news_subject_remove_notes_category_and_more'),
+        ('resources','0002_grade_news_subject_remove_notes_category_and_more'),
     ]
 
     operations = [
