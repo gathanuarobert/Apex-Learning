@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Subject, Grade, Note, PastPaper, Exam, News
+from .models import Subject, Grade, Note, PastPaper, Exam, News, EducationLevel, Topic, NewsCategory
 
 class NoteAdmin(admin.ModelAdmin):
     list_display = ('title', 'subject', 'grade', 'created_at')
@@ -30,6 +30,9 @@ class NewsAdmin(admin.ModelAdmin):
 
 admin.site.register(Subject)
 admin.site.register(Grade)
+admin.site.register(NewsCategory)
+admin.site.register(EducationLevel)
+admin.site.register(Topic)
 admin.site.register(Note, NoteAdmin)
 admin.site.register(PastPaper, PastPaperAdmin)
 admin.site.register(Exam, ExamAdmin)
