@@ -50,7 +50,7 @@ class News(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     headline = models.CharField(max_length=150)
     body = models.TextField()
-    file = models.FileField(upload_to='news_files/', blank=True, null=True)
+    file = models.FileField(upload_to='news_files/', blank=True,null=True)
     published_at = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return self.headline
