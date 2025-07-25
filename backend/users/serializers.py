@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, TeacherProfile, StudentProfile, ParentProfile
+from .models import User, TeacherProfile, StudentProfile, ParentProfile, PublicProfile
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
@@ -23,18 +23,24 @@ class ParentProfileSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'children']
         extra_kwargs = {
             'children': {'required': False}
-        }
+        }     
+
+class PublicProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PublicProfile
+        fields = ['user']
 
 class UserSerializer(serializers.ModelSerializer):
     teacher_profile = TeacherProfileSerializer(required=False)
     student_profile = StudentProfileSerializer(required=False)
     parent_profile = ParentProfileSerializer(required=False)
+    public_profile = PublicProfileSerializer(required=False)
     password = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
         fields =  ['id', 'email', 'name', 'role', 'password',
-                   'teacher_profile', 'student_profile', 'parent_profile']
+                   'teacher_profile', 'student_profile', 'parent_profile', 'public_profile']
         
     def create(self, validated_data):
         role = validated_data.get('role')
@@ -46,6 +52,8 @@ class UserSerializer(serializers.ModelSerializer):
             profile_data = validated_data.pop('student_profile', {})
         elif role == 'parent':
             profile_data = validated_data.pop('parent_profile', {})
+        elif role == 'public':
+            profile_data = validated_data.pop('public_profile', {})    
 
         password = validated_data.pop('password')
         user = User.objects.create(**validated_data)
@@ -60,6 +68,8 @@ class UserSerializer(serializers.ModelSerializer):
             profile = ParentProfile.objects.create(user=user)
             if 'children' in profile_data:
                 profile.children.set(profile_data['children'])
+        elif role == 'public':
+            PublicProfile.objects.create(user=user, **profile_data)        
 
 
         return user

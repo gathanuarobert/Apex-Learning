@@ -30,6 +30,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('student', 'Student'),
         ('teacher', 'Teacher'),
         ('parent', 'Parent'),
+        ('public', 'General Public'),
     )
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=30, blank=True, default='')
@@ -94,3 +95,14 @@ class ParentProfile(models.Model):
         if self.user.role != 'parent':
             raise ValueError("Assigned user is not a parent")
         super().save(*args, **kwargs)
+
+class PublicProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='public_profile', null=True, blank=True)
+
+    def __str__(self):
+        return f'Public Profile of {self.user.get_full_name()}' if self.user else 'Public Profile'
+
+    def save(self, *args, **kwargs):
+        if self.user.role != 'public':
+            raise ValueError("Assigned user is not a public user")
+        super().save(*args, **kwargs)        
