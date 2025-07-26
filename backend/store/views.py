@@ -1,18 +1,17 @@
-from rest_framework import generics, permissions
+from rest_framework import viewsets, permissions
 from .models import Product, Order
 from .serializers import ProductSerializer, OrderSerializer
 
-# List and Create Products
-class ProductListCreateView(generics.ListCreateAPIView):
+class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-# List and Create Orders
-class OrderListCreateView(generics.ListCreateAPIView):
+class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
+        # Automatically associate order with the logged-in user
         serializer.save(user=self.request.user)
