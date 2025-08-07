@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     # Custom apps
      'users',
     'resources',
-    'store',
     'payments',
 ]
 
