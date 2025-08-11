@@ -1,72 +1,63 @@
-from rest_framework import viewsets, permissions
-from django.http import FileResponse
-from rest_framework.response import Response
+from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
-from .models import Note, PastPaper, Exam, News
+from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.http import FileResponse
+
+from .models import Note, PastPaper, Exam, News
 from .serializers import NoteSerializer, PastPaperSerializer, ExamSerializer, NewsSerializer
+from payments.services import process_download_payment  # <- service in payments app
 
-class IsTeacherOrAdmin(permissions.BasePermission):
+
+class IsAdminOnly(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and (
-           request.user.role == 'teacher' or request.user.is_superuser
-        )
+        return request.user.is_authenticated and request.user.is_superuser
 
-class NoteViewSet(viewsets.ModelViewSet):
+
+class BaseResourceViewSet(viewsets.ModelViewSet):
+    parser_classes = [MultiPartParser, FormParser]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    permission_classes = [permissions.IsAuthenticated]  # read access = authenticated only
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminOnly()]
+        return super().get_permissions()
+
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        instance = self.get_object()
+
+        # Call payments service to check payment
+        payment_result = process_download_payment(user=request.user, resource=instance)
+
+        if not payment_result["success"]:
+            return Response(
+                {"detail": payment_result["message"]},
+                status=status.HTTP_402_PAYMENT_REQUIRED
+            )
+
+        if instance.file:
+            return FileResponse(instance.file, as_attachment=True)
+
+        return Response({"detail": "File not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class NoteViewSet(BaseResourceViewSet):
     queryset = Note.objects.all()
     serializer_class = NoteSerializer
-    parser_classes = [MultiPartParser, FormParser]
 
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsTeacherOrAdmin()]
-        return [permissions.IsAuthenticated()]
-    
-    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
-    def download(self, request, pk=None):
-        note = self.get_object()
-        if note.file:
-            return FileResponse(note.file, as_attachment=True)
-        return Response({"detail": "File not found"}, status=404)
 
-class PastPaperViewSet(viewsets.ModelViewSet):
+class PastPaperViewSet(BaseResourceViewSet):
     queryset = PastPaper.objects.all()
     serializer_class = PastPaperSerializer
-    parser_classes = [MultiPartParser, FormParser]
 
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsTeacherOrAdmin()]
-        return [permissions.IsAuthenticated()]    
-    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
-    def download(self, request, pk=None):
-        past_paper = self.get_object()
-        if past_paper.file:
-            return FileResponse(past_paper.file, as_attachment=True)
-        return Response({"detail": "File not found"}, status=404)        
 
-class ExamViewSet(viewsets.ModelViewSet):
+class ExamViewSet(BaseResourceViewSet):
     queryset = Exam.objects.all()
     serializer_class = ExamSerializer
-    parser_classes = [MultiPartParser, FormParser]
 
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsTeacherOrAdmin()]
-        return [permissions.IsAuthenticated()]  
-    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
-    def download(self, request, pk=None):
-        exam = self.get_object()
-        if exam.file:
-            return FileResponse(exam.file, as_attachment=True)
-        return Response({"detail": "File not found"}, status=404)          
 
-class NewsViewSet(viewsets.ModelViewSet):
+class NewsViewSet(BaseResourceViewSet):
     queryset = News.objects.all()
     serializer_class = NewsSerializer
-    parser_classes = [MultiPartParser, FormParser]
-
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsTeacherOrAdmin()]
-        return [permissions.IsAuthenticated()]            
