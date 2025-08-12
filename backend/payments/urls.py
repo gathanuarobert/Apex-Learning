@@ -1,11 +1,9 @@
 from django.urls import path
-from .views import mpesa_callback
-from .views import PaymentInitiateView
+from .views import WalletDepositInitiateView, OneTimePurchaseInitiateView, mpesa_callback, WalletPurchaseAPIView
 
-# urls.py
 urlpatterns = [
-    path('payments/initiate/', PaymentInitiateView.as_view(), name='payment-initiate'),
-    path('payments/mpesa-callback/', mpesa_callback, name='mpesa-callback'),
+    path('wallet/deposit/initiate/', WalletDepositInitiateView.as_view(), name='wallet-deposit-initiate'),
+    path('purchase/resource/initiate/', OneTimePurchaseInitiateView.as_view(), name='one-time-purchase-initiate'),
+    path('wallet/purchase/', WalletPurchaseAPIView.as_view(), name='wallet-purchase'),
+    path('mpesa-callback/', mpesa_callback, name='mpesa-callback'),
 ]
-
-# This file defines the URL patterns for the payments app, specifically for initiating M-Pesa payments.
