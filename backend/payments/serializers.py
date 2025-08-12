@@ -6,7 +6,7 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = '__all__'
-        read_only_fields = ['status', 'transaction_id', 'provider_response', 'created_at', 'updated_at']
+        read_only_fields = ['status', 'transaction_id', 'provider_response', 'created_at', 'updated_at', 'purpose', 'resource_id', 'resource_type']
 
     def validate_phone_number(self, value):
         value = value.strip().replace(" ", "")
