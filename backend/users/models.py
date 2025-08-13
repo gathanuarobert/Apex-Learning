@@ -106,3 +106,4 @@ class PublicProfile(models.Model):
         if self.user.role != 'public':
             raise ValueError("Assigned user is not a public user")
         super().save(*args, **kwargs)        
+

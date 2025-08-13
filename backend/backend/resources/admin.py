@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Subject, Grade, Note, PastPaper, Exam, News, EducationLevel, Topic, NewsCategory
+from .models import Subject, Grade, Note, PastPaper, Exam, News
 
 class NoteAdmin(admin.ModelAdmin):
     list_display = ('title', 'subject', 'grade', 'created_at')
@@ -23,16 +23,13 @@ class ExamAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at',)
 
 class NewsAdmin(admin.ModelAdmin):
-    list_display = ('headline', 'published_at')
+    list_display = ('headline','published_at')
     search_fields = ('headline',)
     ordering = ('-published_at',)
     readonly_fields = ('published_at',)        
 
 admin.site.register(Subject)
 admin.site.register(Grade)
-admin.site.register(NewsCategory)
-admin.site.register(EducationLevel)
-admin.site.register(Topic)
 admin.site.register(Note, NoteAdmin)
 admin.site.register(PastPaper, PastPaperAdmin)
 admin.site.register(Exam, ExamAdmin)
