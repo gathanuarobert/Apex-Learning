@@ -1,0 +1,9 @@
+from django.urls import path
+from .views import WalletDepositInitiateView, OneTimePurchaseInitiateView, mpesa_callback, WalletPurchaseAPIView
+
+urlpatterns = [
+    path('wallet/deposit/initiate/', WalletDepositInitiateView.as_view(), name='wallet-deposit-initiate'),
+    path('purchase/resource/initiate/', OneTimePurchaseInitiateView.as_view(), name='one-time-purchase-initiate'),
+    path('wallet/purchase/', WalletPurchaseAPIView.as_view(), name='wallet-purchase'),
+    path('mpesa-callback/', mpesa_callback, name='mpesa-callback'),
+]
