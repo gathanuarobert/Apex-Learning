@@ -36,15 +36,18 @@ def initiate_wallet_deposit(user, amount, phone_number):
     return payment, resp
 
 
-def initiate_one_time_purchase(user, resource, amount, phone_number):
+def initiate_one_time_purchase(user, resource, phone_number):
     """
     Initiate STK push for a one-time purchase of `resource`.
-    Creates a Payment with purpose='purchase' (pending), returns payment and provider response.
+    Always fetch price from DB to prevent tampering.
     """
+    # Get the latest price from the DB
+    amount = Decimal(resource.__class__.objects.values_list("price", flat=True).get(pk=resource.id))
+
     payment = Payment.objects.create(
         user=user,
         phone_number=phone_number,
-        amount=Decimal(amount),
+        amount=amount,
         purpose='purchase',
         resource_id=str(resource.id),
         resource_type=resource.__class__.__name__,
@@ -61,25 +64,24 @@ def initiate_one_time_purchase(user, resource, amount, phone_number):
     return payment, resp
 
 
-def process_wallet_purchase(user, resource, amount):
+def process_wallet_purchase(user, resource):
     """
     Buy a resource immediately using wallet balance.
-    Deducts wallet, creates Transaction, returns dict with success key.
+    Always fetch price from DB to prevent tampering.
     """
+    # Get the latest price from the DB
+    amount = Decimal(resource.__class__.objects.values_list("price", flat=True).get(pk=resource.id))
+
     try:
         wallet = Wallet.objects.get(user=user)
     except Wallet.DoesNotExist:
         return {"success": False, "message": "No wallet found. Please deposit funds."}
 
-    amount = Decimal(amount)
     if wallet.balance < amount:
         return {"success": False, "message": "Insufficient balance."}
 
     with db_transaction.atomic():
-        # withdraw
         wallet.withdraw(amount)
-
-        # record transaction
         tx = Transaction.objects.create(
             user=user,
             transaction_type='download',
