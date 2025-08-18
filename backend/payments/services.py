@@ -19,12 +19,10 @@ def initiate_wallet_deposit(user, amount, phone_number):
         status='pending',
     )
 
-    # trigger STK push
+    
     resp = send_stk_push(phone_number, amount)
-
-    # attach provider response + CheckoutRequestID if present
-    payment.provider_response = resp
     checkout_id = None
+
     # Many mpesa responses include "CheckoutRequestID" (sandbox response)
     if isinstance(resp, dict):
         checkout_id = resp.get('CheckoutRequestID') or resp.get('checkoutRequestID')
@@ -84,7 +82,7 @@ def process_wallet_purchase(user, resource):
         wallet.withdraw(amount)
         tx = Transaction.objects.create(
             user=user,
-            transaction_type='download',
+            transaction_type='purchase',
             amount=amount,
             status='completed',
             resource_id=str(resource.id),
