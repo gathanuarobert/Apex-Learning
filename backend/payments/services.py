@@ -1,34 +1,30 @@
 from decimal import Decimal
-from .models import Wallet, Transaction, Payment
 from django.db import transaction as db_transaction
-from .mpesa import send_stk_push  # uses your mpesa.py
+from django.http import JsonResponse
 from django.utils import timezone
+
+from .models import Wallet, Transaction, Payment
+from resources.models import Note, Exam, PastPaper
+from .mpesa import send_stk_push
+
 
 def initiate_wallet_deposit(user, amount, phone_number):
     """
     Initiate STK push for wallet deposit.
-    Creates a Payment with purpose='deposit' (status pending).
-    Returns the provider response (so frontend can use it).
     """
-    # Create Payment record with pending status first
     payment = Payment.objects.create(
         user=user,
         phone_number=phone_number,
         amount=Decimal(amount),
-        purpose='deposit',
-        status='pending',
+        purpose="deposit",
+        status="pending",
     )
 
-    
     resp = send_stk_push(phone_number, amount)
-    checkout_id = None
-
-    # Many mpesa responses include "CheckoutRequestID" (sandbox response)
     if isinstance(resp, dict):
-        checkout_id = resp.get('CheckoutRequestID') or resp.get('checkoutRequestID')
-        # Also some responses present ResponseCode and CustomerMessage
-    if checkout_id:
-        payment.transaction_id = checkout_id
+        checkout_id = resp.get("CheckoutRequestID") or resp.get("checkoutRequestID")
+        if checkout_id:
+            payment.transaction_id = checkout_id
     payment.provider_response = resp
     payment.save()
     return payment, resp
@@ -36,25 +32,23 @@ def initiate_wallet_deposit(user, amount, phone_number):
 
 def initiate_one_time_purchase(user, resource, phone_number):
     """
-    Initiate STK push for a one-time purchase of `resource`.
-    Always fetch price from DB to prevent tampering.
+    One-time purchase of a resource (price always fetched fresh from DB).
     """
-    # Get the latest price from the DB
-    amount = Decimal(resource.__class__.objects.values_list("price", flat=True).get(pk=resource.id))
+    amount = Decimal(resource.price)
 
     payment = Payment.objects.create(
         user=user,
         phone_number=phone_number,
         amount=amount,
-        purpose='purchase',
+        purpose="purchase",
         resource_id=str(resource.id),
         resource_type=resource.__class__.__name__,
-        status='pending'
+        status="pending",
     )
 
     resp = send_stk_push(phone_number, amount)
     if isinstance(resp, dict):
-        checkout_id = resp.get('CheckoutRequestID') or resp.get('checkoutRequestID')
+        checkout_id = resp.get("CheckoutRequestID") or resp.get("checkoutRequestID")
         if checkout_id:
             payment.transaction_id = checkout_id
     payment.provider_response = resp
@@ -64,11 +58,12 @@ def initiate_one_time_purchase(user, resource, phone_number):
 
 def process_wallet_purchase(user, resource):
     """
-    Buy a resource immediately using wallet balance.
-    Always fetch price from DB to prevent tampering.
+    Deduct price from wallet balance and log transaction.
     """
-    # Get the latest price from the DB
-    amount = Decimal(resource.__class__.objects.values_list("price", flat=True).get(pk=resource.id))
+    try:
+        amount = Decimal(resource.price)
+    except AttributeError:
+        return {"success": False, "message": "Resource does not have a price."}
 
     try:
         wallet = Wallet.objects.get(user=user)
@@ -79,94 +74,79 @@ def process_wallet_purchase(user, resource):
         return {"success": False, "message": "Insufficient balance."}
 
     with db_transaction.atomic():
-        wallet.withdraw(amount)
+        wallet.purchase(amount, resource=resource, resource_type=resource.__class__.__name__)
+
         tx = Transaction.objects.create(
             user=user,
-            transaction_type='purchase',
+            transaction_type="purchase",
             amount=amount,
-            status='completed',
-            resource_id=str(resource.id),
+            status="completed",
+            resource_id=resource.id,
             resource_type=resource.__class__.__name__,
         )
 
-    return {"success": True, "message": "Payment successful", "transaction_id": str(tx.id)}
+    return {
+        "success": True,
+        "message": f"Purchase successful. {resource.__class__.__name__} unlocked.",
+        "transaction_id": str(tx.id),
+    }
 
 
-def handle_mpesa_callback(callback_data):
+def handle_mpesa_callback(request):
     """
-    Called by the mpesa callback view to process provider callback payload.
-    Expects the raw parsed JSON (already decoded).
-    Updates Payment object based on CheckoutRequestID and result code.
-    If deposit --> credit wallet + create Transaction.
-    If purchase --> create Transaction marking purchase completed.
-    Returns tuple (payment, transaction or None)
+    Handle Safaricom M-Pesa STK push callback.
+    Always return a dict (no JsonResponse here).
     """
+    payload = request.data if hasattr(request, "data") else request.POST
+    result_code = payload["Body"]["stkCallback"]["ResultCode"]
+    result_desc = payload["Body"]["stkCallback"]["ResultDesc"]
+    checkout_id = payload["Body"]["stkCallback"]["CheckoutRequestID"]
 
-    # defensive: try to extract checkout id and result
     try:
-        body = callback_data.get('Body', {})
-        stk = body.get('stkCallback', {})
-        checkout_id = stk.get('CheckoutRequestID')
-        result_code = stk.get('ResultCode')
-        result_desc = stk.get('ResultDesc')
-    except Exception:
-        return None, None
+        payment = Payment.objects.get(transaction_id=checkout_id)
+    except Payment.DoesNotExist:
+        return {"success": False, "message": "Payment not found."}
 
-    payment = Payment.objects.filter(transaction_id=checkout_id).first()
-    if not payment:
-        return None, None
+    if result_code != 0:
+        payment.status = "failed"
+        payment.error_message = result_desc
+        payment.save()
+        return {"success": False, "message": result_desc}
 
-    # store full provider response
-    payment.provider_response = callback_data
-    payment.updated_at = timezone.now()
-
-    if isinstance(result_code, int):
-        success = (result_code == 0)
-    else:
-        # sometimes result_code arrives as string
-        try:
-            success = int(result_code) == 0
-        except Exception:
-            success = False
-
-    if success:
-        payment.status = 'completed'
+    with db_transaction.atomic():
+        payment.status = "completed"
         payment.save()
 
-        if payment.purpose == 'deposit':
-            # credit wallet & create Transaction
-            wallet, _ = Wallet.objects.get_or_create(user=payment.user)
-            wallet.deposit(payment.amount)
-            tx = Transaction.objects.create(
-                user=payment.user,
-                transaction_type='deposit',
-                amount=payment.amount,
-                status='completed',
-                payment=payment
-            )
-            return payment, tx
+        wallet, _ = Wallet.objects.get_or_create(user=payment.user)
 
-        elif payment.purpose == 'purchase':
-            # create transaction entry for the one-time purchase so Resources can allow download
-            tx = Transaction.objects.create(
-                user=payment.user,
-                transaction_type='purchase',
-                amount=payment.amount,
-                status='completed',
-                resource_id=payment.resource_id,
-                resource_type=payment.resource_type,
-                payment=payment
-            )
-            return payment, tx
-    else:
-        payment.status = 'failed'
-        payment.save()
-        # optionally record failed transaction
-        tx = Transaction.objects.create(
-            user=payment.user,
-            transaction_type='purchase' if payment.purpose == 'purchase' else 'deposit',
-            amount=payment.amount,
-            status='failed',
-            payment=payment
-        )
-        return payment, tx
+        if payment.purpose == "deposit":
+            wallet.deposit(payment.amount, payment=payment)
+
+    return {"success": True, "message": "Payment successful"}
+
+
+
+def get_resource(resource_type: str, resource_id: int):
+    """
+    Validate and fetch a resource (Note, Exam, or PastPaper).
+    Returns (resource, amount) if valid, otherwise raises ValueError/LookupError.
+    """
+    resource_models = {
+        "Note": Note,
+        "Exam": Exam,
+        "PastPaper": PastPaper,
+    }
+
+    model = resource_models.get(resource_type)
+    if not model:
+        raise ValueError("Invalid resource type. Must be Note, Exam, or PastPaper.")
+
+    try:
+        resource = model.objects.get(id=resource_id)
+    except model.DoesNotExist:
+        raise LookupError(f"{resource_type} with ID {resource_id} not found.")
+
+    if not hasattr(resource, "price"):
+        raise AttributeError(f"{resource_type} does not have a price field.")
+
+    return resource, Decimal(resource.price)
