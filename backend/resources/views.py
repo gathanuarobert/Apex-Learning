@@ -213,6 +213,53 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
         # Default: serve file normally
         return FileResponse(resource.file, as_attachment=True)
 
+class UserLibraryViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'], url_path='my-downloads')
+    def my_downloads(self, request):
+        """
+        Returns all resources (Notes, Exams, PastPapers, News)
+        the user has purchased successfully.
+        """
+        transactions = Transaction.objects.filter(
+            user=request.user,
+            transaction_type="purchase",
+            status="completed"
+        ).order_by("-created_at")
+
+        # Map resource_type string -> model
+        model_map = {
+            "Note": Note,
+            "PastPaper": PastPaper,
+            "Exam": Exam,
+            "News": News,
+        }
+
+        data = []
+        for tx in transactions:
+            model_class = model_map.get(tx.resource_type)
+            resource = None
+            if model_class:
+                try:
+                    resource = model_class.objects.get(id=tx.resource_id)
+                except model_class.DoesNotExist:
+                    pass
+
+            data.append({
+                "transaction_id": tx.id,
+                "resource_id": tx.resource_id,
+                "resource_type": tx.resource_type,
+                "title": getattr(resource, "title", "Resource deleted") if resource else "Resource deleted",
+                "amount": tx.amount,
+                "purchased_on": tx.created_at,
+                "download_url": request.build_absolute_uri(
+                    f"/api/{tx.resource_type.lower()}s/{tx.resource_id}/download/"
+                ) if resource else None
+            })
+
+        return Response(data)
+
 class NoteViewSet(BaseResourceViewSet):
     queryset = Note.objects.all()
     serializer_class = NoteSerializer
