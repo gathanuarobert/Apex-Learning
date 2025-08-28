@@ -1,0 +1,167 @@
+// src/data/examsData.js
+
+const examsData = {
+  CBC: {
+    "Pre-Primary 1": {
+      subjects: {
+        "Language Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Mathematical Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Environmental Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Pre-Primary 2": {
+      subjects: {
+        "Language Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Mathematical Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Environmental Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 1": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Kiswahili: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Environmental Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 2": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Kiswahili: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Environmental Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 3": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Kiswahili: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Environmental Activities": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 4": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Kiswahili: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Science & Technology": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 5": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Kiswahili: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Science & Technology": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 6": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Kiswahili: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Science & Technology": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 7": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Integrated Science": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 8": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Integrated Science": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 9": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        "Integrated Science": { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Grade 10 (Senior Secondary)": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+        Physics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+      },
+    },
+    "Grade 11 (Senior Secondary)": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+        Physics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+      },
+    },
+    "Grade 12 (Senior Secondary)": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+        Physics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Primary School Education Assessment (KPSEA) (2024)"] },
+      },
+    },
+  },
+
+  "8-4-4": {
+    "Form 1": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Biology: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Form 2": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Biology: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Form 3": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+        Biology: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Final Exam (2024)"] },
+      },
+    },
+    "Form 4": {
+      subjects: {
+        English: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Certificate of Secondary Education (KCSE) (2024)"] },
+        Mathematics: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Certificate of Secondary Education (KCSE) (2024)"] },
+        Biology: { exams: ["Opener Exam (2024)", "Mid-Term Exam (2024)", "End-of-Term Exam (2024)", "Kenya Certificate of Secondary Education (KCSE) (2024)"] },
+      },
+    },
+  },
+
+  University: {
+    "Computer Science": [
+      "Intro to Computing Opener (2024)", "Data Structures Mid-Term (2024)", "Algorithms End-of-Term (2024)", "Software Engineering Final Exam (2024)"
+    ],
+    "Medicine (MBChB)": [
+      "Human Anatomy Opener (2024)", "Physiology Mid-Term (2024)", "Pathology End-of-Term (2024)", "Surgery Final Exam (2024)"
+    ],
+    "Law (LLB)": [
+      "Constitutional Law Opener (2024)", "Criminal Law Mid-Term (2024)", "Law of Contract End-of-Term (2024)", "Civil Procedure Final Exam (2024)"
+    ],
+    "Business Administration": [
+      "Principles of Management Opener (2024)", "Financial Accounting Mid-Term (2024)", "Marketing End-of-Term (2024)", "Strategic Management Final Exam (2024)"
+    ],
+    "Education (Arts)": [
+      "Educational Psychology Opener (2024)", "Curriculum Development Mid-Term (2024)", "Instructional Methods End-of-Term (2024)", "Philosophy of Education Final Exam (2024)"
+    ],
+    "Engineering (Civil)": [
+      "Engineering Mathematics Opener (2024)", "Materials Science Mid-Term (2024)", "Fluid Mechanics End-of-Term (2024)", "Structural Analysis Final Exam (2024)"
+    ],
+    "Nursing": [
+      "Fundamentals of Nursing Opener (2024)", "Medical-Surgical Nursing Mid-Term (2024)", "Maternal & Child Health End-of-Term (2024)", "Critical Care Nursing Final Exam (2024)"
+    ],
+  },
+};
+
+export default examsData;
