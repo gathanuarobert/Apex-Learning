@@ -1,12 +1,49 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+// src/pages/Register.jsx
+import React, { useState, useEffect } from "react";
+import Particles from "react-tsparticles";
+import { loadSlim } from "tsparticles-slim";
+import { Eye, EyeOff, Info } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
-import {jwtDecode} from "jwt-decode";
-import DraggableCaptcha from "../components/DraggableCaptcha";
+import { jwtDecode } from "jwt-decode";
+
+const CBC_GRADES = [
+  "Pre-Primary 1", "Pre-Primary 2", "Grade 1", "Grade 2", "Grade 3",
+  "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8",
+  "Grade 9", "Grade 10", "Grade 11", "Grade 12"
+];
+
+const EIGHT_FOUR_FOUR_FORMS = ["Form 1", "Form 2", "Form 3", "Form 4"];
+
+const CBC_SUBJECTS = [
+  "Mathematics", "English", "Kiswahili", "Science", "Social Studies",
+  "Religious Education", "Agriculture", "Computer Studies", "Business Studies",
+  "Music", "Art & Craft", "P.E."
+];
+
+const EIGHT_FOUR_FOUR_SUBJECTS = [
+  "Mathematics", "English", "Kiswahili", "Biology", "Physics",
+  "Chemistry", "Geography", "History & Government", "CRE",
+  "Agriculture", "Business Studies", "Computer Studies", "Music", "French"
+];
+
+const VALID_EMAIL_DOMAINS = ["gmail.com", "yahoo.com", "student.ku.ac.ke", "outlook.com"];
+
+const tooltips = {
+  firstName: "Enter your legal first name.",
+  middleName: "Optional: add your middle name if applicable.",
+  lastName: "Enter your surname/last name.",
+  email: `Valid email required (domains: ${VALID_EMAIL_DOMAINS.join(", ")}).`,
+  password: "Include upper/lowercase, number & symbol for strong security.",
+  confirmPassword: "Must match the password entered above.",
+  educationLevel: "CBC is the Competency-Based Curriculum; 8-4-4 is the older system.",
+  currentGrade: "Select your current grade or form.",
+  teachingLevel: "Choose whether you teach CBC or 8-4-4 curriculum.",
+  subject: "Select the subject you teach.",
+  childName: "Optional: Enter your child's name to link accounts."
+};
 
 const Register = () => {
-  const navigate = useNavigate();
-  const [role, setRole] = useState("general");
+  const [role, setRole] = useState("student");
   const [formData, setFormData] = useState({
     firstName: "",
     middleName: "",
@@ -15,301 +52,247 @@ const Register = () => {
     password: "",
     confirmPassword: "",
     educationLevel: "",
-    grade: "",
-    childName: "",
+    currentGrade: "",
+    teachingLevel: "",
     subject: "",
+    childName: ""
   });
 
-  const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [hoverField, setHoverField] = useState(null);
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: "" });
 
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
-  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const particlesInit = async (engine) => await loadSlim(engine);
+  const subjects = formData.teachingLevel === "CBC" ? CBC_SUBJECTS : EIGHT_FOUR_FOUR_SUBJECTS;
 
-  const validate = () => {
-    const newErrors = {};
-    if (
-      !formData.email.match(
-        /^[\w-.]+@(gmail\.com|yahoo\.com|student\.ku\.ac\.ke)$/
-      )
-    ) {
-      newErrors.email = "Invalid email domain.";
+  const handleGoogleSuccess = (credentialResponse) => {
+    const decoded = jwtDecode(credentialResponse.credential);
+    console.log("Google Sign-Up Success:", decoded);
+  };
+
+  // Password strength calculator
+  const calculateStrength = (password) => {
+    let score = 0;
+    if (password.length >= 6) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+
+    const levels = ["Weak", "Fair", "Good", "Strong"];
+    setPasswordStrength({ score, label: levels[Math.min(score, levels.length - 1)] });
+  };
+
+  // Validation
+  useEffect(() => {
+    Object.keys(formData).forEach((key) => validateField(key, formData[key]));
+  }, [formData, role]);
+
+  const validateField = (name, value) => {
+    let msg = "";
+    const emailDomain = formData.email.split("@")[1];
+
+    switch (name) {
+      case "firstName": if (!value.trim()) msg = "First name is required."; break;
+      case "lastName": if (!value.trim()) msg = "Last name is required."; break;
+      case "email":
+        if (!value.trim()) msg = "Email is required.";
+        else if (!VALID_EMAIL_DOMAINS.includes(emailDomain)) msg = "Invalid email domain.";
+        break;
+      case "password":
+        if (!value.trim()) msg = "Password is required.";
+        else if (value.length < 6) msg = "At least 6 characters.";
+        break;
+      case "confirmPassword":
+        if (value !== formData.password) msg = "Passwords do not match.";
+        break;
+      case "educationLevel":
+        if (role === "student" && !value) msg = "Select education level.";
+        break;
+      case "currentGrade":
+        if (role === "student" && !value) msg = "Select grade/form.";
+        break;
+      case "teachingLevel":
+        if (role === "teacher" && !value) msg = "Select teaching level.";
+        break;
+      case "subject":
+        if (role === "teacher" && !value) msg = "Select subject.";
+        break;
+      default: break;
     }
-    if (formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters long.";
-    }
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match.";
-    }
-    return newErrors;
+    setErrors((prev) => ({ ...prev, [name]: msg }));
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrors((prev) => ({ ...prev, [e.target.name]: null }));
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (name === "password") calculateStrength(value);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-    } else {
-      setErrors({});
-      setRegistrationSuccess(true);
-    }
-  };
-
-  const handleCaptchaComplete = () => {
-    setCaptchaVerified(true);
-  };
-
-  const handleGoogleSuccess = (credentialResponse) => {
-    const userData = jwtDecode(credentialResponse.credential);
-    console.log("Google user data:", userData);
-  };
-
-  const getGrades = () => {
-    if (formData.educationLevel === "CBC") {
-      return [
-        "Pre-primary 1",
-        "Pre-primary 2",
-        "Grade 1",
-        "Grade 2",
-        "Grade 3",
-        "Grade 4",
-        "Grade 5",
-        "Grade 6",
-        "Grade 7",
-        "Grade 8",
-        "Grade 9",
-        "Grade 10",
-        "Grade 11",
-        "Grade 12",
-      ];
-    } else if (formData.educationLevel === "8-4-4") {
-      return ["Form 1", "Form 2", "Form 3", "Form 4"];
-    } else {
-      return [];
+    if (!Object.values(errors).some((msg) => msg)) {
+      console.log("Register Data:", { role, ...formData });
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-300 p-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-lg space-y-6"
-      >
-        <h2 className="text-xl font-bold text-center mb-4">Register</h2>
+    <div className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
+      {/* Particles Background */}
+      <Particles
+        id="tsparticles"
+        init={particlesInit}
+        options={{
+          background: { color: { value: "#0d1117" } },
+          fpsLimit: 120,
+          interactivity: { events: { onHover: { enable: true, mode: "trail" }, onClick: { enable: true, mode: "push" } },
+            modes: { trail: { delay: 0.005, quantity: 5, particles: { color: { value: "#3b82f6" }, size: { value: 3 } } }, push: { quantity: 4 } }
+          },
+          particles: { color: { value: ["#3b82f6", "#60a5fa", "#93c5fd"] }, links: { color: "#3b82f6", distance: 120, enable: true, opacity: 0.4, width: 1 }, move: { enable: true, speed: 1, outModes: { default: "bounce" } }, number: { value: 50, density: { enable: true, area: 800 } }, opacity: { value: 0.5 }, shape: { type: "circle" }, size: { value: { min: 1, max: 4 } } }
+        }}
+        className="absolute inset-0 z-0"
+      />
 
-        <div className="flex flex-wrap gap-4 mb-6">
-          <label className="w-full font-medium text-base">Select Role:</label>
-          {["student", "parent", "teacher", "general"].map((r) => (
-            <label
-              key={r}
-              className="flex items-center gap-2 cursor-pointer text-sm md:text-base"
-            >
-              <input
-                type="radio"
-                name="role"
-                value={r}
-                checked={role === r}
-                onChange={() => setRole(r)}
-                className="cursor-pointer"
-              />
-              {r.charAt(0).toUpperCase() + r.slice(1)}
+      {/* Form Container */}
+      <div className="relative z-10 w-full max-w-3xl bg-gray-900/90 p-8 rounded-2xl shadow-2xl border border-gray-700 backdrop-blur-lg animate-slideUp">
+        <h1 className="text-3xl font-extrabold text-center mb-6 text-blue-400">Create Your Account</h1>
+
+        {/* Role Selector */}
+        <div className="flex justify-around mb-6">
+          {["student", "teacher", "parent", "public"].map((r) => (
+            <label key={r} className="cursor-pointer">
+              <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} className="hidden" />
+              <span className={`px-4 py-2 rounded-full text-sm font-semibold ${role === r ? "bg-blue-600 shadow-md" : "bg-gray-700 hover:bg-gray-600"}`}>
+                {r.charAt(0).toUpperCase() + r.slice(1)}
+              </span>
             </label>
           ))}
         </div>
 
-        {role !== "general" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <input
-              name="firstName"
-              placeholder="First Name"
-              onChange={handleChange}
-              className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full"
-            />
-            <input
-              name="middleName"
-              placeholder="Middle Name"
-              onChange={handleChange}
-              className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full"
-            />
-            <input
-              name="lastName"
-              placeholder="Last Name"
-              onChange={handleChange}
-              className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full"
-            />
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Floating Inputs */}
+          {["firstName", "middleName", "lastName", "email", "password", "confirmPassword"].map((field) => (
+            <div key={field} className="relative group">
+              <input
+                type={field.includes("password") ? (field === "confirmPassword" && showConfirm ? "text" : field === "password" && showPassword ? "text" : "password") : field === "email" ? "email" : "text"}
+                name={field}
+                value={formData[field]}
+                onChange={handleChange}
+                onFocus={() => setHoverField(field)}
+                onBlur={() => setHoverField(null)}
+                className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder=" "
+              />
+              <label className="absolute left-3 top-2 text-gray-400 text-xs peer-placeholder-shown:top-4 peer-placeholder-shown:text-gray-500 peer-placeholder-shown:text-sm transition-all">
+                {field.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
+              </label>
+              {field.includes("password") && (
+                <span className="absolute right-3 top-4 cursor-pointer" onClick={() => field === "password" ? setShowPassword(!showPassword) : setShowConfirm(!showConfirm)}>
+                  {field === "password" ? (showPassword ? <EyeOff size={18} /> : <Eye size={18} />) : (showConfirm ? <EyeOff size={18} /> : <Eye size={18} />)}
+                </span>
+              )}
+              {hoverField === field && tooltips[field] && (
+                <div className="absolute top-full mt-1 left-0 bg-gray-800 text-gray-200 text-xs px-3 py-1 rounded shadow-lg border border-gray-700 animate-fadeIn">
+                  <Info size={12} className="inline mr-1" /> {tooltips[field]}
+                </div>
+              )}
+              {errors[field] && <p className="text-red-400 text-xs mt-1">{errors[field]}</p>}
 
-        {role === "parent" && (
-          <input
-            name="childName"
-            placeholder="Child's Name (optional)"
-            onChange={handleChange}
-            className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full mb-6"
-          />
-        )}
+              {/* Password Strength Meter */}
+              {field === "password" && formData.password && (
+                <div className="mt-2">
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${
+                        passwordStrength.score <= 1 ? "bg-red-500 w-1/4" :
+                        passwordStrength.score === 2 ? "bg-yellow-500 w-2/4" :
+                        passwordStrength.score === 3 ? "bg-blue-500 w-3/4" :
+                        "bg-green-500 w-full"
+                      }`}
+                    ></div>
+                  </div>
+                  <p className={`text-xs mt-1 ${
+                    passwordStrength.score <= 1 ? "text-red-400" :
+                    passwordStrength.score === 2 ? "text-yellow-400" :
+                    passwordStrength.score === 3 ? "text-blue-400" :
+                    "text-green-400"
+                  }`}>
+                    {passwordStrength.label} Password
+                  </p>
+                </div>
+              )}
+            </div>
+          ))}
 
-        <input
-          name="email"
-          placeholder="Email"
-          onChange={handleChange}
-          className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full mb-4"
-          autoComplete="email"
-        />
-        {errors.email && (
-          <p className="text-red-600 text-sm mt-1 mb-4">{errors.email}</p>
-        )}
+          {/* Student Fields */}
+          {role === "student" && (
+            <>
+              <div className="relative">
+                <select name="educationLevel" value={formData.educationLevel} onChange={handleChange} className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">Select Education Level</option>
+                  <option value="CBC">CBC</option>
+                  <option value="8-4-4">8-4-4</option>
+                </select>
+                <label className="absolute left-3 top-2 text-gray-400 text-xs">Education Level</label>
+              </div>
+              <div className="relative">
+                <select name="currentGrade" value={formData.currentGrade} onChange={handleChange} className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">Select Current Grade/Form</option>
+                  {(formData.educationLevel === "CBC" ? CBC_GRADES : EIGHT_FOUR_FOUR_FORMS).map((lvl) => <option key={lvl}>{lvl}</option>)}
+                </select>
+                <label className="absolute left-3 top-2 text-gray-400 text-xs">Current Grade/Form</label>
+              </div>
+            </>
+          )}
 
-        <div className="relative mb-4">
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            placeholder="Password"
-            onChange={handleChange}
-            className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full"
-            autoComplete="new-password"
-          />
-          <span
-            className="absolute right-3 top-3 cursor-pointer select-none p-1"
-            onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            role="button"
-          >
-            {showPassword ? "🙈" : "👁️"}
-          </span>
-        </div>
-        {errors.password && (
-          <p className="text-red-600 text-sm mt-1 mb-4">{errors.password}</p>
-        )}
+          {/* Teacher Fields */}
+          {role === "teacher" && (
+            <>
+              <div className="relative">
+                <select name="teachingLevel" value={formData.teachingLevel} onChange={handleChange} className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">Select Teaching Level</option>
+                  <option value="CBC">CBC</option>
+                  <option value="8-4-4">8-4-4</option>
+                </select>
+                <label className="absolute left-3 top-2 text-gray-400 text-xs">Teaching Level</label>
+              </div>
+              <div className="relative">
+                <select name="subject" value={formData.subject} onChange={handleChange} className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">Select Subject</option>
+                  {subjects.map((subj) => <option key={subj}>{subj}</option>)}
+                </select>
+                <label className="absolute left-3 top-2 text-gray-400 text-xs">Subject</label>
+              </div>
+            </>
+          )}
 
-        <div className="relative mb-4">
-          <input
-            type={showConfirmPassword ? "text" : "password"}
-            name="confirmPassword"
-            placeholder="Confirm Password"
-            onChange={handleChange}
-            className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full"
-            autoComplete="new-password"
-          />
-          <span
-            className="absolute right-3 top-3 cursor-pointer select-none p-1"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            aria-label={
-              showConfirmPassword ? "Hide password" : "Show password"
-            }
-            role="button"
-          >
-            {showConfirmPassword ? "🙈" : "👁️"}
-          </span>
-        </div>
-        {errors.confirmPassword && (
-          <p className="text-red-600 text-sm mt-1 mb-4">{errors.confirmPassword}</p>
-        )}
+          {/* Parent Field */}
+          {role === "parent" && (
+            <div className="relative">
+              <input type="text" name="childName" value={formData.childName} onChange={handleChange} placeholder=" " className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label className="absolute left-3 top-2 text-gray-400 text-xs">Child's Name (Optional)</label>
+            </div>
+          )}
 
-        {(role === "student" || role === "teacher") && (
-          <select
-            name="educationLevel"
-            onChange={handleChange}
-            className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full mb-4"
-            defaultValue=""
-          >
-            <option value="" disabled>
-              Select Education Level
-            </option>
-            <option value="CBC">CBC</option>
-            <option value="8-4-4">8-4-4</option>
-          </select>
-        )}
-
-        {role === "student" && (
-          <select
-            name="grade"
-            onChange={handleChange}
-            className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full mb-4"
-            defaultValue=""
-          >
-            <option value="" disabled>
-              Select Grade
-            </option>
-            {getGrades().map((grade) => (
-              <option key={grade} value={grade}>
-                {grade}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {role === "teacher" && (
-          <select
-            name="subject"
-            onChange={handleChange}
-            className="rounded-2xl p-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-full mb-4"
-            defaultValue=""
-          >
-            <option value="" disabled>
-              Select Subject
-            </option>
-            <option>Mathematics</option>
-            <option>English</option>
-            <option>Kiswahili</option>
-            <option>Science</option>
-            <option>Social Studies</option>
-            <option>CRE/IRE/HRE</option>
-          </select>
-        )}
-
-        {!registrationSuccess && (
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-2xl transition duration-300"
-          >
+          {/* Submit */}
+          <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-full font-semibold transition-all">
             Register
           </button>
-        )}
+        </form>
 
-        {registrationSuccess && !captchaVerified && (
-          <div className="mb-6">
-            <p className="text-center text-gray-700 mb-3 text-sm md:text-base">
-              Registration successful! Please complete CAPTCHA to continue.
-            </p>
-            <DraggableCaptcha onVerify={handleCaptchaComplete} />
-          </div>
-        )}
-
-        {captchaVerified && (
-          <p className="text-center text-green-700 font-semibold mt-6 text-sm md:text-base">
-            Registration complete! You may now{" "}
-            <span
-              onClick={() => navigate("/login")}
-              className="text-blue-600 cursor-pointer underline"
-            >
-              log in
-            </span>
-            .
-          </p>
-        )}
-
-        <div className="text-center mt-6 mb-2 text-sm md:text-base">Or</div>
-        <div className="flex justify-center">
-          <GoogleLogin onSuccess={handleGoogleSuccess} />
+        {/* Google Sign-Up */}
+        <div className="mt-6 flex justify-center">
+          <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => console.log("Google Sign-Up Failed")} shape="pill" theme="filled_blue" text="signup_with" />
         </div>
+      </div>
 
-        <p className="text-center mt-6 text-sm md:text-base">
-          Already have an account?{" "}
-          <span
-            onClick={() => navigate("/login")}
-            className="text-blue-600 cursor-pointer underline"
-          >
-            Login
-          </span>
-        </p>
-      </form>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes slideUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
+        .animate-slideUp { animation: slideUp 0.8s ease-out; }
+      `}</style>
     </div>
   );
 };
