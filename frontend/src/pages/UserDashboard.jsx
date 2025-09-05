@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
+import Api, { getCurrentUser, getLibrary } from "../Api"; // import API
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -26,22 +27,13 @@ export default function UserDashboard() {
   // Wallet modal
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(500);
+  const [transactions, setTransactions] = useState([]);
   const [txSearch, setTxSearch] = useState("");
 
   // Tabs
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [downloads, setDownloads] = useState([]);
   const [dlSearch, setDlSearch] = useState("");
-
-  // Sample data
-  const [transactions] = useState([
-    { date: "2025-08-10", description: "Top Up", amount: "+KES 300" },
-    { date: "2025-08-09", description: "Bought Notes", amount: "-KES 50" },
-    { date: "2025-08-08", description: "Bought Exam", amount: "-KES 20" },
-  ]);
-  const [downloads] = useState([
-    { date: "2025-08-10", item: "Math Notes", type: "PDF" },
-    { date: "2025-08-09", item: "Physics Past Paper", type: "DOCX" },
-  ]);
 
   // Cards
   const cards = [
@@ -104,6 +96,29 @@ export default function UserDashboard() {
   const filteredDownloads = downloads.filter(dl =>
     dl.date.includes(dlSearch) || dl.item.toLowerCase().includes(dlSearch.toLowerCase()) || dl.type.toLowerCase().includes(dlSearch.toLowerCase())
   );
+
+  // ---------------------- LIVE DATA FETCH ----------------------
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem("token"); // assuming token stored here
+      const userRes = await getCurrentUser(token);
+      if(userRes.data.wallet) setWalletBalance(userRes.data.wallet.balance || 0);
+      if(userRes.data.transactions) setTransactions(userRes.data.transactions.reverse());
+      
+      const libraryRes = await getLibrary();
+      if(libraryRes.data) setDownloads(libraryRes.data.reverse());
+    } catch(err) {
+      console.error("Failed to fetch user data:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData(); // fetch once on mount
+    const interval = setInterval(fetchUserData, 300000); // refresh every 300s
+    return () => clearInterval(interval);
+  }, []);
+
+  // --------------------------------------------------------------
 
   return (
     <div className="relative min-h-screen flex text-white bg-gray-900 overflow-hidden">

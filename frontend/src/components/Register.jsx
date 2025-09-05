@@ -5,6 +5,7 @@ import { loadSlim } from "tsparticles-slim";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
+import * as api from "../Api"; // <-- API integration
 
 const CBC_GRADES = [
   "Pre-Primary 1", "Pre-Primary 2", "Grade 1", "Grade 2", "Grade 3",
@@ -67,12 +68,7 @@ const Register = () => {
   const particlesInit = async (engine) => await loadSlim(engine);
   const subjects = formData.teachingLevel === "CBC" ? CBC_SUBJECTS : EIGHT_FOUR_FOUR_SUBJECTS;
 
-  const handleGoogleSuccess = (credentialResponse) => {
-    const decoded = jwtDecode(credentialResponse.credential);
-    console.log("Google Sign-Up Success:", decoded);
-  };
-
-  // Password strength calculator
+  // ------------------- Password Strength -------------------
   const calculateStrength = (password) => {
     let score = 0;
     if (password.length >= 6) score++;
@@ -84,7 +80,7 @@ const Register = () => {
     setPasswordStrength({ score, label: levels[Math.min(score, levels.length - 1)] });
   };
 
-  // Validation
+  // ------------------- Validation -------------------
   useEffect(() => {
     Object.keys(formData).forEach((key) => validateField(key, formData[key]));
   }, [formData, role]);
@@ -130,10 +126,51 @@ const Register = () => {
     if (name === "password") calculateStrength(value);
   };
 
-  const handleSubmit = (e) => {
+  // ------------------- Submit Handler with API -------------------
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!Object.values(errors).some((msg) => msg)) {
-      console.log("Register Data:", { role, ...formData });
+      try {
+        const userData = {
+          first_name: formData.firstName,
+          middle_name: formData.middleName,
+          last_name: formData.lastName,
+          email: formData.email,
+          password: formData.password
+        };
+
+        // Register user via API
+        const res = await api.registerUser(userData);
+        console.log("Registration response:", res.data);
+
+        // If parent and child name provided, link child
+        if (role === "parent" && formData.childName.trim()) {
+          await api.addChildren([formData.childName], res.data.token);
+          console.log("Child linked successfully");
+        }
+      } catch (err) {
+        console.error("Registration error:", err.response?.data || err.message);
+      }
+    }
+  };
+
+  // ------------------- Google Sign-Up -------------------
+  const handleGoogleSuccess = async (credentialResponse) => {
+    const decoded = jwtDecode(credentialResponse.credential);
+    console.log("Google Sign-Up Success:", decoded);
+
+    try {
+      const userData = {
+        first_name: decoded.given_name || "",
+        last_name: decoded.family_name || "",
+        email: decoded.email,
+        password: Math.random().toString(36).slice(-8) // random password for Google signup
+      };
+
+      const res = await api.registerUser(userData);
+      console.log("Registered via Google:", res.data);
+    } catch (err) {
+      console.error("Google registration error:", err.response?.data || err.message);
     }
   };
 
@@ -146,10 +183,19 @@ const Register = () => {
         options={{
           background: { color: { value: "#0d1117" } },
           fpsLimit: 120,
-          interactivity: { events: { onHover: { enable: true, mode: "trail" }, onClick: { enable: true, mode: "push" } },
+          interactivity: {
+            events: { onHover: { enable: true, mode: "trail" }, onClick: { enable: true, mode: "push" } },
             modes: { trail: { delay: 0.005, quantity: 5, particles: { color: { value: "#3b82f6" }, size: { value: 3 } } }, push: { quantity: 4 } }
           },
-          particles: { color: { value: ["#3b82f6", "#60a5fa", "#93c5fd"] }, links: { color: "#3b82f6", distance: 120, enable: true, opacity: 0.4, width: 1 }, move: { enable: true, speed: 1, outModes: { default: "bounce" } }, number: { value: 50, density: { enable: true, area: 800 } }, opacity: { value: 0.5 }, shape: { type: "circle" }, size: { value: { min: 1, max: 4 } } }
+          particles: {
+            color: { value: ["#3b82f6", "#60a5fa", "#93c5fd"] },
+            links: { color: "#3b82f6", distance: 120, enable: true, opacity: 0.4, width: 1 },
+            move: { enable: true, speed: 1, outModes: { default: "bounce" } },
+            number: { value: 50, density: { enable: true, area: 800 } },
+            opacity: { value: 0.5 },
+            shape: { type: "circle" },
+            size: { value: { min: 1, max: 4 } }
+          }
         }}
         className="absolute inset-0 z-0"
       />

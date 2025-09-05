@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
-import pastPapersData from "./pastPapersData";
 import { ArrowLeft, Wallet, Download, Search, X, Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // <-- Import useNavigate
+import { useNavigate } from "react-router-dom";
+import api, { getPastPapers, initiateWalletDeposit, initiateOneTimePurchase, walletPurchase } from "../Api";
 
 // ---------- Pricing ----------
 const PRICING = {
@@ -13,25 +13,8 @@ const PRICING = {
   subjectAllGrades: 120,
 };
 
-// ---------- M-Pesa helpers (mocked) ----------
-async function stkPush({ phone, amount, accountRef, description }) {
-  console.log(`STK Push initiated for KES ${amount} to ${phone}`);
-  return { CheckoutRequestID: "mock_checkout_id" };
-}
-
-async function queryStk({ checkoutRequestID }) {
-  console.log(`Querying status for ${checkoutRequestID}`);
-  // Simulate a successful payment after a few seconds
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ resultCode: "0", resultDesc: "Success", amount: 15 });
-    }, 3500);
-  });
-}
-
 // ---------- Component ----------
 export default function PastPapers() {
-  // Use the navigate hook
   const navigate = useNavigate();
 
   const [walletBalance, setWalletBalance] = useState(() => {
@@ -50,6 +33,22 @@ export default function PastPapers() {
   const [paymentModal, setPaymentModal] = useState(null);
   const [mpesaPhone, setMpesaPhone] = useState("");
 
+  const [pastPapersData, setPastPapersData] = useState({});
+
+  // Fetch past papers from backend
+  useEffect(() => {
+    const fetchPapers = async () => {
+      try {
+        const res = await getPastPapers();
+        setPastPapersData(res.data);
+      } catch (e) {
+        console.error("Failed to fetch past papers:", e);
+        alert("Failed to fetch past papers. Try again later.");
+      }
+    };
+    fetchPapers();
+  }, []);
+
   // Particles
   const particlesInit = async (engine) => { await loadSlim(engine); };
   const particleOptions = {
@@ -66,7 +65,7 @@ export default function PastPapers() {
     detectRetina: true,
   };
 
-  // Search flatten across all levels
+  // Flatten for search
   const allItems = useMemo(() => {
     const out = [];
     Object.keys(pastPapersData).forEach((level) => {
@@ -86,7 +85,7 @@ export default function PastPapers() {
       });
     });
     return out;
-  }, []);
+  }, [pastPapersData]);
 
   const filteredItems = searchQuery.trim()
     ? allItems.filter((i) =>
@@ -97,7 +96,6 @@ export default function PastPapers() {
     )
     : [];
 
-  // Subject/Paper list for selection
   const currentPapers = useMemo(() => {
     if (!selectedLevel || !selectedGrade) return [];
     if (selectedLevel === "University") {
@@ -105,7 +103,6 @@ export default function PastPapers() {
     }
     const bucket = pastPapersData[selectedLevel][selectedGrade];
     if (!bucket?.subjects) return [];
-
     const paperList = [];
     Object.keys(bucket.subjects).forEach((subject) => {
       (bucket.subjects[subject].exams || []).forEach((paper) => {
@@ -113,91 +110,97 @@ export default function PastPapers() {
       });
     });
     return paperList;
-  }, [selectedLevel, selectedGrade]);
+  }, [selectedLevel, selectedGrade, pastPapersData]);
 
-  // Wallet top-up via M-Pesa
+  // Wallet top-up
   const handleTopUp = async (amount) => {
     if (!amount || amount <= 0) return alert("Enter a valid amount.");
     if (!/^(?:254|\+254|0)?7\d{8}$/.test(walletPhone.replace(/\s+/g, "")))
       return alert("Enter a valid Safaricom phone (e.g., 2547XXXXXXXX).");
-
     try {
-      let msisdn = walletPhone.replace(/\s+/g, "");
-      if (msisdn.startsWith("+")) msisdn = msisdn.slice(1);
-      if (msisdn.startsWith("0")) msisdn = "254" + msisdn.slice(1);
-      if (msisdn.startsWith("7")) msisdn = "254" + msisdn;
-
-      const { CheckoutRequestID } = await stkPush({
-        phone: msisdn,
-        amount: Number(amount),
-        accountRef: "WALLET_TOPUP",
-        description: "Apex Wallet Top-up",
-      });
-
+      const { data } = await initiateWalletDeposit({ phone: walletPhone, amount });
       alert("M-Pesa STK Push sent. Complete payment on your phone.");
-      const start = Date.now();
       const poll = async () => {
-        const { resultCode, resultDesc, amount: paid } = await queryStk({ checkoutRequestID: CheckoutRequestID });
-        if (resultCode === "0") {
-          setWalletBalance((b) => b + Number(paid || amount));
-          setTopUpAmount("");
-          alert("Top-up successful ✅");
-          setShowWallet(false);
-        } else if (Date.now() - start < 60000 && resultCode === "1") {
+        try {
+          const res = await api.get(`payments/wallet/status/${data.transaction_id}/`);
+          if (res.data.status === "success") {
+            setWalletBalance((b) => b + Number(amount));
+            setTopUpAmount("");
+            alert("Top-up successful ✅");
+            setShowWallet(false);
+          } else if (res.data.status === "pending") {
+            setTimeout(poll, 3000);
+          } else {
+            alert(`Top-up failed/cancelled: ${res.data.status}`);
+          }
+        } catch {
           setTimeout(poll, 3000);
-        } else {
-          alert(`Top-up failed/cancelled: ${resultDesc || "Try again."}`);
         }
       };
-      setTimeout(poll, 3500);
+      setTimeout(poll, 3000);
     } catch (e) {
       console.error(e);
-      alert("Failed to initiate M-Pesa top-up. Check connection and try again.");
+      alert("Failed to initiate M-Pesa top-up. Try again.");
     }
   };
 
-  // Purchasing
-  const payViaWallet = (price) => {
+  // Wallet purchase
+  const payViaWallet = async (price, paperTitle) => {
     if (walletBalance < price) {
       alert("Insufficient wallet balance. Top up via M-Pesa in your wallet.");
       return false;
     }
-    setWalletBalance((b) => b - price);
-    alert(`Payment successful! KES ${price} deducted from wallet.`);
-    return true;
+    try {
+      const res = await walletPurchase({ paper: paperTitle, price });
+      if (res.data.success) {
+        setWalletBalance((b) => b - price);
+        alert(`Payment successful! KES ${price} deducted from wallet.`);
+        // Trigger download
+        const blob = await api.get(`resources/past-papers/download/${res.data.file_id}/`, { responseType: "blob" });
+        const url = window.URL.createObjectURL(new Blob([blob.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", paperTitle + ".pdf");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return true;
+      } else alert("Payment failed. Try again.");
+    } catch (e) {
+      console.error(e);
+      alert("Payment failed. Try again.");
+    }
   };
 
+  // M-Pesa purchase
   const payViaMpesa = async (price, paperTitle) => {
     if (!/^(?:254|\+254|0)?7\d{8}$/.test(mpesaPhone.replace(/\s+/g, "")))
       return alert("Enter a valid Safaricom phone (e.g., 2547XXXXXXXX).");
-
     try {
-      let msisdn = mpesaPhone.replace(/\s+/g, "");
-      if (msisdn.startsWith("+")) msisdn = msisdn.slice(1);
-      if (msisdn.startsWith("0")) msisdn = "254" + msisdn.slice(1);
-      if (msisdn.startsWith("7")) msisdn = "254" + msisdn;
-
-      const { CheckoutRequestID } = await stkPush({
-        phone: msisdn,
-        amount: Number(price),
-        accountRef: "PAPER_PURCHASE",
-        description: `Purchase: ${paperTitle}`,
-      });
-
+      const res = await initiateOneTimePurchase({ phone: mpesaPhone, price, paper: paperTitle });
       alert("M-Pesa STK Push sent. Complete payment on your phone.");
-      const start = Date.now();
       const poll = async () => {
-        const { resultCode, resultDesc } = await queryStk({ checkoutRequestID: CheckoutRequestID });
-        if (resultCode === "0") {
-          alert("Payment confirmed ✅ Download starting...");
-          setPaymentModal(null);
-        } else if (Date.now() - start < 60000 && resultCode === "1") {
+        try {
+          const statusRes = await api.get(`payments/mpesa/status/${res.data.transaction_id}/`);
+          if (statusRes.data.status === "success") {
+            alert("Payment confirmed ✅ Download starting...");
+            const blob = await api.get(`resources/past-papers/download/${statusRes.data.file_id}/`, { responseType: "blob" });
+            const url = window.URL.createObjectURL(new Blob([blob.data]));
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", paperTitle + ".pdf");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setPaymentModal(null);
+          } else if (statusRes.data.status === "pending") {
+            setTimeout(poll, 3000);
+          } else alert("Payment failed/cancelled. Try again.");
+        } catch {
           setTimeout(poll, 3000);
-        } else {
-          alert(`Payment failed/cancelled: ${resultDesc || "Try again."}`);
         }
       };
-      setTimeout(poll, 3500);
+      setTimeout(poll, 3000);
     } catch (e) {
       console.error(e);
       alert("Failed to initiate M-Pesa payment. Try again.");
@@ -206,20 +209,18 @@ export default function PastPapers() {
 
   const openPurchase = (title, meta = {}) => setPaymentModal({ title, meta });
 
-  // UI
   return (
     <div className="min-h-screen relative text-white">
-      {/* Interactive background */}
+      {/* Particles background */}
       <Particles id="tsparticles" init={particlesInit} options={particleOptions} className="absolute inset-0 -z-10" />
 
       {/* Top bar */}
       <div className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        {/* Updated Back button logic */}
         <button
           onClick={() => {
             if (selectedGrade) setSelectedGrade(null);
             else if (selectedLevel) setSelectedLevel(null);
-            else navigate("/user-dashboard"); // <-- Redirect to dashboard
+            else navigate("/user-dashboard");
           }}
           className="inline-flex items-center gap-2 hover:text-cyan-300 font-bold text-yellow-300"
         >
@@ -239,7 +240,6 @@ export default function PastPapers() {
           </div>
         </div>
 
-        {/* Wallet chip */}
         <button
           onClick={() => setShowWallet(true)}
           className="flex items-center gap-2 bg-yellow-400 text-black font-extrabold px-4 py-2 rounded-full hover:bg-yellow-300"
@@ -291,7 +291,7 @@ export default function PastPapers() {
         </div>
       )}
 
-      {/* Grade/Form/Major selection */}
+      {/* Grade selection */}
       {!searchQuery && selectedLevel && !selectedGrade && (
         <div className="px-6 pb-12">
           <p className="mb-3 font-extrabold text-yellow-300">Select a grade/form/major</p>
@@ -309,129 +309,75 @@ export default function PastPapers() {
         </div>
       )}
 
-      {/* Subjects/Past Papers list */}
+      {/* Papers list */}
       {!searchQuery && selectedLevel && selectedGrade && (
         <div className="px-6 pb-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {currentPapers.map(({ subject, paper }, i) => (
-            <div
-              key={`${subject}-${paper}-${i}`}
-              className="bg-gradient-to-br from-emerald-700 to-lime-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] transition relative overflow-hidden"
-            >
-              <h3 className="text-lg font-extrabold text-white mb-3">{paper}</h3>
-              {subject && <p className="text-sm mb-4 font-bold text-white/90">{subject}</p>}
-              <button
-                onClick={() => openPurchase(paper, { level: selectedLevel, grade: selectedGrade, subject })}
-                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded font-extrabold"
-              >
-                <Download size={18} /> Buy & Download
-              </button>
+          {currentPapers.map(({ paper, subject }, idx) => (
+            <div key={`${paper}-${idx}`} className="bg-white/10 p-6 rounded-2xl flex flex-col gap-4">
+              <h3 className="text-lg font-extrabold text-yellow-300">{paper}</h3>
+              {subject && <p className="text-sm font-bold text-white/80">{subject}</p>}
+              <Row
+                label="Buy & Download"
+                price={PRICING.paperWithMS}
+                onWallet={() => payViaWallet(PRICING.paperWithMS, paper)}
+                onMpesa={() => openPurchase(paper)}
+              />
             </div>
           ))}
         </div>
       )}
 
-      {/* Wallet / Top Up (M-Pesa) */}
+      {/* Wallet Top-Up Modal */}
       {showWallet && (
-        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0f172a] text-white p-6 rounded-2xl shadow-2xl w-[420px]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-extrabold text-yellow-300">Wallet</h2>
-              <button onClick={() => setShowWallet(false)} className="hover:text-red-300">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="flex items-center justify-between bg-white/10 rounded-xl px-4 py-3 mb-4">
-              <div className="flex items-center gap-2 font-bold">
-                <Wallet size={18} />
-                <span className="opacity-90">Balance</span>
-              </div>
-              <div className="text-2xl font-extrabold text-yellow-300">{walletBalance} KES</div>
-            </div>
-            <label className="text-sm font-extrabold text-yellow-300">M-Pesa Phone (e.g., 2547XXXXXXXX)</label>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
+          <div className="bg-gray-900 p-6 rounded-2xl max-w-sm w-full">
+            <h3 className="text-xl font-extrabold mb-4 text-yellow-300">Wallet Top-Up</h3>
             <input
+              type="text"
+              placeholder="Enter phone (2547XXXXXXXX)"
               value={walletPhone}
               onChange={(e) => setWalletPhone(e.target.value)}
-              placeholder="2547XXXXXXXX"
-              className="w-full p-2 rounded mt-1 mb-3 text-black font-bold"
+              className="w-full mb-3 px-4 py-2 rounded bg-white/10 text-white font-extrabold outline-none"
             />
-            <label className="text-sm font-extrabold text-yellow-300">Top-up Amount (KES)</label>
-            <div className="flex gap-2 mt-1 mb-3">
-              <input
-                type="number"
-                min={1}
-                value={topUpAmount}
-                onChange={(e) => setTopUpAmount(e.target.value)}
-                className="flex-1 p-2 rounded text-black font-bold"
-                placeholder="Enter amount"
-              />
-              <button
-                onClick={() => handleTopUp(Number(topUpAmount || 0))}
-                className="bg-yellow-400 text-black font-extrabold px-4 rounded hover:bg-yellow-300"
-              >
+            <input
+              type="number"
+              placeholder="Amount (KES)"
+              value={topUpAmount}
+              onChange={(e) => setTopUpAmount(e.target.value)}
+              className="w-full mb-3 px-4 py-2 rounded bg-white/10 text-white font-extrabold outline-none"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => handleTopUp(topUpAmount)} className="flex-1 bg-yellow-400 text-black rounded font-extrabold py-2 hover:bg-yellow-300">
                 Top Up
               </button>
-            </div>
-            <p className="text-sm opacity-80 mb-2 font-bold">Quick add</p>
-            <div className="flex gap-2">
-              {[100, 200, 500].map((amt) => (
-                <button
-                  key={amt}
-                  onClick={() => handleTopUp(amt)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-xl font-extrabold"
-                >
-                  <Plus size={16} /> {amt}
-                </button>
-              ))}
+              <button onClick={() => setShowWallet(false)} className="flex-1 bg-white/10 text-white rounded font-extrabold py-2 hover:bg-white/20">
+                Cancel
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Payment Modal (tiers) */}
+      {/* M-Pesa Purchase Modal */}
       {paymentModal && (
-        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0f172a] text-white p-6 rounded-2xl shadow-2xl w-[560px]">
-            <h2 className="text-lg font-extrabold mb-1 text-yellow-300">Purchase: {paymentModal.title}</h2>
-            <p className="text-sm mb-4 font-bold text-white/90">
-              {paymentModal?.meta?.level && `${paymentModal.meta.level} • `}
-              {paymentModal?.meta?.grade} {paymentModal?.meta?.subject && `• ${paymentModal.meta.subject}`}
-            </p>
-
-            <div className="space-y-2 mb-4">
-              <Row
-                label="Single Past Paper"
-                price={PRICING.paperWithMS}
-                onWallet={() => {
-                  if (payViaWallet(PRICING.paperWithMS)) setPaymentModal(null);
-                }}
-                onMpesa={() => payViaMpesa(PRICING.paperWithMS, paymentModal.title)}
-              />
-              <Row
-                label="All Past Papers per Subject for the entire grade"
-                price={PRICING.subjectAllGrades}
-                onWallet={() => {
-                  if (payViaWallet(PRICING.subjectAllGrades)) setPaymentModal(null);
-                }}
-                onMpesa={() => payViaMpesa(PRICING.subjectAllGrades, paymentModal.title)}
-              />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
+          <div className="bg-gray-900 p-6 rounded-2xl max-w-sm w-full">
+            <h3 className="text-xl font-extrabold mb-4 text-yellow-300">Purchase {paymentModal.title}</h3>
+            <input
+              type="text"
+              placeholder="Enter phone (2547XXXXXXXX)"
+              value={mpesaPhone}
+              onChange={(e) => setMpesaPhone(e.target.value)}
+              className="w-full mb-3 px-4 py-2 rounded bg-white/10 text-white font-extrabold outline-none"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => payViaMpesa(PRICING.paperWithMS, paymentModal.title)} className="flex-1 bg-yellow-400 text-black rounded font-extrabold py-2 hover:bg-yellow-300">
+                Pay KES {PRICING.paperWithMS}
+              </button>
+              <button onClick={() => setPaymentModal(null)} className="flex-1 bg-white/10 text-white rounded font-extrabold py-2 hover:bg-white/20">
+                Cancel
+              </button>
             </div>
-
-            <div className="mt-4">
-              <label className="text-xs font-extrabold text-yellow-300">M-Pesa Phone (for direct pay)</label>
-              <input
-                value={mpesaPhone}
-                onChange={(e) => setMpesaPhone(e.target.value)}
-                placeholder="2547XXXXXXXX"
-                className="w-full p-2 rounded mt-1 text-black font-bold"
-              />
-            </div>
-
-            <button
-              onClick={() => setPaymentModal(null)}
-              className="mt-5 w-full p-2 bg-red-500 rounded hover:bg-red-600 font-extrabold"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
@@ -439,6 +385,7 @@ export default function PastPapers() {
   );
 }
 
+// Row component for wallet/M-Pesa buttons
 function Row({ label, price, onWallet, onMpesa }) {
   return (
     <div className="flex items-center justify-between gap-3 bg-white/5 rounded-xl px-4 py-3">

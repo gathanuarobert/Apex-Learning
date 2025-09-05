@@ -1,37 +1,15 @@
-// src/pages/Exams.jsx
-
+// src/pages/Notes.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
-import examsData from "./examsData";
+import notesData from "./notesData";
 import { ArrowLeft, Wallet, Download, Search, X, Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // <-- Import useNavigate
+import { useNavigate } from "react-router-dom";
 
-// ---------- Pricing ----------
-const PRICING = {
-  examWithMS: 20,
-  subjectAllGrades: 150,
-};
+// ---- Import API ----
+import { initiateMpesaPayment } from "../Api"; // Adjust path if needed
 
-// ---------- M-Pesa helpers (mocked) ----------
-async function stkPush({ phone, amount, accountRef, description }) {
-  console.log(`STK Push initiated for KES ${amount} to ${phone}`);
-  return { CheckoutRequestID: "mock_checkout_id" };
-}
-
-async function queryStk({ checkoutRequestID }) {
-  console.log(`Querying status for ${checkoutRequestID}`);
-  // Simulate a successful payment after a few seconds
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ resultCode: "0", resultDesc: "Success", amount: 20 });
-    }, 3500);
-  });
-}
-
-// ---------- Component ----------
-export default function Exams() {
-  // Use the navigate hook
+export default function Notes() {
   const navigate = useNavigate();
 
   const [walletBalance, setWalletBalance] = useState(() => {
@@ -43,14 +21,12 @@ export default function Exams() {
   const [showWallet, setShowWallet] = useState(false);
   const [walletPhone, setWalletPhone] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("");
-
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [paymentModal, setPaymentModal] = useState(null);
   const [mpesaPhone, setMpesaPhone] = useState("");
 
-  // Particles
   const particlesInit = async (engine) => { await loadSlim(engine); };
   const particleOptions = {
     background: { color: { value: "#0B1220" } },
@@ -66,19 +42,18 @@ export default function Exams() {
     detectRetina: true,
   };
 
-  // Search flatten across all levels
   const allItems = useMemo(() => {
     const out = [];
-    Object.keys(examsData).forEach((level) => {
-      Object.keys(examsData[level]).forEach((grade) => {
-        const bucket = examsData[level][grade];
+    Object.keys(notesData).forEach((level) => {
+      Object.keys(notesData[level]).forEach((grade) => {
+        const bucket = notesData[level][grade];
         if (level === "University") {
-          (bucket || []).forEach((exam) => out.push({ level, grade, exam }));
+          (bucket || []).forEach((note) => out.push({ level, grade, note }));
         } else {
           if (bucket?.subjects) {
             Object.keys(bucket.subjects).forEach((subject) => {
-              (bucket.subjects[subject].exams || []).forEach((exam) => {
-                out.push({ level, grade, subject, exam });
+              (bucket.subjects[subject].notes || []).forEach((note) => {
+                out.push({ level, grade, subject, note });
               });
             });
           }
@@ -90,32 +65,30 @@ export default function Exams() {
 
   const filteredItems = searchQuery.trim()
     ? allItems.filter((i) =>
-      (i.exam && i.exam.toLowerCase().includes(searchQuery.trim().toLowerCase())) ||
+      (i.note && i.note.toLowerCase().includes(searchQuery.trim().toLowerCase())) ||
       (i.subject && i.subject.toLowerCase().includes(searchQuery.trim().toLowerCase())) ||
       i.grade.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
       i.level.toLowerCase().includes(searchQuery.trim().toLowerCase())
     )
     : [];
 
-  // Subject/Exam list for selection
-  const currentExams = useMemo(() => {
+  const currentNotes = useMemo(() => {
     if (!selectedLevel || !selectedGrade) return [];
     if (selectedLevel === "University") {
-      return (examsData[selectedLevel][selectedGrade] || []).map((e) => ({ exam: e, isModule: true }));
+      return (notesData[selectedLevel][selectedGrade] || []).map((n) => ({ note: n }));
     }
-    const bucket = examsData[selectedLevel][selectedGrade];
+    const bucket = notesData[selectedLevel][selectedGrade];
     if (!bucket?.subjects) return [];
-
-    const examList = [];
+    const noteList = [];
     Object.keys(bucket.subjects).forEach((subject) => {
-      (bucket.subjects[subject].exams || []).forEach((exam) => {
-        examList.push({ subject, exam });
+      (bucket.subjects[subject].notes || []).forEach((note) => {
+        noteList.push({ subject, note });
       });
     });
-    return examList;
+    return noteList;
   }, [selectedLevel, selectedGrade]);
 
-  // Wallet top-up via M-Pesa
+  // Wallet top-up
   const handleTopUp = async (amount) => {
     if (!amount || amount <= 0) return alert("Enter a valid amount.");
     if (!/^(?:254|\+254|0)?7\d{8}$/.test(walletPhone.replace(/\s+/g, "")))
@@ -127,36 +100,17 @@ export default function Exams() {
       if (msisdn.startsWith("0")) msisdn = "254" + msisdn.slice(1);
       if (msisdn.startsWith("7")) msisdn = "254" + msisdn;
 
-      const { CheckoutRequestID } = await stkPush({
-        phone: msisdn,
-        amount: Number(amount),
-        accountRef: "WALLET_TOPUP",
-        description: "Apex Wallet Top-up",
-      });
-
+      await initiateMpesaPayment(msisdn, Number(amount), "Wallet Top-up");
       alert("M-Pesa STK Push sent. Complete payment on your phone.");
-      const start = Date.now();
-      const poll = async () => {
-        const { resultCode, resultDesc, amount: paid } = await queryStk({ checkoutRequestID: CheckoutRequestID });
-        if (resultCode === "0") {
-          setWalletBalance((b) => b + Number(paid || amount));
-          setTopUpAmount("");
-          alert("Top-up successful ✅");
-          setShowWallet(false);
-        } else if (Date.now() - start < 60000 && resultCode === "1") {
-          setTimeout(poll, 3000);
-        } else {
-          alert(`Top-up failed/cancelled: ${resultDesc || "Try again."}`);
-        }
-      };
-      setTimeout(poll, 3500);
+      setWalletBalance((b) => b + Number(amount));
+      setTopUpAmount("");
+      setShowWallet(false);
     } catch (e) {
       console.error(e);
-      alert("Failed to initiate M-Pesa top-up. Check connection and try again.");
+      alert("Failed to initiate M-Pesa top-up. Try again.");
     }
   };
 
-  // Purchasing
   const payViaWallet = (price) => {
     if (walletBalance < price) {
       alert("Insufficient wallet balance. Top up via M-Pesa in your wallet.");
@@ -167,7 +121,7 @@ export default function Exams() {
     return true;
   };
 
-  const payViaMpesa = async (price, examTitle) => {
+  const payViaMpesa = async (price, noteTitle) => {
     if (!/^(?:254|\+254|0)?7\d{8}$/.test(mpesaPhone.replace(/\s+/g, "")))
       return alert("Enter a valid Safaricom phone (e.g., 2547XXXXXXXX).");
 
@@ -177,27 +131,9 @@ export default function Exams() {
       if (msisdn.startsWith("0")) msisdn = "254" + msisdn.slice(1);
       if (msisdn.startsWith("7")) msisdn = "254" + msisdn;
 
-      const { CheckoutRequestID } = await stkPush({
-        phone: msisdn,
-        amount: Number(price),
-        accountRef: "EXAM_PURCHASE",
-        description: `Purchase: ${examTitle}`,
-      });
-
-      alert("M-Pesa STK Push sent. Complete payment on your phone.");
-      const start = Date.now();
-      const poll = async () => {
-        const { resultCode, resultDesc } = await queryStk({ checkoutRequestID: CheckoutRequestID });
-        if (resultCode === "0") {
-          alert("Payment confirmed ✅ Download starting...");
-          setPaymentModal(null);
-        } else if (Date.now() - start < 60000 && resultCode === "1") {
-          setTimeout(poll, 3000);
-        } else {
-          alert(`Payment failed/cancelled: ${resultDesc || "Try again."}`);
-        }
-      };
-      setTimeout(poll, 3500);
+      await initiateMpesaPayment(msisdn, Number(20), noteTitle); // default 20 KES per note
+      alert("Payment STK Push sent. Complete payment on your phone.");
+      setPaymentModal(null);
     } catch (e) {
       console.error(e);
       alert("Failed to initiate M-Pesa payment. Try again.");
@@ -206,20 +142,17 @@ export default function Exams() {
 
   const openPurchase = (title, meta = {}) => setPaymentModal({ title, meta });
 
-  // UI
   return (
     <div className="min-h-screen relative text-white">
-      {/* Interactive background */}
       <Particles id="tsparticles" init={particlesInit} options={particleOptions} className="absolute inset-0 -z-10" />
 
       {/* Top bar */}
       <div className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        {/* Updated Back button logic */}
         <button
           onClick={() => {
             if (selectedGrade) setSelectedGrade(null);
             else if (selectedLevel) setSelectedLevel(null);
-            else navigate("/user-dashboard"); // <-- Redirect to dashboard
+            else navigate("/user-dashboard");
           }}
           className="inline-flex items-center gap-2 hover:text-cyan-300 font-bold text-yellow-300"
         >
@@ -233,37 +166,35 @@ export default function Exams() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search exams, subjects, grades, majors…"
+              placeholder="Search notes, subjects, grades, majors…"
               className="w-full bg-transparent outline-none placeholder-yellow-300/80 text-white font-extrabold"
             />
           </div>
         </div>
 
-        {/* Wallet chip */}
         <button
           onClick={() => setShowWallet(true)}
           className="flex items-center gap-2 bg-yellow-400 text-black font-extrabold px-4 py-2 rounded-full hover:bg-yellow-300"
-          title="Open wallet / Top up (M-Pesa)"
         >
           <Wallet size={18} /> {walletBalance} KES
         </button>
       </div>
 
-      {/* Search results */}
-      {searchQuery && (
+      {/* Render search results or current notes */}
+      {searchQuery ? (
         <div className="px-6 pb-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredItems.length > 0 ? (
             filteredItems.map((item, idx) => (
               <div
-                key={`${item.level}-${item.grade}-${item.subject}-${item.exam}-${idx}`}
+                key={`${item.level}-${item.grade}-${item.subject}-${item.note}-${idx}`}
                 className="bg-gradient-to-br from-fuchsia-700 to-indigo-800 p-6 rounded-2xl shadow-lg hover:scale-[1.02] transition relative overflow-hidden"
               >
-                <h3 className="text-lg font-extrabold text-yellow-300 mb-1">{item.exam}</h3>
+                <h3 className="text-lg font-extrabold text-yellow-300 mb-1">{item.note}</h3>
                 <p className="text-sm mb-4 font-bold text-white/90">
                   {item.level} • {item.grade} {item.subject && `• ${item.subject}`}
                 </p>
                 <button
-                  onClick={() => openPurchase(item.exam, { level: item.level, grade: item.grade })}
+                  onClick={() => openPurchase(item.note, { level: item.level, grade: item.grade })}
                   className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded font-extrabold"
                 >
                   <Download size={18} /> Buy & Download
@@ -274,183 +205,63 @@ export default function Exams() {
             <p className="px-2 font-extrabold text-yellow-300">No matches found.</p>
           )}
         </div>
-      )}
-
-      {/* Level selection */}
-      {!searchQuery && !selectedLevel && (
-        <div className="px-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 pb-12">
-          {Object.keys(examsData).map((level) => (
-            <div
-              key={level}
-              onClick={() => setSelectedLevel(level)}
-              className="bg-gradient-to-br from-cyan-700 to-teal-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] cursor-pointer transition"
-            >
-              <h3 className="text-2xl font-extrabold text-white">{level}</h3>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Grade/Form/Major selection */}
-      {!searchQuery && selectedLevel && !selectedGrade && (
+      ) : (
         <div className="px-6 pb-12">
-          <p className="mb-3 font-extrabold text-yellow-300">Select a grade/form/major</p>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Object.keys(examsData[selectedLevel]).map((grade) => (
-              <div
-                key={grade}
-                onClick={() => setSelectedGrade(grade)}
-                className="bg-gradient-to-br from-violet-700 to-rose-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] cursor-pointer transition"
-              >
-                <h3 className="text-xl font-extrabold">{grade}</h3>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Subjects/Exams list */}
-      {!searchQuery && selectedLevel && selectedGrade && (
-        <div className="px-6 pb-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {currentExams.map(({ subject, exam }, i) => (
-            <div
-              key={`${subject}-${exam}-${i}`}
-              className="bg-gradient-to-br from-emerald-700 to-lime-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] transition relative overflow-hidden"
-            >
-              <h3 className="text-lg font-extrabold text-white mb-3">{exam}</h3>
-              {subject && <p className="text-sm mb-4 font-bold text-white/90">{subject}</p>}
-              <button
-                onClick={() => openPurchase(exam, { level: selectedLevel, grade: selectedGrade, subject })}
-                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded font-extrabold"
-              >
-                <Download size={18} /> Buy & Download
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Wallet / Top Up (M-Pesa) */}
-      {showWallet && (
-        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0f172a] text-white p-6 rounded-2xl shadow-2xl w-[420px]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-extrabold text-yellow-300">Wallet</h2>
-              <button onClick={() => setShowWallet(false)} className="hover:text-red-300">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="flex items-center justify-between bg-white/10 rounded-xl px-4 py-3 mb-4">
-              <div className="flex items-center gap-2 font-bold">
-                <Wallet size={18} />
-                <span className="opacity-90">Balance</span>
-              </div>
-              <div className="text-2xl font-extrabold text-yellow-300">{walletBalance} KES</div>
-            </div>
-            <label className="text-sm font-extrabold text-yellow-300">M-Pesa Phone (e.g., 2547XXXXXXXX)</label>
-            <input
-              value={walletPhone}
-              onChange={(e) => setWalletPhone(e.target.value)}
-              placeholder="2547XXXXXXXX"
-              className="w-full p-2 rounded mt-1 mb-3 text-black font-bold"
-            />
-            <label className="text-sm font-extrabold text-yellow-300">Top-up Amount (KES)</label>
-            <div className="flex gap-2 mt-1 mb-3">
-              <input
-                type="number"
-                min={1}
-                value={topUpAmount}
-                onChange={(e) => setTopUpAmount(e.target.value)}
-                className="flex-1 p-2 rounded text-black font-bold"
-                placeholder="Enter amount"
-              />
-              <button
-                onClick={() => handleTopUp(Number(topUpAmount || 0))}
-                className="bg-yellow-400 text-black font-extrabold px-4 rounded hover:bg-yellow-300"
-              >
-                Top Up
-              </button>
-            </div>
-            <p className="text-sm opacity-80 mb-2 font-bold">Quick add</p>
-            <div className="flex gap-2">
-              {[100, 200, 500].map((amt) => (
-                <button
-                  key={amt}
-                  onClick={() => handleTopUp(amt)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-xl font-extrabold"
+          {/* Level selection */}
+          {!selectedLevel && (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Object.keys(notesData).map((level) => (
+                <div
+                  key={level}
+                  onClick={() => setSelectedLevel(level)}
+                  className="bg-gradient-to-br from-cyan-700 to-teal-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] cursor-pointer transition"
                 >
-                  <Plus size={16} /> {amt}
-                </button>
+                  <h3 className="text-2xl font-extrabold text-white">{level}</h3>
+                </div>
               ))}
             </div>
-          </div>
+          )}
+
+          {/* Grade/Form/Major selection */}
+          {selectedLevel && !selectedGrade && (
+            <div>
+              <p className="mb-3 font-extrabold text-yellow-300">Select a grade/form/major</p>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.keys(notesData[selectedLevel]).map((grade) => (
+                  <div
+                    key={grade}
+                    onClick={() => setSelectedGrade(grade)}
+                    className="bg-gradient-to-br from-violet-700 to-rose-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] cursor-pointer transition"
+                  >
+                    <h3 className="text-xl font-extrabold">{grade}</h3>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Notes list */}
+          {selectedLevel && selectedGrade && (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {currentNotes.map(({ subject, note }, i) => (
+                <div
+                  key={`${subject}-${note}-${i}`}
+                  className="bg-gradient-to-br from-emerald-700 to-lime-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] transition relative overflow-hidden"
+                >
+                  <h3 className="text-lg font-extrabold text-white mb-3">{note}</h3>
+                  {subject && <p className="text-sm mb-4 font-bold text-white/90">{subject}</p>}
+                  <button
+                    onClick={() => openPurchase(note, { level: selectedLevel, grade: selectedGrade, subject })}
+                    className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded font-extrabold"
+                  >
+                    <Download size={18} /> Buy & Download
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
-
-      {/* Payment Modal (tiers) */}
-      {paymentModal && (
-        <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#0f172a] text-white p-6 rounded-2xl shadow-2xl w-[560px]">
-            <h2 className="text-lg font-extrabold mb-1 text-yellow-300">Purchase: {paymentModal.title}</h2>
-            <p className="text-sm mb-4 font-bold text-white/90">
-              {paymentModal?.meta?.level && `${paymentModal.meta.level} • `}
-              {paymentModal?.meta?.grade} {paymentModal?.meta?.subject && `• ${paymentModal.meta.subject}`}
-            </p>
-
-            <div className="space-y-2 mb-4">
-              <Row
-                label="Single Exam"
-                price={PRICING.examWithMS}
-                onWallet={() => {
-                  if (payViaWallet(PRICING.examWithMS)) setPaymentModal(null);
-                }}
-                onMpesa={() => payViaMpesa(PRICING.examWithMS, paymentModal.title)}
-              />
-              <Row
-                label="All Exams per Subject for the entire grade"
-                price={PRICING.subjectAllGrades}
-                onWallet={() => {
-                  if (payViaWallet(PRICING.subjectAllGrades)) setPaymentModal(null);
-                }}
-                onMpesa={() => payViaMpesa(PRICING.subjectAllGrades, paymentModal.title)}
-              />
-            </div>
-
-            <div className="mt-4">
-              <label className="text-xs font-extrabold text-yellow-300">M-Pesa Phone (for direct pay)</label>
-              <input
-                value={mpesaPhone}
-                onChange={(e) => setMpesaPhone(e.target.value)}
-                placeholder="2547XXXXXXXX"
-                className="w-full p-2 rounded mt-1 text-black font-bold"
-              />
-            </div>
-
-            <button
-              onClick={() => setPaymentModal(null)}
-              className="mt-5 w-full p-2 bg-red-500 rounded hover:bg-red-600 font-extrabold"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Row({ label, price, onWallet, onMpesa }) {
-  return (
-    <div className="flex items-center justify-between gap-3 bg-white/5 rounded-xl px-4 py-3">
-      <span className="text-sm font-extrabold text-white">{label}</span>
-      <div className="flex gap-2">
-        <button onClick={onWallet} className="p-2 bg-blue-600 rounded hover:bg-blue-700 font-extrabold">
-          Wallet: KES {price}
-        </button>
-        <button onClick={onMpesa} className="p-2 bg-yellow-400 text-black rounded hover:bg-yellow-300 font-extrabold">
-          M-Pesa: KES {price}
-        </button>
-      </div>
     </div>
   );
 }

@@ -2,10 +2,11 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
+import {jwtDecode} from "jwt-decode";
 import ReCAPTCHA from "react-google-recaptcha";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
+import { loginUser } from "../Api"; // ✅ import login API
 
 const Login = () => {
   const navigate = useNavigate();
@@ -13,12 +14,18 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isRecaptchaVisible, setIsRecaptchaVisible] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const [userRole, setUserRole] = useState(null); // ✅ track role
+  const [userRole, setUserRole] = useState(null);
+  const [token, setToken] = useState(null);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const validateEmail = (email) => {
-    const allowedDomains = ["gmail.com", "yahoo.com", "outlook.com", "student.ku.ac.ke"];
+    const allowedDomains = [
+      "gmail.com",
+      "yahoo.com",
+      "outlook.com",
+      "student.ku.ac.ke",
+    ];
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const domain = email.split("@")[1];
     return emailRegex.test(email) && allowedDomains.includes(domain);
@@ -27,8 +34,9 @@ const Login = () => {
   const handleInputChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!validateEmail(formData.email)) {
       alert("Please enter a valid email from allowed domains.");
       return;
@@ -38,20 +46,30 @@ const Login = () => {
       return;
     }
 
-    // ✅ Assign role (hardcoded admin email for now)
-    if (formData.email === "admin@example.com") {
-      setUserRole("admin");
-    } else {
-      setUserRole("user");
-    }
+    try {
+      // ✅ Call Django backend login
+      const response = await loginUser(formData);
+      const data = response.data;
 
-    setIsRecaptchaVisible(true); // show captcha after login
+      // Example: backend returns { token, user: { email, role } }
+      const user = data.user;
+      const userToken = data.token;
+      setToken(userToken);
+
+      setUserRole(user.role); // dynamically set role from backend
+      setIsRecaptchaVisible(true); // show captcha after successful login
+    } catch (err) {
+      console.error(err);
+      alert(
+        err.response?.data?.detail || "Login failed. Check your credentials."
+      );
+    }
   };
 
   const onRecaptchaChange = (token) => {
     if (token) {
       alert("✅ Human confirmed!");
-      // ✅ Route based on role
+      // Navigate based on role from backend
       if (userRole === "admin") {
         navigate("/admin-dashboard");
       } else {
@@ -60,17 +78,14 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLoginSuccess = (credentialResponse) => {
+  const handleGoogleLoginSuccess = async (credentialResponse) => {
     const decoded = jwtDecode(credentialResponse.credential);
     console.log("Google user:", decoded);
 
-    // ✅ Role detection example with Google login
-    if (decoded.email === "admin@example.com") {
-      setUserRole("admin");
-    } else {
-      setUserRole("user");
-    }
+    // You can call your backend to create/login the user here
+    // Example: await loginWithGoogle(decoded.email);
 
+    setUserRole(decoded.email === "admin@example.com" ? "admin" : "user");
     setIsRecaptchaVisible(true); // still go through recaptcha
   };
 
@@ -89,10 +104,7 @@ const Login = () => {
           background: { color: { value: "#0d1117" } },
           fpsLimit: 120,
           interactivity: {
-            events: {
-              onHover: { enable: true, mode: "trail" },
-              onClick: { enable: true, mode: "push" },
-            },
+            events: { onHover: { enable: true, mode: "trail" }, onClick: { enable: true, mode: "push" } },
             modes: {
               trail: { delay: 0.005, quantity: 5, particles: { color: { value: "#3b82f6" }, size: { value: 3 } } },
               push: { quantity: 4 },
@@ -196,31 +208,6 @@ const Login = () => {
           </div>
         )}
       </div>
-
-      {/* Animation Styles */}
-      <style>{`
-        @keyframes slideUp {
-          0% { opacity: 0; transform: translateY(30px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slideUp {
-          animation: slideUp 0.8s ease-out;
-        }
-
-        @keyframes auraglow {
-          0% { transform: translate(-50%, -50%) rotate(0deg); }
-          50% { transform: translate(-48%, -52%) rotate(180deg); }
-          100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        .animate-auraglow {
-          top: 50%;
-          left: 50%;
-          position: absolute;
-          transform: translate(-50%, -50%);
-          animation: auraglow 12s linear infinite;
-          z-index: 1;
-        }
-      `}</style>
     </div>
   );
 };
