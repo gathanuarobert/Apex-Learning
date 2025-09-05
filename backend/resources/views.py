@@ -17,7 +17,7 @@ from payments.models import Transaction, Payment
 import io
 import datetime
 from PyPDF2 import PdfReader, PdfWriter
-from PyPDF2.constants import Permissions
+# from PyPDF2.constants import Permissions
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
