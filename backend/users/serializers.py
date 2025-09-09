@@ -37,10 +37,17 @@ class UserSerializer(serializers.ModelSerializer):
     public_profile = PublicProfileSerializer(required=False)
     password = serializers.CharField(write_only=True)
 
+    # ✅ Add superuser/staff flags
+    is_superuser = serializers.BooleanField(read_only=True)
+    is_staff = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = User
-        fields =  ['id', 'email', 'name', 'role', 'password',
-                   'teacher_profile', 'student_profile', 'parent_profile', 'public_profile']
+        fields =  [
+            'id', 'email', 'name', 'role', 'password',
+            'teacher_profile', 'student_profile', 'parent_profile', 'public_profile',
+            'is_superuser', 'is_staff'  # ✅ added
+        ]
         
     def create(self, validated_data):
         role = validated_data.get('role')
@@ -71,7 +78,6 @@ class UserSerializer(serializers.ModelSerializer):
         elif role == 'public':
             PublicProfile.objects.create(user=user, **profile_data)        
 
-
         return user
 
 class LoginSerializer(serializers.Serializer):
@@ -96,5 +102,5 @@ class LoginSerializer(serializers.Serializer):
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
-            'user': UserSerializer(user).data
+            'user': UserSerializer(user).data  # ✅ now includes is_superuser & is_staff
         }

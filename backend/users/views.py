@@ -1,14 +1,54 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from rest_framework.generics import ListAPIView, DestroyAPIView
+from rest_framework.permissions import IsAdminUser
 from .models import User, ParentProfile, StudentProfile
 from .serializers import UserSerializer, LoginSerializer, ParentProfileSerializer
+from django.conf import settings
+import requests
+
+
+def verify_recaptcha(token):
+    """
+    Verify the Google reCAPTCHA token with Google's API.
+    """
+    url = "https://www.google.com/recaptcha/api/siteverify"
+    data = {
+        "secret": settings.RECAPTCHA_SECRET_KEY,
+        "response": token,
+    }
+    try:
+        response = requests.post(url, data=data)
+        result = response.json()
+        return result.get("success", False)
+    except Exception:
+        return False
+
 
 # Create your views here.
+class UserListView(ListAPIView):
+    queryset = User.objects.all().order_by("-date_joined")
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
+
+
+class UserDeleteView(DestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
+    
 class RegistrationUserView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        recaptcha_token = request.data.get("recaptcha")
+        if not recaptcha_token or not verify_recaptcha(recaptcha_token):
+            return Response(
+                {"detail": "Invalid reCAPTCHA. Please try again."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
@@ -17,16 +57,28 @@ class RegistrationUserView(APIView):
                 'user': UserSerializer(user).data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
+
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        # ✅ Check reCAPTCHA
+        recaptcha_token = request.data.get("recaptcha")
+        if not recaptcha_token or not verify_recaptcha(recaptcha_token):
+            return Response(
+                {"detail": "Invalid reCAPTCHA. Please try again."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # ✅ Continue with normal login
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-             return Response(serializer.validated_data, status=status.HTTP_200_OK)   
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 class AddChildrenToParentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
