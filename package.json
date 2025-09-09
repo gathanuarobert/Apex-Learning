@@ -6,7 +6,7 @@
     "@stripe/stripe-js": "^7.7.0",
     "@vitejs/plugin-react": "^4.7.0",
     "aos": "^2.3.4",
-    "axios": "^1.10.0",
+    "axios": "^1.11.0",
     "framer-motion": "^12.23.9",
     "gsap": "^3.13.0",
     "jwt-decode": "^4.0.0",
