@@ -4,6 +4,7 @@ from .views import (
     OneTimePurchaseInitiateView,
     WalletPurchaseAPIView,
     mpesa_callback_view,
+    TransactionHistoryView
 )
 
 urlpatterns = [
@@ -11,4 +12,5 @@ urlpatterns = [
     path("purchase/resource/initiate/", OneTimePurchaseInitiateView.as_view(), name="one-time-purchase-initiate"),
     path("wallet/purchase/", WalletPurchaseAPIView.as_view(), name="wallet-purchase"),
     path("mpesa-callback/", mpesa_callback_view, name="mpesa-callback"),
+    path("transactions/", TransactionHistoryView.as_view(), name="transaction-history"),
 ]

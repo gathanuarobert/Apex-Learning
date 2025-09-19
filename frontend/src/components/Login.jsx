@@ -2,7 +2,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import {jwtDecode} from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import ReCAPTCHA from "react-google-recaptcha";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
@@ -11,11 +11,12 @@ import { loginUser } from "../Api"; // ✅ import login API
 const Login = () => {
   const navigate = useNavigate();
   const recaptchaRef = useRef(null);
+
   const [showPassword, setShowPassword] = useState(false);
-  const [isRecaptchaVisible, setIsRecaptchaVisible] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [userRole, setUserRole] = useState(null);
   const [token, setToken] = useState(null);
+  const [recaptchaToken, setRecaptchaToken] = useState(""); // ✅ store recaptcha token
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
@@ -35,58 +36,63 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateEmail(formData.email)) {
-      alert("Please enter a valid email from allowed domains.");
-      return;
+  if (!validateEmail(formData.email)) {
+    alert("Please enter a valid email from allowed domains.");
+    return;
+  }
+  if (formData.password.length < 8) {
+    alert("Password must be at least 8 characters.");
+    return;
+  }
+
+  if (!recaptchaToken) {
+    alert("Please complete the reCAPTCHA.");
+    return;
+  }
+
+  try {
+    const response = await loginUser({
+      ...formData,
+      recaptcha: recaptchaToken,
+    });
+
+    const data = response.data;
+
+    // ⚠️ depending on your backend, adjust field names
+    const access = data.access || data.token?.access;
+    const refresh = data.refresh || data.token?.refresh;
+    const user = data.user;
+
+    if (access && refresh) {
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
     }
-    if (formData.password.length < 8) {
-      alert("Password must be at least 8 characters.");
-      return;
+
+    setUserRole(user.role);
+
+    // Navigate after login
+    if (user.is_superuser || user.role === "admin") {
+      navigate("/dashboard");
+    } else {
+      navigate("/user-dashboard");
     }
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.detail || "Login failed. Check your credentials.");
+  }
+};
 
-    try {
-      // ✅ Call Django backend login
-      const response = await loginUser(formData);
-      const data = response.data;
-
-      // Example: backend returns { token, user: { email, role } }
-      const user = data.user;
-      const userToken = data.token;
-      setToken(userToken);
-
-      setUserRole(user.role); // dynamically set role from backend
-      setIsRecaptchaVisible(true); // show captcha after successful login
-    } catch (err) {
-      console.error(err);
-      alert(
-        err.response?.data?.detail || "Login failed. Check your credentials."
-      );
-    }
-  };
-
-  const onRecaptchaChange = (token) => {
-    if (token) {
-      alert("✅ Human confirmed!");
-      // Navigate based on role from backend
-      if (userRole === "admin") {
-        navigate("/admin-dashboard");
-      } else {
-        navigate("/dashboard");
-      }
-    }
-  };
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     const decoded = jwtDecode(credentialResponse.credential);
     console.log("Google user:", decoded);
 
-    // You can call your backend to create/login the user here
-    // Example: await loginWithGoogle(decoded.email);
-
-    setUserRole(decoded.email === "admin@example.com" ? "admin" : "user");
-    setIsRecaptchaVisible(true); // still go through recaptcha
+    // Optional: send decoded.email to backend for Google login
+    const role = decoded.email === "admin@example.com" ? "admin" : "user";
+    setUserRole(role);
+    navigate(role === "admin" ? "/admin-dashboard" : "/dashboard");
   };
 
   const particlesInit = async (engine) => {
@@ -104,15 +110,31 @@ const Login = () => {
           background: { color: { value: "#0d1117" } },
           fpsLimit: 120,
           interactivity: {
-            events: { onHover: { enable: true, mode: "trail" }, onClick: { enable: true, mode: "push" } },
+            events: {
+              onHover: { enable: true, mode: "trail" },
+              onClick: { enable: true, mode: "push" },
+            },
             modes: {
-              trail: { delay: 0.005, quantity: 5, particles: { color: { value: "#3b82f6" }, size: { value: 3 } } },
+              trail: {
+                delay: 0.005,
+                quantity: 5,
+                particles: {
+                  color: { value: "#3b82f6" },
+                  size: { value: 3 },
+                },
+              },
               push: { quantity: 4 },
             },
           },
           particles: {
             color: { value: ["#3b82f6", "#60a5fa", "#93c5fd"] },
-            links: { color: "#3b82f6", distance: 120, enable: true, opacity: 0.4, width: 1 },
+            links: {
+              color: "#3b82f6",
+              distance: 120,
+              enable: true,
+              opacity: 0.4,
+              width: 1,
+            },
             move: { enable: true, speed: 1, outModes: { default: "bounce" } },
             number: { value: 50, density: { enable: true, area: 800 } },
             opacity: { value: 0.5 },
@@ -169,13 +191,13 @@ const Login = () => {
             </button>
           </div>
 
-          <div className="flex justify-between text-sm">
-            <a href="/forgot-password" className="text-blue-400 hover:underline">
-              Forgot Password?
-            </a>
-            <a href="/register" className="text-blue-400 hover:underline">
-              Register
-            </a>
+          {/* reCAPTCHA */}
+          <div className="mt-4 flex justify-center">
+            <ReCAPTCHA
+              ref={recaptchaRef}
+               sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+              onChange={(token) => setRecaptchaToken(token)}   // ✅ capture token
+            />
           </div>
 
           <button
@@ -197,16 +219,6 @@ const Login = () => {
             />
           </div>
         </form>
-
-        {isRecaptchaVisible && (
-          <div className="mt-4">
-            <ReCAPTCHA
-              ref={recaptchaRef}
-              sitekey="YOUR_RECAPTCHA_SITE_KEY"
-              onChange={onRecaptchaChange}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
