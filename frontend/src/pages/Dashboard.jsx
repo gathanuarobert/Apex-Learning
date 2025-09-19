@@ -61,7 +61,7 @@ export default function AdminDashboard() {
       try {
         const [usersRes, uploadsRes, transactionsRes] = await Promise.all([
           api.get("users/"),
-          api.get("resources/library/"),
+          api.get("resources/library/my-downloads/"),
           api.get("payments/transactions/"),
         ]);
 

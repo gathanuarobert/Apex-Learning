@@ -36,49 +36,54 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateEmail(formData.email)) {
-      alert("Please enter a valid email from allowed domains.");
-      return;
+  if (!validateEmail(formData.email)) {
+    alert("Please enter a valid email from allowed domains.");
+    return;
+  }
+  if (formData.password.length < 8) {
+    alert("Password must be at least 8 characters.");
+    return;
+  }
+
+  if (!recaptchaToken) {
+    alert("Please complete the reCAPTCHA.");
+    return;
+  }
+
+  try {
+    const response = await loginUser({
+      ...formData,
+      recaptcha: recaptchaToken,
+    });
+
+    const data = response.data;
+
+    // ⚠️ depending on your backend, adjust field names
+    const access = data.access || data.token?.access;
+    const refresh = data.refresh || data.token?.refresh;
+    const user = data.user;
+
+    if (access && refresh) {
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
     }
-    if (formData.password.length < 8) {
-      alert("Password must be at least 8 characters.");
-      return;
+
+    setUserRole(user.role);
+
+    // Navigate after login
+    if (user.is_superuser || user.role === "admin") {
+      navigate("/dashboard");
+    } else {
+      navigate("/user-dashboard");
     }
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.detail || "Login failed. Check your credentials.");
+  }
+};
 
-    if (!recaptchaToken) {
-      alert("Please complete the reCAPTCHA.");
-      return;
-    }
-
-    try {
-      // ✅ Send credentials + reCAPTCHA token to backend
-      const response = await loginUser({
-        ...formData,
-        recaptcha: recaptchaToken,
-      });
-
-      const data = response.data;
-      const user = data.user;
-      const userToken = data.token;
-
-      setToken(userToken);
-      setUserRole(user.role);
-
-      // Navigate after login
-      if (user.is_superuser || user.role === "admin") {
-        navigate("/dashboard");
-      } else {
-        navigate("/user-dashboard");
-      }
-    } catch (err) {
-      console.error(err);
-      alert(
-        err.response?.data?.detail || "Login failed. Check your credentials."
-      );
-    }
-  };
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     const decoded = jwtDecode(credentialResponse.credential);
