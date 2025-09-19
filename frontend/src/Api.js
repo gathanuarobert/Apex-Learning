@@ -38,11 +38,18 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
 
-        const { data } = await api.post("token/refresh/", {
+        // ⚠️ use plain axios, not api, to avoid expired token in headers
+        const { data } = await axios.post("http://localhost:8000/api/token/refresh/", {
           refresh: refreshToken,
         });
 
+        // Save new token
         localStorage.setItem("access", data.access);
+
+        // Update default headers for future requests
+        api.defaults.headers.Authorization = `Bearer ${data.access}`;
+
+        // Retry original request
         originalRequest.headers.Authorization = `Bearer ${data.access}`;
         return api(originalRequest);
       } catch (err) {
@@ -79,8 +86,7 @@ export const getNotes = () => api.get("resources/notes/");
 export const getExams = () => api.get("resources/exams/");
 export const getPastPapers = () => api.get("resources/past-papers/");
 export const getNews = () => api.get("resources/news/");
-export const getLibrary = () => api.get("resources/library/");
-
+export const getLibrary = () => api.get("resources/library/my-downloads/");
 // ------------------- M-PESA -------------------
 const getTimestamp = () => {
   const now = new Date();
