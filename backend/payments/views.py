@@ -11,6 +11,8 @@ from decimal import Decimal, InvalidOperation
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+
 
 
 class WalletDepositInitiateView(APIView):
@@ -124,5 +126,17 @@ class TransactionHistoryView(APIView):
 
     def get(self, request):
         transactions = Transaction.objects.filter(user=request.user).order_by("-created_at")
+        serializer = TransactionSerializer(transactions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class AdminTransactionHistoryView(APIView):
+    """
+    Admin-only endpoint to see ALL transactions from all users
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        transactions = Transaction.objects.all().order_by("-created_at")
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
