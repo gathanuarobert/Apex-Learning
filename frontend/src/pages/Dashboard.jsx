@@ -1,12 +1,11 @@
 // src/pages/AdminDashboard.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FaUsers,
   FaFileInvoiceDollar,
   FaUpload,
   FaHistory,
   FaTrash,
-  FaPlus,
   FaDollarSign,
 } from "react-icons/fa";
 import { AiOutlineLogout } from "react-icons/ai";
@@ -24,7 +23,8 @@ import { useNavigate } from "react-router-dom";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { FaBars, FaTimes } from "react-icons/fa";
-import api, { getCurrentUser } from "../Api";
+import api from "../Api";
+import UploadResourceModal from "../components/UploadResourceModal";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -33,11 +33,12 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [users, setUsers] = useState([]);
-  const [uploads, setUploads] = useState([]);
+  const [resources, setResources] = useState({ notes: [], exams: [], pastpapers: [], news: [] });
   const [transactions, setTransactions] = useState([]);
   const [userHistory, setUserHistory] = useState([]);
   const [uploadHistory, setUploadHistory] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // -------- Derived stats --------
   const totalRevenue = useMemo(
@@ -53,35 +54,39 @@ export default function AdminDashboard() {
     [transactions]
   );
 
+  const allUploads = useMemo(() => {
+    return [
+      ...resources.notes.map(n => ({ ...n, type: 'Note' })),
+      ...resources.exams.map(e => ({ ...e, type: 'Exam' })),
+      ...resources.pastpapers.map(p => ({ ...p, type: 'Past Paper' })),
+      ...resources.news.map(n => ({ ...n, type: 'News' })),
+    ];
+  }, [resources]);
+
   // -------- Helper function to build chart from real data --------
   function buildChartDataFromRealData(users, transactions) {
     const now = new Date();
     const weeks = [];
     
-    // Create 8 weeks of data (W-7 to Now)
     for (let i = 7; i >= 0; i--) {
       const weekStart = new Date(now);
       weekStart.setDate(now.getDate() - (i * 7));
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 7);
       
-      // Filter transactions for this week
       const weekTransactions = transactions.filter(t => {
         const tDate = new Date(t.created_at);
         return tDate >= weekStart && tDate < weekEnd;
       });
       
-      // Calculate revenue (deposits only)
       const weekRevenue = weekTransactions
         .filter(t => t.transaction_type === "deposit")
         .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
       
-      // Calculate downloads (purchases)
       const weekDownloads = weekTransactions
         .filter(t => t.transaction_type === "purchase")
         .length;
       
-      // Count users who joined this week
       const weekUsers = users.filter(u => {
         const joinDate = new Date(u.date_joined);
         return joinDate >= weekStart && joinDate < weekEnd;
@@ -95,7 +100,6 @@ export default function AdminDashboard() {
       });
     }
     
-    // If no data, return at least one point to show the chart
     if (weeks.every(w => w.users === 0 && w.revenue === 0 && w.downloads === 0)) {
       return [{
         name: "Now",
@@ -109,57 +113,74 @@ export default function AdminDashboard() {
   }
 
   // -------- Fetch data from backend --------
+  const fetchDashboardData = async () => {
+    try {
+      const [usersRes, transactionsRes, resourcesRes] = await Promise.all([
+        api.get("users/"),
+        api.get("payments/admin/transactions/"),
+        api.get("resources/admin/all/"),
+      ]);
+
+      setUsers(usersRes.data || []);
+      setTransactions(transactionsRes.data || []);
+      setResources(resourcesRes.data || { notes: [], exams: [], pastpapers: [], news: [] });
+
+      const chartData = buildChartDataFromRealData(
+        usersRes.data || [],
+        transactionsRes.data || []
+      );
+      setChartData(chartData);
+
+      const userEvents = (usersRes.data || []).map((u) => ({
+        id: u.id,
+        user: u.email || u.username || "Unknown",
+        action: "joined",
+        timestamp: u.date_joined || new Date().toISOString(),
+      }));
+      setUserHistory(userEvents);
+
+      // Build upload history from resources
+      const allResources = [
+        ...(resourcesRes.data.notes || []).map(r => ({ ...r, type: 'Note' })),
+        ...(resourcesRes.data.exams || []).map(r => ({ ...r, type: 'Exam' })),
+        ...(resourcesRes.data.pastpapers || []).map(r => ({ ...r, type: 'Past Paper' })),
+        ...(resourcesRes.data.news || []).map(r => ({ ...r, type: 'News' })),
+      ];
+
+      const uploadEvents = allResources.map(r => ({
+        id: r.id,
+        file: r.title || r.headline || "Untitled",
+        action: "uploaded",
+        timestamp: r.created_at || r.published_at || new Date().toISOString(),
+      }));
+      setUploadHistory(uploadEvents);
+
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      setUsers([]);
+      setTransactions([]);
+      setResources({ notes: [], exams: [], pastpapers: [], news: [] });
+      setChartData([]);
+      setUserHistory([]);
+      setUploadHistory([]);
+    }
+  };
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const [usersRes, transactionsRes] = await Promise.all([
-          api.get("/users/"),
-          api.get("/payments/admin/transactions/"),  // Admin endpoint for ALL transactions
-        ]);
-
-        setUsers(usersRes.data || []);
-        setTransactions(transactionsRes.data || []);
-
-        // Build real chart data from actual transactions
-        const chartData = buildChartDataFromRealData(
-          usersRes.data || [],
-          transactionsRes.data || []
-        );
-        setChartData(chartData);
-
-        // User history from real data
-        const userEvents = (usersRes.data || []).map((u) => ({
-          id: u.id,
-          user: u.email || u.username || "Unknown",
-          action: "joined",
-          timestamp: u.date_joined || new Date().toISOString(),
-        }));
-        setUserHistory(userEvents);
-
-        // Upload history - for now set empty (you can add endpoint later)
-        setUploadHistory([]);
-
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        // Set empty defaults on error
-        setUsers([]);
-        setTransactions([]);
-        setChartData([]);
-        setUserHistory([]);
-        setUploadHistory([]);
-      }
-    };
-
     fetchDashboardData();
-  }, []); // Only run once on mount
+  }, []);
 
   // -------- Handlers --------
   const deleteUser = async (id) => {
     const userToDelete = users.find((u) => u.id === id);
     if (!userToDelete) return;
 
+    if (!confirm(`Are you sure you want to delete ${userToDelete.email || userToDelete.username}?`)) {
+      return;
+    }
+
     try {
-      await api.delete(`/users/${id}/`);
+      await api.delete(`users/${id}/`);
       setUsers((prev) => prev.filter((u) => u.id !== id));
       setUserHistory((prev) => [
         ...prev,
@@ -176,38 +197,41 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const deleteResource = async (resource) => {
+    if (!confirm(`Are you sure you want to delete "${resource.title || resource.headline}"?`)) {
+      return;
+    }
 
-    const now = new Date().toISOString();
-    const newUpload = {
-      id: Date.now(),
-      name: file.name,
-      size: `${(file.size / 1024).toFixed(1)} KB`,
-      uploader: "Admin",
-      date: now,
-    };
-    setUploads((prev) => [...prev, newUpload]);
-    setUploadHistory((prev) => [
-      ...prev,
-      { id: Date.now(), file: newUpload.name, action: "uploaded", timestamp: now },
-    ]);
+    try {
+      const endpoints = {
+        'Note': 'resources/notes/',
+        'Exam': 'resources/exams/',
+        'Past Paper': 'resources/past-papers/',
+        'News': 'resources/news/',
+      };
+
+      await api.delete(`${endpoints[resource.type]}${resource.id}/`);
+      
+      // Refresh data
+      fetchDashboardData();
+      
+      setUploadHistory((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          file: resource.title || resource.headline,
+          action: "deleted",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      alert("Failed to delete resource");
+    }
   };
 
-  const deleteUpload = (id) => {
-    const uploadToDelete = uploads.find((u) => u.id === id);
-    if (!uploadToDelete) return;
-    setUploads((prev) => prev.filter((u) => u.id !== id));
-    setUploadHistory((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        file: uploadToDelete.name,
-        action: "deleted",
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+  const handleUploadSuccess = () => {
+    fetchDashboardData(); // Refresh all data after successful upload
   };
 
   // -------- Particles background --------
@@ -242,6 +266,13 @@ export default function AdminDashboard() {
         <div className="absolute -top-24 -left-24 h-80 w-80 bg-fuchsia-500 rounded-full blur-3xl animate-pulse" />
         <div className="absolute -bottom-24 -right-24 h-96 w-96 bg-cyan-500 rounded-full blur-3xl animate-[pulse_6s_ease-in-out_infinite]" />
       </div>
+
+      {/* Upload Modal */}
+      <UploadResourceModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+      />
 
       {/* Sidebar */}
       <aside
@@ -371,7 +402,7 @@ export default function AdminDashboard() {
                 <tbody>
                   {transactions.map((t) => (
                     <tr key={t.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
-                      <td className="px-4 py-2">{t.id}</td>
+                      <td className="px-4 py-2 text-xs">{String(t.id).slice(0, 8)}...</td>
                       <td className="px-4 py-2">{t.user || "Unknown"}</td>
                       <td className="px-4 py-2">{t.transaction_type}</td>
                       <td className="px-4 py-2">KSh {parseFloat(t.amount || 0).toLocaleString()}</td>
@@ -391,16 +422,16 @@ export default function AdminDashboard() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-700 text-slate-300">
-                    <th className="px-4 py-2">ID</th>
                     <th className="px-4 py-2">Entity</th>
                     <th className="px-4 py-2">Action</th>
                     <th className="px-4 py-2">Timestamp</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[...userHistory, ...uploadHistory].map((h) => (
-                    <tr key={h.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
-                      <td className="px-4 py-2">{h.id}</td>
+                  {[...userHistory, ...uploadHistory]
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .map((h, idx) => (
+                    <tr key={idx} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
                       <td className="px-4 py-2">{h.user || h.file}</td>
                       <td className="px-4 py-2">{h.action}</td>
                       <td className="px-4 py-2">{new Date(h.timestamp).toLocaleString()}</td>
@@ -451,38 +482,41 @@ export default function AdminDashboard() {
 
         {activeTab === "manageUploads" && (
           <section className="bg-[#101a2b]/70 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <h3 className="text-xl font-semibold mb-4 text-slate-200">Manage Uploads</h3>
-            <input
-              type="file"
-              onChange={handleUpload}
-              className="mb-4 p-2 rounded bg-slate-800 text-slate-200 cursor-pointer"
-            />
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-slate-200">Manage Uploads</h3>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <FaUpload /> Upload Resource
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-700 text-slate-300">
                     <th className="px-4 py-2">ID</th>
-                    <th className="px-4 py-2">File Name</th>
-                    <th className="px-4 py-2">Size</th>
-                    <th className="px-4 py-2">Uploader</th>
+                    <th className="px-4 py-2">Title</th>
+                    <th className="px-4 py-2">Type</th>
+                    <th className="px-4 py-2">Price</th>
                     <th className="px-4 py-2">Date</th>
                     <th className="px-4 py-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {uploads.map((u) => (
-                    <tr key={u.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
-                      <td className="px-4 py-2">{u.id}</td>
-                      <td className="px-4 py-2">{u.name}</td>
-                      <td className="px-4 py-2">{u.size}</td>
-                      <td className="px-4 py-2">{u.uploader}</td>
-                      <td className="px-4 py-2">{new Date(u.date).toLocaleString()}</td>
+                  {allUploads.map((resource) => (
+                    <tr key={`${resource.type}-${resource.id}`} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
+                      <td className="px-4 py-2 text-xs">{String(resource.id).slice(0, 8)}...</td>
+                      <td className="px-4 py-2">{resource.title || resource.headline || "Untitled"}</td>
+                      <td className="px-4 py-2">{resource.type}</td>
+                      <td className="px-4 py-2">KSh {parseFloat(resource.price || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2">{new Date(resource.created_at || resource.published_at).toLocaleDateString()}</td>
                       <td className="px-4 py-2">
                         <button
-                          onClick={() => deleteUpload(u.id)}
+                          onClick={() => deleteResource(resource)}
                           className="text-red-400 hover:text-red-600 transition-colors"
                         >
-                          Delete
+                          <FaTrash />
                         </button>
                       </td>
                     </tr>
