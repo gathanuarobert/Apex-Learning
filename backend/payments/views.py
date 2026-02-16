@@ -106,16 +106,16 @@ class WalletPurchaseAPIView(APIView):
 
 
 
+# In payments/views.py
 class WalletDetailView(APIView):
-    """
-    Return wallet balance and transaction history for the authenticated user.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         wallet, _ = Wallet.objects.get_or_create(user=request.user)
-        serializer = WalletSerializer(wallet)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({
+            "balance": wallet.balance,
+            "user": request.user.email
+        })
 
 
 class TransactionHistoryView(APIView):
