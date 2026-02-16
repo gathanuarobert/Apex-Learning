@@ -107,6 +107,7 @@ export default function Notes() {
       <Particles
         id="tsparticles"
         init={particlesInit}
+         className="absolute inset-0 -z-10"
         options={{
           background: { color: "#0f172a" },
           fpsLimit: 120,

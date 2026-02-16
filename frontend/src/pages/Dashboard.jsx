@@ -24,7 +24,7 @@ import { useNavigate } from "react-router-dom";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { FaBars, FaTimes } from "react-icons/fa";
-import api, { getCurrentUser } from "../Api"; // <-- integrated API
+import api, { getCurrentUser } from "../Api";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -39,124 +39,148 @@ export default function AdminDashboard() {
   const [uploadHistory, setUploadHistory] = useState([]);
   const [chartData, setChartData] = useState([]);
 
-  const tickRef = useRef(8);
-
   // -------- Derived stats --------
   const totalRevenue = useMemo(
     () =>
       transactions
-        .filter((t) => t.type === "deposit")
-        .reduce((sum, t) => sum + t.amount, 0),
+        .filter((t) => t.transaction_type === "deposit")
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0),
     [transactions]
   );
 
   const totalDownloads = useMemo(
-    () => uploadHistory.filter((h) => h.action === "downloaded").length,
-    [uploadHistory]
+    () => transactions.filter((t) => t.transaction_type === "purchase").length,
+    [transactions]
   );
+
+  // -------- Helper function to build chart from real data --------
+  function buildChartDataFromRealData(users, transactions) {
+    const now = new Date();
+    const weeks = [];
+    
+    // Create 8 weeks of data (W-7 to Now)
+    for (let i = 7; i >= 0; i--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - (i * 7));
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+      
+      // Filter transactions for this week
+      const weekTransactions = transactions.filter(t => {
+        const tDate = new Date(t.created_at);
+        return tDate >= weekStart && tDate < weekEnd;
+      });
+      
+      // Calculate revenue (deposits only)
+      const weekRevenue = weekTransactions
+        .filter(t => t.transaction_type === "deposit")
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+      
+      // Calculate downloads (purchases)
+      const weekDownloads = weekTransactions
+        .filter(t => t.transaction_type === "purchase")
+        .length;
+      
+      // Count users who joined this week
+      const weekUsers = users.filter(u => {
+        const joinDate = new Date(u.date_joined);
+        return joinDate >= weekStart && joinDate < weekEnd;
+      }).length;
+      
+      weeks.push({
+        name: i === 0 ? "Now" : `W-${i}`,
+        users: weekUsers,
+        revenue: Math.round(weekRevenue),
+        downloads: weekDownloads,
+      });
+    }
+    
+    // If no data, return at least one point to show the chart
+    if (weeks.every(w => w.users === 0 && w.revenue === 0 && w.downloads === 0)) {
+      return [{
+        name: "Now",
+        users: users.length,
+        revenue: 0,
+        downloads: 0
+      }];
+    }
+    
+    return weeks;
+  }
 
   // -------- Fetch data from backend --------
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [usersRes, uploadsRes, transactionsRes] = await Promise.all([
-          api.get("users/"),
-          api.get("resources/library/my-downloads/"),
-          api.get("payments/transactions/"),
+        const [usersRes, transactionsRes] = await Promise.all([
+          api.get("/users/"),
+          api.get("/payments/admin/transactions/"),  // Admin endpoint for ALL transactions
         ]);
 
-        setUsers(usersRes.data);
-        setUploads(uploadsRes.data);
-        setTransactions(transactionsRes.data);
+        setUsers(usersRes.data || []);
+        setTransactions(transactionsRes.data || []);
 
-        // History logs
-        const userEvents = usersRes.data.map((u) => ({
+        // Build real chart data from actual transactions
+        const chartData = buildChartDataFromRealData(
+          usersRes.data || [],
+          transactionsRes.data || []
+        );
+        setChartData(chartData);
+
+        // User history from real data
+        const userEvents = (usersRes.data || []).map((u) => ({
           id: u.id,
-          user: u.name,
+          user: u.email || u.username || "Unknown",
           action: "joined",
-          timestamp: u.joined,
-        }));
-        const uploadEvents = uploadsRes.data.map((u) => ({
-          id: u.id,
-          file: u.name,
-          action: "uploaded",
-          timestamp: u.date,
+          timestamp: u.date_joined || new Date().toISOString(),
         }));
         setUserHistory(userEvents);
-        setUploadHistory(uploadEvents);
 
-        // Chart data
-        const labels = ["W-7","W-6","W-5","W-4","W-3","W-2","W-1","Now"];
-        let usersCount = usersRes.data.length;
-        let revenue = transactionsRes.data.reduce(
-          (sum, t) => sum + (t.type === "deposit" ? t.amount : 0),
-          0
-        );
-        let downloads = uploadEvents.length;
-        setChartData(
-          labels.map((name, i) => {
-            usersCount += Math.round((Math.sin(i) + 1) * 5);
-            revenue += Math.round((Math.cos(i / 2) + 1) * 100);
-            downloads += Math.round((Math.sin(i / 1.5) + 1) * 3);
-            return { name, users: usersCount, revenue, downloads };
-          })
-        );
+        // Upload history - for now set empty (you can add endpoint later)
+        setUploadHistory([]);
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        // Set empty defaults on error
+        setUsers([]);
+        setTransactions([]);
+        setChartData([]);
+        setUserHistory([]);
+        setUploadHistory([]);
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, []); // Only run once on mount
 
-  // -------- Real-time simulator (optional, keeps your original effect) --------
-  useEffect(() => {
-    const chartTimer = setInterval(() => {
-      tickRef.current += 1;
-      const nextLabel = `+${tickRef.current}m`;
-      const last = chartData[chartData.length - 1] || { users: 0, revenue: 0, downloads: 0 };
-      const next = {
-        name: nextLabel,
-        users: Math.max(
-          0,
-          last.users + Math.round((Math.sin(tickRef.current / 2) + 0.3) * 18)
-        ),
-        revenue: Math.max(
-          0,
-          last.revenue + Math.round((Math.cos(tickRef.current / 3) + 0.6) * 400)
-        ),
-        downloads: Math.max(
-          0,
-          last.downloads + Math.round((Math.sin(tickRef.current / 1.8) + 0.5) * 22)
-        ),
-      };
-      setChartData((prev) => [...prev.slice(-11), next]);
-    }, 6000);
-
-    return () => clearInterval(chartTimer);
-  }, [chartData]);
-
-  // -------- Handlers remain the same --------
-  const deleteUser = (id) => {
+  // -------- Handlers --------
+  const deleteUser = async (id) => {
     const userToDelete = users.find((u) => u.id === id);
     if (!userToDelete) return;
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    setUserHistory((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        user: userToDelete.name,
-        action: "deleted",
-        timestamp: new Date().toISOString().slice(0, 16).replace("T", " "),
-      },
-    ]);
+
+    try {
+      await api.delete(`/users/${id}/`);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setUserHistory((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          user: userToDelete.email || userToDelete.username,
+          action: "deleted",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Failed to delete user");
+    }
   };
 
   const handleUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const now = new Date().toISOString().slice(0, 16).replace("T", " ");
+    const now = new Date().toISOString();
     const newUpload = {
       id: Date.now(),
       name: file.name,
@@ -181,12 +205,12 @@ export default function AdminDashboard() {
         id: Date.now(),
         file: uploadToDelete.name,
         action: "deleted",
-        timestamp: new Date().toISOString().slice(0, 16).replace("T", " "),
+        timestamp: new Date().toISOString(),
       },
     ]);
   };
 
-  // -------- Particles background and UI remain unchanged --------
+  // -------- Particles background --------
   const particlesInit = async (engine) => {
     await loadSlim(engine);
   };
@@ -348,10 +372,10 @@ export default function AdminDashboard() {
                   {transactions.map((t) => (
                     <tr key={t.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
                       <td className="px-4 py-2">{t.id}</td>
-                      <td className="px-4 py-2">{t.user}</td>
-                      <td className="px-4 py-2">{t.type}</td>
-                      <td className="px-4 py-2">KSh {t.amount.toLocaleString()}</td>
-                      <td className="px-4 py-2">{t.date}</td>
+                      <td className="px-4 py-2">{t.user || "Unknown"}</td>
+                      <td className="px-4 py-2">{t.transaction_type}</td>
+                      <td className="px-4 py-2">KSh {parseFloat(t.amount || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2">{new Date(t.created_at).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -379,7 +403,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-2">{h.id}</td>
                       <td className="px-4 py-2">{h.user || h.file}</td>
                       <td className="px-4 py-2">{h.action}</td>
-                      <td className="px-4 py-2">{h.timestamp}</td>
+                      <td className="px-4 py-2">{new Date(h.timestamp).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -396,8 +420,8 @@ export default function AdminDashboard() {
                 <thead>
                   <tr className="border-b border-slate-700 text-slate-300">
                     <th className="px-4 py-2">ID</th>
-                    <th className="px-4 py-2">Name</th>
                     <th className="px-4 py-2">Email</th>
+                    <th className="px-4 py-2">Role</th>
                     <th className="px-4 py-2">Joined</th>
                     <th className="px-4 py-2">Action</th>
                   </tr>
@@ -406,9 +430,9 @@ export default function AdminDashboard() {
                   {users.map((u) => (
                     <tr key={u.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
                       <td className="px-4 py-2">{u.id}</td>
-                      <td className="px-4 py-2">{u.name}</td>
-                      <td className="px-4 py-2">{u.email}</td>
-                      <td className="px-4 py-2">{u.joined}</td>
+                      <td className="px-4 py-2">{u.email || u.username}</td>
+                      <td className="px-4 py-2">{u.role || "user"}</td>
+                      <td className="px-4 py-2">{new Date(u.date_joined).toLocaleDateString()}</td>
                       <td className="px-4 py-2">
                         <button
                           onClick={() => deleteUser(u.id)}
@@ -452,7 +476,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-2">{u.name}</td>
                       <td className="px-4 py-2">{u.size}</td>
                       <td className="px-4 py-2">{u.uploader}</td>
-                      <td className="px-4 py-2">{u.date}</td>
+                      <td className="px-4 py-2">{new Date(u.date).toLocaleString()}</td>
                       <td className="px-4 py-2">
                         <button
                           onClick={() => deleteUpload(u.id)}
