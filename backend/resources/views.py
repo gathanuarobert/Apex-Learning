@@ -259,6 +259,30 @@ class UserLibraryViewSet(viewsets.ViewSet):
             })
 
         return Response(data)
+    
+
+class AdminResourcesViewSet(viewsets.ViewSet):
+    """
+    Admin-only endpoint to get ALL resources (notes, exams, pastpapers, news) in one call
+    """
+    permission_classes = [IsAdminOnly]
+
+    @action(detail=False, methods=['get'], url_path='all')
+    def all_resources(self, request):
+        notes = Note.objects.all()
+        exams = Exam.objects.all()
+        pastpapers = PastPaper.objects.all()
+        news = News.objects.all()
+
+        data = {
+            "notes": NoteSerializer(notes, many=True, context={'request': request}).data,
+            "exams": ExamSerializer(exams, many=True, context={'request': request}).data,
+            "pastpapers": PastPaperSerializer(pastpapers, many=True, context={'request': request}).data,
+            "news": NewsSerializer(news, many=True, context={'request': request}).data,
+        }
+
+        return Response(data)
+
 
 class NoteViewSet(BaseResourceViewSet):
     queryset = Note.objects.all()
