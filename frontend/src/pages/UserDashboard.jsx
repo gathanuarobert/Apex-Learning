@@ -38,9 +38,9 @@ export default function UserDashboard() {
   // Cards
   const cards = [
     { title: "Notes", icon: <FileText size={36} />, color: "from-blue-500 to-blue-700", route: "/notes" },
-    { title: "Exams", icon: <BookOpen size={36} />, color: "from-green-500 to-green-700", route: "/exams" },
-    { title: "Past Papers", icon: <FileArchive size={36} />, color: "from-purple-500 to-purple-700", route: "/past-papers" },
-    { title: "Revision", icon: <Video size={36} />, color: "from-pink-500 to-pink-700", route: "/revision" },
+    { title: "Exams", icon: <BookOpen size={36} />, color: "from-purple-500 to-purple-700", route: "/exams" },
+    { title: "Past Papers", icon: <FileArchive size={36} />, color: "from-pink-500 to-pink-700", route: "/past-papers" },
+    { title: "Revision", icon: <Video size={36} />, color: "from-green-500 to-green-700", route: "/revision" },
   ];
 
   // Refs for card tilts
