@@ -220,6 +220,7 @@ const Register = () => {
         const loginRes = await api.loginUser({
           email: formData.email,
           password: formData.password,
+          recaptcha: recaptchaToken, // ✅ send this to backend too
         });
 
         const data = loginRes.data;
