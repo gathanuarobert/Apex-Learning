@@ -1,265 +1,281 @@
-// src/pages/Notes.jsx
-import React, { useEffect, useMemo, useState } from "react";
+// src/pages/ExamsPage.jsx
+import React, { useEffect, useState } from "react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
-import notesData from "./notesData";
-import { ArrowLeft, Wallet, Download, Search, X, Plus } from "lucide-react";
+import { ArrowLeft, Download, Search, X, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import api from "../Api";
 
-// ---- Import API ----
-import { initiateMpesaPayment } from "../Api"; // Adjust path if needed
-
-export default function Notes() {
+export default function ExamsPage() {
   const navigate = useNavigate();
-
-  const [walletBalance, setWalletBalance] = useState(() => {
-    const saved = localStorage.getItem("walletBalance");
-    return saved ? Number(saved) : 500;
-  });
-  useEffect(() => localStorage.setItem("walletBalance", String(walletBalance)), [walletBalance]);
-
-  const [showWallet, setShowWallet] = useState(false);
-  const [walletPhone, setWalletPhone] = useState("");
-  const [topUpAmount, setTopUpAmount] = useState("");
+  
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLevel, setSelectedLevel] = useState(null);
-  const [selectedGrade, setSelectedGrade] = useState(null);
   const [paymentModal, setPaymentModal] = useState(null);
   const [mpesaPhone, setMpesaPhone] = useState("");
+  const [walletBalance, setWalletBalance] = useState(0);
 
-  const particlesInit = async (engine) => { await loadSlim(engine); };
-  const particleOptions = {
-    background: { color: { value: "#0B1220" } },
-    fpsLimit: 60,
-    particles: {
-      number: { value: 55, density: { enable: true, area: 800 } },
-      color: { value: ["#FDE047", "#22D3EE", "#A78BFA"] },
-      opacity: { value: 0.25 },
-      size: { value: { min: 1, max: 3 } },
-      move: { enable: true, speed: 0.6, outModes: { default: "out" } },
-      links: { enable: true, distance: 130, opacity: 0.2 },
-    },
-    detectRetina: true,
-  };
-
-  const allItems = useMemo(() => {
-    const out = [];
-    Object.keys(notesData).forEach((level) => {
-      Object.keys(notesData[level]).forEach((grade) => {
-        const bucket = notesData[level][grade];
-        if (level === "University") {
-          (bucket || []).forEach((note) => out.push({ level, grade, note }));
-        } else {
-          if (bucket?.subjects) {
-            Object.keys(bucket.subjects).forEach((subject) => {
-              (bucket.subjects[subject].notes || []).forEach((note) => {
-                out.push({ level, grade, subject, note });
-              });
-            });
-          }
-        }
-      });
-    });
-    return out;
+  // Fetch exams from backend
+  useEffect(() => {
+    const fetchExams = async () => {
+      try {
+        const [examsRes, walletRes] = await Promise.all([
+          api.get("resources/exams/"),
+          api.get("payments/wallet/").catch(() => ({ data: { balance: 0 } }))
+        ]);
+        setExams(examsRes.data || []);
+        setWalletBalance(walletRes.data?.balance || 0);
+      } catch (error) {
+        console.error("Error fetching exams:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchExams();
   }, []);
 
-  const filteredItems = searchQuery.trim()
-    ? allItems.filter((i) =>
-      (i.note && i.note.toLowerCase().includes(searchQuery.trim().toLowerCase())) ||
-      (i.subject && i.subject.toLowerCase().includes(searchQuery.trim().toLowerCase())) ||
-      i.grade.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-      i.level.toLowerCase().includes(searchQuery.trim().toLowerCase())
-    )
-    : [];
+  // Filter exams based on search
+  const filteredExams = exams.filter(exam =>
+    exam.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    exam.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const currentNotes = useMemo(() => {
-    if (!selectedLevel || !selectedGrade) return [];
-    if (selectedLevel === "University") {
-      return (notesData[selectedLevel][selectedGrade] || []).map((n) => ({ note: n }));
+  // Payment handlers
+  const handleWalletPurchase = async (exam) => {
+    if (walletBalance < parseFloat(exam.price)) {
+      alert("Insufficient wallet balance. Please top up your wallet.");
+      return;
     }
-    const bucket = notesData[selectedLevel][selectedGrade];
-    if (!bucket?.subjects) return [];
-    const noteList = [];
-    Object.keys(bucket.subjects).forEach((subject) => {
-      (bucket.subjects[subject].notes || []).forEach((note) => {
-        noteList.push({ subject, note });
+
+    try {
+      const response = await api.post("payments/wallet/purchase/", {
+        resource_type: "exam",
+        resource_id: exam.id
       });
-    });
-    return noteList;
-  }, [selectedLevel, selectedGrade]);
 
-  // Wallet top-up
-  const handleTopUp = async (amount) => {
-    if (!amount || amount <= 0) return alert("Enter a valid amount.");
-    if (!/^(?:254|\+254|0)?7\d{8}$/.test(walletPhone.replace(/\s+/g, "")))
-      return alert("Enter a valid Safaricom phone (e.g., 2547XXXXXXXX).");
-
-    try {
-      let msisdn = walletPhone.replace(/\s+/g, "");
-      if (msisdn.startsWith("+")) msisdn = msisdn.slice(1);
-      if (msisdn.startsWith("0")) msisdn = "254" + msisdn.slice(1);
-      if (msisdn.startsWith("7")) msisdn = "254" + msisdn;
-
-      await initiateMpesaPayment(msisdn, Number(amount), "Wallet Top-up");
-      alert("M-Pesa STK Push sent. Complete payment on your phone.");
-      setWalletBalance((b) => b + Number(amount));
-      setTopUpAmount("");
-      setShowWallet(false);
-    } catch (e) {
-      console.error(e);
-      alert("Failed to initiate M-Pesa top-up. Try again.");
+      if (response.data.success) {
+        alert("Purchase successful!");
+        setWalletBalance(prev => prev - parseFloat(exam.price));
+        handleDownload(exam);
+        setPaymentModal(null);
+      }
+    } catch (error) {
+      console.error("Wallet purchase error:", error);
+      alert(error.response?.data?.error || "Purchase failed. Please try again.");
     }
   };
 
-  const payViaWallet = (price) => {
-    if (walletBalance < price) {
-      alert("Insufficient wallet balance. Top up via M-Pesa in your wallet.");
-      return false;
+  const handleMpesaPurchase = async (exam) => {
+    if (!mpesaPhone) {
+      alert("Please enter your M-Pesa phone number.");
+      return;
     }
-    setWalletBalance((b) => b - price);
-    alert(`Payment successful! KES ${price} deducted from wallet.`);
-    return true;
-  };
-
-  const payViaMpesa = async (price, noteTitle) => {
-    if (!/^(?:254|\+254|0)?7\d{8}$/.test(mpesaPhone.replace(/\s+/g, "")))
-      return alert("Enter a valid Safaricom phone (e.g., 2547XXXXXXXX).");
 
     try {
-      let msisdn = mpesaPhone.replace(/\s+/g, "");
-      if (msisdn.startsWith("+")) msisdn = msisdn.slice(1);
-      if (msisdn.startsWith("0")) msisdn = "254" + msisdn.slice(1);
-      if (msisdn.startsWith("7")) msisdn = "254" + msisdn;
+      const response = await api.post("payments/purchase/resource/initiate/", {
+        resource_type: "exam",
+        resource_id: exam.id,
+        phone_number: mpesaPhone
+      });
 
-      await initiateMpesaPayment(msisdn, Number(20), noteTitle); // default 20 KES per note
-      alert("Payment STK Push sent. Complete payment on your phone.");
+      alert("M-Pesa STK Push sent! Please complete payment on your phone.");
       setPaymentModal(null);
-    } catch (e) {
-      console.error(e);
-      alert("Failed to initiate M-Pesa payment. Try again.");
+    } catch (error) {
+      console.error("M-Pesa purchase error:", error);
+      alert(error.response?.data?.error || "Payment initiation failed. Please try again.");
     }
   };
 
-  const openPurchase = (title, meta = {}) => setPaymentModal({ title, meta });
+  const handleDownload = async (exam) => {
+    try {
+      const response = await api.get(`resources/exams/${exam.id}/download/`, {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${exam.title}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download error:", error);
+      alert(error.response?.data?.detail || "Download failed. Please try again.");
+    }
+  };
+
+  const particlesInit = async (engine) => {
+    await loadSlim(engine);
+  };
 
   return (
-    <div className="min-h-screen relative text-white">
-      <Particles id="tsparticles" init={particlesInit} options={particleOptions} className="absolute inset-0 -z-10" />
+    <div className="relative w-full min-h-screen text-white overflow-y-auto bg-slate-950">
+      {/* Background Particles */}
+      <Particles
+        id="tsparticles"
+        init={particlesInit}
+        className="absolute inset-0 -z-10"
+        options={{
+          background: { color: "#0B1220" },
+          fpsLimit: 60,
+          particles: {
+            number: { value: 55 },
+            color: { value: ["#FDE047", "#22D3EE", "#A78BFA"] },
+            opacity: { value: 0.25 },
+            size: { value: { min: 1, max: 3 } },
+            move: { enable: true, speed: 0.6 },
+          },
+        }}
+      />
 
-      {/* Top bar */}
-      <div className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <button
-          onClick={() => {
-            if (selectedGrade) setSelectedGrade(null);
-            else if (selectedLevel) setSelectedLevel(null);
-            else navigate("/user-dashboard");
-          }}
-          className="inline-flex items-center gap-2 hover:text-cyan-300 font-bold text-yellow-300"
-        >
-          <ArrowLeft size={20} /> Back
-        </button>
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <button
+              onClick={() => navigate("/user-dashboard")}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+            >
+              <ArrowLeft size={18} /> Back
+            </button>
 
-        <div className="flex-1 max-w-2xl mx-auto w-full">
-          <div className="flex items-center gap-3 bg-white/10 rounded-2xl px-4 py-3 ring-1 ring-white/15">
-            <Search className="shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search notes, subjects, grades, majors…"
-              className="w-full bg-transparent outline-none placeholder-yellow-300/80 text-white font-extrabold"
-            />
+            <div className="flex-1 max-w-md">
+              <div className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-2">
+                <Search size={18} className="text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search exams..."
+                  className="w-full bg-transparent focus:outline-none text-white"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate("/wallet")}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-black font-semibold transition-colors"
+            >
+              <Wallet size={18} /> KSh {walletBalance.toFixed(2)}
+            </button>
           </div>
         </div>
-
-        <button
-          onClick={() => setShowWallet(true)}
-          className="flex items-center gap-2 bg-yellow-400 text-black font-extrabold px-4 py-2 rounded-full hover:bg-yellow-300"
-        >
-          <Wallet size={18} /> {walletBalance} KES
-        </button>
       </div>
 
-      {/* Render search results or current notes */}
-      {searchQuery ? (
-        <div className="px-6 pb-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.length > 0 ? (
-            filteredItems.map((item, idx) => (
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">Available Exams</h1>
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
+            <p className="mt-4 text-slate-400">Loading exams...</p>
+          </div>
+        ) : filteredExams.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-slate-400 text-lg">
+              {searchQuery ? "No exams found matching your search." : "No exams available yet."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredExams.map((exam) => (
               <div
-                key={`${item.level}-${item.grade}-${item.subject}-${item.note}-${idx}`}
-                className="bg-gradient-to-br from-fuchsia-700 to-indigo-800 p-6 rounded-2xl shadow-lg hover:scale-[1.02] transition relative overflow-hidden"
+                key={exam.id}
+                className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-violet-500 transition-all hover:shadow-lg hover:shadow-violet-500/20"
               >
-                <h3 className="text-lg font-extrabold text-yellow-300 mb-1">{item.note}</h3>
-                <p className="text-sm mb-4 font-bold text-white/90">
-                  {item.level} • {item.grade} {item.subject && `• ${item.subject}`}
-                </p>
+                <h2 className="text-xl font-bold mb-2 text-violet-400">{exam.title}</h2>
+                {exam.description && (
+                  <p className="text-slate-400 text-sm mb-3 line-clamp-2">{exam.description}</p>
+                )}
+                {exam.date && (
+                  <p className="text-slate-500 text-xs mb-4">
+                    Exam Date: {new Date(exam.date).toLocaleDateString()}
+                  </p>
+                )}
+                
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-2xl font-bold text-yellow-400">
+                    KSh {parseFloat(exam.price || 0).toFixed(2)}
+                  </span>
+                  {parseFloat(exam.price) === 0 && (
+                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">FREE</span>
+                  )}
+                </div>
+
                 <button
-                  onClick={() => openPurchase(item.note, { level: item.level, grade: item.grade })}
-                  className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded font-extrabold"
+                  onClick={() => {
+                    if (parseFloat(exam.price) === 0) {
+                      handleDownload(exam);
+                    } else {
+                      setPaymentModal(exam);
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-violet-600 hover:bg-violet-700 transition-colors font-semibold"
                 >
-                  <Download size={18} /> Buy & Download
+                  <Download size={18} />
+                  {parseFloat(exam.price) === 0 ? "Download Free" : "Purchase & Download"}
                 </button>
               </div>
-            ))
-          ) : (
-            <p className="px-2 font-extrabold text-yellow-300">No matches found.</p>
-          )}
-        </div>
-      ) : (
-        <div className="px-6 pb-12">
-          {/* Level selection */}
-          {!selectedLevel && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.keys(notesData).map((level) => (
-                <div
-                  key={level}
-                  onClick={() => setSelectedLevel(level)}
-                  className="bg-gradient-to-br from-cyan-700 to-teal-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] cursor-pointer transition"
-                >
-                  <h3 className="text-2xl font-extrabold text-white">{level}</h3>
-                </div>
-              ))}
-            </div>
-          )}
+            ))}
+          </div>
+        )}
+      </div>
 
-          {/* Grade/Form/Major selection */}
-          {selectedLevel && !selectedGrade && (
-            <div>
-              <p className="mb-3 font-extrabold text-yellow-300">Select a grade/form/major</p>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.keys(notesData[selectedLevel]).map((grade) => (
-                  <div
-                    key={grade}
-                    onClick={() => setSelectedGrade(grade)}
-                    className="bg-gradient-to-br from-violet-700 to-rose-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] cursor-pointer transition"
-                  >
-                    <h3 className="text-xl font-extrabold">{grade}</h3>
-                  </div>
-                ))}
+      {/* Payment Modal */}
+      {paymentModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Purchase Exam</h2>
+              <button onClick={() => setPaymentModal(null)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-violet-400">{paymentModal.title}</h3>
+              <p className="text-2xl font-bold text-yellow-400 mt-2">
+                KSh {parseFloat(paymentModal.price).toFixed(2)}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => handleWalletPurchase(paymentModal)}
+                className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-semibold transition-colors"
+              >
+                Pay with Wallet (KSh {walletBalance.toFixed(2)})
+              </button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-700"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-slate-900 text-slate-400">OR</span>
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Notes list */}
-          {selectedLevel && selectedGrade && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {currentNotes.map(({ subject, note }, i) => (
-                <div
-                  key={`${subject}-${note}-${i}`}
-                  className="bg-gradient-to-br from-emerald-700 to-lime-700 p-6 rounded-2xl shadow-lg hover:scale-[1.02] transition relative overflow-hidden"
-                >
-                  <h3 className="text-lg font-extrabold text-white mb-3">{note}</h3>
-                  {subject && <p className="text-sm mb-4 font-bold text-white/90">{subject}</p>}
-                  <button
-                    onClick={() => openPurchase(note, { level: selectedLevel, grade: selectedGrade, subject })}
-                    className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded font-extrabold"
-                  >
-                    <Download size={18} /> Buy & Download
-                  </button>
-                </div>
-              ))}
+              <input
+                type="tel"
+                placeholder="M-Pesa Phone (254XXXXXXXXX)"
+                value={mpesaPhone}
+                onChange={(e) => setMpesaPhone(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-violet-500 focus:outline-none"
+              />
+
+              <button
+                onClick={() => handleMpesaPurchase(paymentModal)}
+                className="w-full bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-colors"
+              >
+                Pay with M-Pesa
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
