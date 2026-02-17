@@ -18,6 +18,7 @@ import ExamsPage from './pages/ExamsPage'
 import PastPapersPage from './pages/PastPapersPage'
 import ForgotPassword from './pages/ForgotPaasword'
 import RevisionPage from './pages/RevisionPage'
+import NewsPage from './pages/NewsPage'
 // const useAuthCheck = () => {
 //   useEffect(() => {
 //     const checkToken = async () => {
@@ -54,6 +55,7 @@ function App() {
         <Route path="/past-papers" element={<PastPapersPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/revision" element={<RevisionPage />} />
+        <Route path="/news" element={<NewsPage />} />
         {/* Add more routes as needed */}
       </Routes>
   
