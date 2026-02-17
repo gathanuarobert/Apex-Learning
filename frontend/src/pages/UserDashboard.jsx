@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Menu,
   Wallet,
   FileText,
   BookOpen,
@@ -13,10 +12,12 @@ import {
   User,
   Download,
   LogOut,
+  X,
+  Home,
 } from "lucide-react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
-import Api, { getCurrentUser, getLibrary } from "../Api"; // import API
+import api, { getCurrentUser, getLibrary } from "../Api";
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -26,53 +27,94 @@ export default function UserDashboard() {
 
   // Wallet modal
   const [walletOpen, setWalletOpen] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(500);
+  const [walletBalance, setWalletBalance] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [txSearch, setTxSearch] = useState("");
 
-  // Tabs
+  // Top-up state
+  const [topUpPhone, setTopUpPhone] = useState("");
+  const [topUpAmount, setTopUpAmount] = useState("");
+  const [topUpLoading, setTopUpLoading] = useState(false);
+  const [showTopUp, setShowTopUp] = useState(false);
+
+  // User info
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Tabs — track previous tab so closing wallet restores it
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [prevTab, setPrevTab] = useState("dashboard");
   const [downloads, setDownloads] = useState([]);
   const [dlSearch, setDlSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
   // Cards
   const cards = [
     { title: "Notes", icon: <FileText size={36} />, color: "from-blue-500 to-blue-700", route: "/notes" },
     { title: "Exams", icon: <BookOpen size={36} />, color: "from-purple-500 to-purple-700", route: "/exams" },
     { title: "Past Papers", icon: <FileArchive size={36} />, color: "from-pink-500 to-pink-700", route: "/past-papers" },
-    { title: "Revision", icon: <Video size={36} />, color: "from-green-500 to-green-700", route: "/revision" },
+    { title: "News", icon: <Video size={36} />, color: "from-green-500 to-green-700", route: "/news" },
   ];
 
-  // Refs for card tilts
   const cardRefs = useRef(cards.map(() => React.createRef()));
 
-  // Sidebar navigation
+  // Helper: open wallet without losing current tab
+  const openWallet = () => {
+    setPrevTab(activeTab);
+    setWalletOpen(true);
+  };
+
+  // Helper: close wallet and restore previous tab
+  const closeWallet = () => {
+    setWalletOpen(false);
+  };
+
+  // Desktop sidebar navigation
   const navItems = [
-    { icon: Wallet, label: "Wallet", onClick: () => { setWalletOpen(true); setActiveTab("wallet"); } },
-    { icon: User, label: "Credentials", onClick: () => setActiveTab("credentials") },
-    { icon: Download, label: "Library", onClick: () => setActiveTab("downloads") },
+    { icon: Home, label: "dashboard", onClick: () => setActiveTab("dashboard") },
+    { icon: Wallet, label: "wallet", onClick: openWallet },
+    { icon: User, label: "credentials", onClick: () => setActiveTab("credentials") },
+    { icon: Download, label: "library", onClick: () => setActiveTab("downloads") },
     ...cards.map((card) => ({
       icon: () => card.icon,
       label: card.title.toLowerCase(),
-      onClick: () => { navigate(card.route); setActiveTab(card.title.toLowerCase()); },
+      onClick: () => navigate(card.route),
     })),
-    { icon: LogOut, label: "logout", onClick: () => { alert("Logging out..."); navigate("/login"); } },
+    {
+      icon: LogOut, label: "logout", onClick: () => {
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
+        navigate("/login");
+      }
+    },
+  ];
+
+  // Mobile bottom nav items (condensed)
+  const mobileNavItems = [
+    { icon: Home, label: "dashboard", onClick: () => setActiveTab("dashboard") },
+    { icon: User, label: "credentials", onClick: () => setActiveTab("credentials") },
+    { icon: Download, label: "library", onClick: () => setActiveTab("downloads") },
+    { icon: Wallet, label: "wallet", onClick: openWallet },
+    {
+      icon: LogOut, label: "logout", onClick: () => {
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
+        navigate("/login");
+      }
+    },
   ];
 
   const navRefs = useRef([]);
   const indicatorRef = useRef(null);
 
-  // Handle sidebar indicator
   useEffect(() => {
     const activeIndex = navItems.findIndex(item => item.label === activeTab);
     const activeElement = navRefs.current[activeIndex];
-    if(activeElement && indicatorRef.current){
+    if (activeElement && indicatorRef.current) {
       indicatorRef.current.style.top = activeElement.offsetTop + "px";
       indicatorRef.current.style.height = activeElement.offsetHeight + "px";
     }
   }, [activeTab, sidebarOpen]);
 
-  // Particles
   const particlesInit = async (engine) => { await loadSlim(engine); };
 
   // Card tilt handlers
@@ -87,38 +129,169 @@ export default function UserDashboard() {
     const rotateY = ((x - centerX) / centerX) * 10;
     card.style.transform = `rotateX(${-rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
   };
-  const handleMouseLeave = (cardRef) => { cardRef.current.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)"; };
+  const handleMouseLeave = (cardRef) => {
+    cardRef.current.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
+  };
 
-  // Filters
-  const filteredTransactions = transactions.filter(tx =>
-    tx.date.includes(txSearch) || tx.description.toLowerCase().includes(txSearch.toLowerCase()) || tx.amount.includes(txSearch)
-  );
-  const filteredDownloads = downloads.filter(dl =>
-    dl.date.includes(dlSearch) || dl.item.toLowerCase().includes(dlSearch.toLowerCase()) || dl.type.toLowerCase().includes(dlSearch.toLowerCase())
-  );
-
-  // ---------------------- LIVE DATA FETCH ----------------------
-  const fetchUserData = async () => {
+  // ---------------------- FETCH WALLET BALANCE ----------------------
+  const fetchWalletBalance = async () => {
     try {
-      const token = localStorage.getItem("token"); // assuming token stored here
-      const userRes = await getCurrentUser(token);
-      if(userRes.data.wallet) setWalletBalance(userRes.data.wallet.balance || 0);
-      if(userRes.data.transactions) setTransactions(userRes.data.transactions.reverse());
-      
-      const libraryRes = await getLibrary();
-      if(libraryRes.data) setDownloads(libraryRes.data.reverse());
-    } catch(err) {
-      console.error("Failed to fetch user data:", err);
+      const res = await api.get("payments/wallet/");
+      setWalletBalance(parseFloat(res.data.balance || 0));
+    } catch (err) {
+      console.error("Failed to fetch wallet balance:", err);
+      setWalletBalance(0);
     }
   };
 
+  // ---------------------- FETCH TRANSACTIONS ----------------------
+  const fetchTransactions = async () => {
+    try {
+      const res = await api.get("payments/transactions/");
+      const mapped = (res.data || []).map(tx => ({
+        id: tx.id,
+        date: new Date(tx.created_at).toLocaleDateString(),
+        description: tx.transaction_type === "deposit" ? "Wallet Top-up" : `Purchase - ${tx.resource_type || "Resource"}`,
+        amount: tx.transaction_type === "deposit"
+          ? `+KSh ${parseFloat(tx.amount).toFixed(2)}`
+          : `-KSh ${parseFloat(tx.amount).toFixed(2)}`,
+        type: tx.transaction_type,
+      }));
+      setTransactions(mapped.reverse());
+    } catch (err) {
+      console.error("Failed to fetch transactions:", err);
+      setTransactions([]);
+    }
+  };
+
+  // ---------------------- FETCH LIBRARY/DOWNLOADS ----------------------
+  const fetchLibrary = async () => {
+    try {
+      const res = await getLibrary();
+      const mapped = (res.data || []).map(item => ({
+        id: item.transaction_id,
+        date: new Date(item.purchased_on).toLocaleDateString(),
+        item: item.title || "Unknown Resource",
+        type: item.resource_type || "Resource",
+        download_url: item.download_url,
+        resource_id: item.resource_id,
+        resource_type: item.resource_type,
+      }));
+      setDownloads(mapped);
+    } catch (err) {
+      console.error("Failed to fetch library:", err);
+      setDownloads([]);
+    }
+  };
+
+  // ---------------------- FETCH USER INFO ----------------------
+  const fetchUserInfo = async () => {
+    try {
+      const res = await getCurrentUser();
+      setCurrentUser(res.data);
+    } catch (err) {
+      console.error("Failed to fetch user info:", err);
+    }
+  };
+
+  // ---------------------- FETCH ALL DATA ----------------------
+  const fetchAllData = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchWalletBalance(),
+      fetchTransactions(),
+      fetchLibrary(),
+      fetchUserInfo(),
+    ]);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    fetchUserData(); // fetch once on mount
-    const interval = setInterval(fetchUserData, 300000); // refresh every 300s
+    fetchAllData();
+    const interval = setInterval(() => {
+      fetchWalletBalance();
+      fetchTransactions();
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // --------------------------------------------------------------
+  // ---------------------- WALLET TOP-UP (M-Pesa) ----------------------
+  const handleTopUp = async () => {
+    if (!topUpPhone || !topUpAmount) {
+      alert("Please enter phone number and amount.");
+      return;
+    }
+    if (parseFloat(topUpAmount) <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+
+    setTopUpLoading(true);
+    try {
+      await api.post("payments/wallet/deposit/initiate/", {
+        phone_number: topUpPhone,
+        amount: topUpAmount,
+      });
+      alert("M-Pesa STK Push sent! Complete payment on your phone. Balance will update shortly.");
+      setShowTopUp(false);
+      setTopUpPhone("");
+      setTopUpAmount("");
+
+      setTimeout(() => {
+        fetchWalletBalance();
+        fetchTransactions();
+      }, 10000);
+    } catch (err) {
+      console.error("Top-up failed:", err);
+      alert(err.response?.data?.error || "Top-up failed. Please try again.");
+    } finally {
+      setTopUpLoading(false);
+    }
+  };
+
+  // ---------------------- DOWNLOAD RESOURCE ----------------------
+  const handleDownload = async (item) => {
+    try {
+      const typeMap = {
+        "Note": "notes",
+        "Exam": "exams",
+        "PastPaper": "past-papers",
+      };
+      const endpoint = typeMap[item.resource_type] || "notes";
+
+      const response = await api.get(`resources/${endpoint}/${item.resource_id}/download/`, {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${item.item}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+      alert(err.response?.data?.detail || "Download failed. Please try again.");
+    }
+  };
+
+  // ---------------------- FILTERS ----------------------
+  const filteredTransactions = transactions.filter(tx =>
+    tx.date?.includes(txSearch) ||
+    tx.description?.toLowerCase().includes(txSearch.toLowerCase()) ||
+    tx.amount?.includes(txSearch)
+  );
+
+  const filteredDownloads = downloads.filter(dl =>
+    dl.date?.includes(dlSearch) ||
+    dl.item?.toLowerCase().includes(dlSearch.toLowerCase()) ||
+    dl.type?.toLowerCase().includes(dlSearch.toLowerCase())
+  );
+
+  // Determine what content to show (wallet open doesn't change activeTab anymore)
+  const visibleTab = activeTab;
 
   return (
     <div className="relative min-h-screen flex text-white bg-gray-900 overflow-hidden">
@@ -141,38 +314,44 @@ export default function UserDashboard() {
         className="absolute inset-0 -z-10"
       />
 
-      {/* Sidebar */}
+      {/* ======================== DESKTOP SIDEBAR ======================== */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-gradient-to-b from-gray-800/80 via-gray-900/80 to-gray-800/80 backdrop-blur-md border-r border-gray-700 shadow-lg z-20 transform transition-all duration-300 ${
-          sidebarOpen ? "translate-x-0 w-64" : "w-20"
-        }`}
+        className={`hidden md:flex fixed top-0 left-0 h-full bg-gradient-to-b from-gray-800/80 via-gray-900/80 to-gray-800/80 backdrop-blur-md border-r border-gray-700 shadow-lg z-20 flex-col transform transition-all duration-300 ${sidebarOpen ? "w-64" : "w-20"}`}
       >
-        <div className="p-4 flex items-center justify-between border-b border-gray-700 sticky top-0 bg-gradient-to-b from-gray-800/90 via-gray-900/90 to-gray-800/90 z-10">
-          <h1 className={`text-lg font-bold tracking-wide transition-all duration-300 ${sidebarOpen ? "block" : "hidden"}`}>Apex Learning</h1>
-          <button className="text-white p-1 hover:bg-gray-700 rounded transition" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        {/* Sidebar Header */}
+        <div className="p-4 flex items-center justify-between border-b border-gray-700 sticky top-0 bg-gradient-to-b from-gray-800/90 to-gray-900/90 z-10">
+          <h1 className={`text-lg font-bold tracking-wide transition-all duration-300 ${sidebarOpen ? "block" : "hidden"}`}>
+            Apex Learning
+          </h1>
+          <button
+            className="text-white p-1 hover:bg-gray-700 rounded transition"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
             {sidebarOpen ? "◀" : "▶"}
           </button>
         </div>
 
-        <div ref={indicatorRef} className="absolute left-0 w-1 bg-gradient-to-b from-blue-400 to-purple-500 rounded transition-all duration-300"></div>
+        <div ref={indicatorRef} className="absolute left-0 w-1 bg-gradient-to-b from-blue-400 to-purple-500 rounded transition-all duration-300" />
 
         <nav className="mt-6 flex flex-col gap-2 relative px-2">
           {navItems.map((item, idx) => {
             const IconComponent = item.icon;
-            const isActive = activeTab === item.label;
+            const isActive = visibleTab === item.label;
             return (
               <div key={idx} ref={el => navRefs.current[idx] = el} className="group relative">
                 <button
-                  className={`flex items-center gap-4 p-3 rounded-lg w-full transition-all transform hover:scale-105 ${
-                    isActive ? "bg-gray-700/60 shadow-lg animate-pulse" : "hover:bg-gray-700/50"
-                  }`}
+                  className={`flex items-center gap-4 p-3 rounded-lg w-full transition-all transform hover:scale-105 ${isActive ? "bg-gray-700/60 shadow-lg" : "hover:bg-gray-700/50"}`}
                   onClick={item.onClick}
                 >
-                  <IconComponent size={20} className={`${isActive ? "text-white" : "text-gray-300"} transition-all duration-300 group-hover:animate-bounce`} />
-                  {sidebarOpen && <span className={`${isActive ? "text-white font-semibold" : "text-gray-300"} transition`}>{item.label}</span>}
+                  <IconComponent size={20} className={`${isActive ? "text-white" : "text-gray-300"} transition-all duration-300`} />
+                  {sidebarOpen && (
+                    <span className={`${isActive ? "text-white font-semibold" : "text-gray-300"} capitalize transition`}>
+                      {item.label}
+                    </span>
+                  )}
                 </button>
                 {!sidebarOpen && (
-                  <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800/90 px-3 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg z-50">
+                  <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-gray-800/90 px-3 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg z-50 capitalize">
                     {item.label}
                   </span>
                 )}
@@ -182,133 +361,323 @@ export default function UserDashboard() {
         </nav>
       </aside>
 
-      {/* Mobile menu */}
-      <button onClick={() => setSidebarOpen(true)} className="fixed top-4 left-4 p-2 bg-gray-700 rounded-full shadow-md md:hidden z-30">
-        <Menu size={20} />
-      </button>
+      {/* ======================== MOBILE TOP BAR ======================== */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 bg-gray-900/90 backdrop-blur-md border-b border-gray-700/60 shadow-lg">
+        <h1 className="text-base font-bold tracking-wide text-white">Apex Learning</h1>
 
-      {/* Wallet Button */}
+        {/* Wallet pill — visible on mobile top bar */}
+        <button
+          onClick={openWallet}
+          className="flex items-center gap-1.5 bg-green-600/90 hover:bg-green-500 px-3 py-1.5 rounded-full text-sm font-semibold shadow transition-all active:scale-95"
+        >
+          <Wallet size={15} />
+          {walletBalance === null ? (
+            <span className="text-xs">...</span>
+          ) : (
+            <span>KSh {parseFloat(walletBalance).toFixed(2)}</span>
+          )}
+        </button>
+      </header>
+
+      {/* ======================== DESKTOP WALLET BUTTON ======================== */}
       <button
-        onClick={() => { setWalletOpen(true); setActiveTab("wallet"); }}
-        className="fixed top-4 right-4 p-2 bg-green-500 hover:bg-green-600 rounded-full shadow-lg z-30 flex items-center gap-2 transition-transform transform hover:scale-110 hover:shadow-2xl"
+        onClick={openWallet}
+        className="hidden md:flex fixed top-4 right-4 p-2 bg-green-500 hover:bg-green-600 rounded-full shadow-lg z-30 items-center gap-2 transition-transform transform hover:scale-110"
       >
-        <Wallet size={18} /> {walletBalance} KES
+        <Wallet size={18} />
+        {walletBalance === null ? (
+          <span className="text-xs">Loading...</span>
+        ) : (
+          <span>KSh {parseFloat(walletBalance).toFixed(2)}</span>
+        )}
       </button>
 
-      {/* Main Content */}
-      <main className={`flex-1 p-6 overflow-y-auto max-h-screen transition-all duration-300 ${sidebarOpen ? "md:ml-64" : "md:ml-20"}`}>
+      {/* ======================== MAIN CONTENT ======================== */}
+      <main
+        className={`
+          flex-1 overflow-y-auto max-h-screen transition-all duration-300
+          /* desktop: respect sidebar width */
+          md:ml-20 
+          ${sidebarOpen ? "md:ml-64" : "md:ml-20"}
+          /* mobile: full width, padded top for topbar, bottom for bottom nav */
+          pt-16 pb-24 md:pt-6 md:pb-6 px-4 md:px-6
+        `}
+      >
+
         {/* Dashboard */}
-        {activeTab === "dashboard" && (
-          <div className={`grid gap-6 ${sidebarOpen ? "sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2" : "sm:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1"}`}>
-            {cards.map((card, idx) => (
-              <div
-                key={idx}
-                ref={cardRefs.current[idx]}
-                className={`bg-gradient-to-br ${card.color} p-10 rounded-2xl shadow-2xl cursor-pointer transform transition duration-500 relative overflow-hidden animate-float`}
-                onClick={() => navigate(card.route)}
-                onMouseMove={(e) => handleMouseMove(e, cardRefs.current[idx])}
-                onMouseLeave={() => handleMouseLeave(cardRefs.current[idx])}
-              >
-                <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-20 transition"></div>
-                <div className="mb-4">{card.icon}</div>
-                <h3 className="text-2xl font-semibold shimmer">{card.title}</h3>
-              </div>
-            ))}
+        {visibleTab === "dashboard" && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-white">
+                Welcome back{currentUser ? `, ${currentUser.email?.split("@")[0]}` : ""}! 👋
+              </h2>
+              <p className="text-slate-400 mt-1 text-sm md:text-base">What would you like to study today?</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-2">
+              {cards.map((card, idx) => (
+                <div
+                  key={idx}
+                  ref={cardRefs.current[idx]}
+                  className={`bg-gradient-to-br ${card.color} p-6 md:p-10 rounded-2xl shadow-2xl cursor-pointer transform transition duration-300 md:duration-500 relative overflow-hidden active:scale-95 md:active:scale-100`}
+                  onClick={() => navigate(card.route)}
+                  onMouseMove={(e) => handleMouseMove(e, cardRefs.current[idx])}
+                  onMouseLeave={() => handleMouseLeave(cardRefs.current[idx])}
+                >
+                  <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-20 transition" />
+                  <div className="mb-3 md:mb-4 [&>svg]:w-7 [&>svg]:h-7 md:[&>svg]:w-9 md:[&>svg]:h-9">{card.icon}</div>
+                  <h3 className="text-lg md:text-2xl font-semibold">{card.title}</h3>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Credentials */}
-        {activeTab === "credentials" && (
-          <div className="max-w-xl mx-auto bg-gray-800 p-6 rounded-xl shadow-lg transition-opacity duration-500 hover:shadow-2xl hover:scale-105">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><User /> Credentials</h2>
-            <form className="space-y-4">
-              <div>
-                <label className="block mb-1">Email</label>
-                <input type="email" className="w-full p-2 rounded bg-gray-700 text-white" placeholder="user@example.com" />
+        {visibleTab === "credentials" && (
+          <div className="max-w-xl mx-auto bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
+              <User size={20} /> My Account
+            </h2>
+            {currentUser ? (
+              <div className="space-y-3">
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <p className="text-slate-400 text-sm">Email</p>
+                  <p className="text-white font-semibold break-all">{currentUser.email}</p>
+                </div>
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <p className="text-slate-400 text-sm">Role</p>
+                  <p className="text-white font-semibold capitalize">{currentUser.role || "User"}</p>
+                </div>
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <p className="text-slate-400 text-sm">Member Since</p>
+                  <p className="text-white font-semibold">
+                    {currentUser.date_joined ? new Date(currentUser.date_joined).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="block mb-1">Password</label>
-                <input type="password" className="w-full p-2 rounded bg-gray-700 text-white" placeholder="••••••••" />
-              </div>
-              <button type="submit" className="bg-blue-500 hover:bg-blue-600 w-full p-2 rounded transition hover:scale-105">Update Credentials</button>
-            </form>
+            ) : (
+              <p className="text-slate-400">Loading user info...</p>
+            )}
           </div>
         )}
 
-        {/* Downloads */}
-        {activeTab === "downloads" && (
-          <div className="max-w-3xl mx-auto bg-gray-800 p-6 rounded-xl shadow-lg transition-opacity duration-500">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Download /> Download History</h2>
+        {/* Downloads Library */}
+        {visibleTab === "downloads" && (
+          <div className="max-w-3xl mx-auto bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
+              <Download size={20} /> My Library
+            </h2>
             <input
               type="text"
               placeholder="Search downloads..."
               value={dlSearch}
               onChange={(e) => setDlSearch(e.target.value)}
-              className="mb-4 w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400"
+              className="mb-4 w-full p-2.5 rounded bg-gray-700 text-white placeholder-gray-400 text-sm"
             />
-            <ul className="space-y-2 max-h-96 overflow-y-auto">
-              {filteredDownloads.map((dl, idx) => (
-                <li key={idx} className="bg-gray-700 p-3 rounded flex justify-between hover:bg-gray-600 transition-transform transform hover:scale-105">
-                  <span>{dl.date} - {dl.item}</span>
-                  <span className="text-green-400">{dl.type}</span>
-                </li>
-              ))}
-            </ul>
+            {filteredDownloads.length === 0 ? (
+              <p className="text-slate-400 text-center py-8 text-sm">
+                No downloads yet. Purchase resources to access them here.
+              </p>
+            ) : (
+              <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {filteredDownloads.map((dl, idx) => (
+                  <li key={idx} className="bg-gray-700 p-3 rounded flex justify-between items-center hover:bg-gray-600 transition">
+                    <div className="min-w-0 mr-3">
+                      <p className="font-semibold text-sm truncate">{dl.item}</p>
+                      <p className="text-xs text-slate-400">{dl.date} • {dl.type}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDownload(dl)}
+                      className="flex-shrink-0 flex items-center gap-1 bg-cyan-600 hover:bg-cyan-700 px-3 py-1.5 rounded text-sm transition active:scale-95"
+                    >
+                      <Download size={13} /> Download
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </main>
 
-      {/* Wallet Modal */}
+      {/* ======================== MOBILE BOTTOM NAV ======================== */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around bg-gray-900/95 backdrop-blur-md border-t border-gray-700/60 shadow-2xl px-2 py-2 safe-area-bottom">
+        {mobileNavItems.map((item, idx) => {
+          const IconComponent = item.icon;
+          const isActive = visibleTab === item.label;
+          const isLogout = item.label === "logout";
+          return (
+            <button
+              key={idx}
+              onClick={item.onClick}
+              className={`
+                flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all active:scale-90
+                ${isActive
+                  ? "text-white bg-gray-700/70"
+                  : isLogout
+                    ? "text-red-400/80 hover:text-red-400"
+                    : "text-gray-400 hover:text-gray-200"
+                }
+              `}
+            >
+              <IconComponent size={20} />
+              <span className={`text-[10px] font-medium capitalize leading-none ${isActive ? "text-white" : ""}`}>
+                {item.label}
+              </span>
+              {isActive && (
+                <span className="absolute bottom-1 w-1 h-1 rounded-full bg-gradient-to-r from-blue-400 to-purple-500" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* ======================== WALLET MODAL ======================== */}
       {walletOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 p-6 rounded-xl shadow-xl w-96 max-h-[90vh] overflow-y-auto transform scale-90 animate-[scaleUp_0.3s_ease-in-out] hover:scale-105 transition-shadow shadow-2xl">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Wallet /> Wallet</h2>
-            <p className="mb-4">💰 Balance: <span className="font-bold">KES {walletBalance}</span></p>
-            <button
-              onClick={() => alert("Top-up logic via Mpesa API")}
-              className="flex items-center gap-2 bg-green-500 w-full p-2 rounded hover:bg-green-600 mb-4 transition-transform transform hover:scale-105 hover:shadow-xl"
-            >
-              <Plus size={18} /> Top Up
-            </button>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) closeWallet(); }}
+        >
+          {/* Bottom sheet on mobile, centered modal on desktop */}
+          <div className="
+            bg-gray-900 border border-gray-700 shadow-2xl w-full overflow-y-auto
+            rounded-t-3xl max-h-[90vh] md:rounded-2xl md:max-w-md md:max-h-[90vh]
+            animate-slide-up md:animate-none
+          ">
+            {/* Drag handle — mobile only */}
+            <div className="flex justify-center pt-3 pb-1 md:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
 
-            <input
-              type="text"
-              placeholder="Search transactions..."
-              value={txSearch}
-              onChange={(e) => setTxSearch(e.target.value)}
-              className="mb-4 w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400"
-            />
+            <div className="p-5 md:p-6">
+              {/* Header */}
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Wallet size={20} /> My Wallet
+                </h2>
+                <button
+                  onClick={closeWallet}
+                  className="text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-gray-700 transition active:scale-90"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-            <h3 className="text-md font-semibold mb-2 flex items-center gap-2"><History size={18} /> Transaction History</h3>
-            <ul className="space-y-2 max-h-96 overflow-y-auto">
-              {filteredTransactions.map((tx, idx) => (
-                <li key={idx} className="bg-gray-700 p-2 rounded flex justify-between hover:bg-gray-600 transition-transform transform hover:scale-105">
-                  <span>{tx.date} - {tx.description}</span>
-                  <span className={tx.amount.startsWith("+") ? "text-green-400" : "text-red-400"}>
-                    {tx.amount}
-                  </span>
-                </li>
-              ))}
-            </ul>
+              {/* Balance */}
+              <div className="bg-gradient-to-r from-green-600 to-emerald-700 rounded-2xl p-5 mb-5 text-center">
+                <p className="text-sm text-green-100 mb-1">Available Balance</p>
+                <p className="text-4xl font-bold text-white">
+                  {walletBalance === null ? (
+                    <span className="text-2xl">Loading...</span>
+                  ) : (
+                    `KSh ${parseFloat(walletBalance).toFixed(2)}`
+                  )}
+                </p>
+                <button
+                  onClick={fetchWalletBalance}
+                  className="mt-2 text-xs text-green-200 hover:text-white underline"
+                >
+                  Refresh balance
+                </button>
+              </div>
 
-            <button
-              onClick={() => setWalletOpen(false)}
-              className="mt-4 w-full p-2 bg-red-500 rounded hover:bg-red-600 transition-transform transform hover:scale-105"
-            >
-              Close
-            </button>
+              {/* Top Up Section */}
+              {showTopUp ? (
+                <div className="bg-gray-800 rounded-xl p-4 mb-5 space-y-3">
+                  <h3 className="font-semibold text-cyan-400">Top Up via M-Pesa</h3>
+                  <input
+                    type="tel"
+                    placeholder="Phone Number (254XXXXXXXXX)"
+                    value={topUpPhone}
+                    onChange={(e) => setTopUpPhone(e.target.value)}
+                    className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-cyan-500 focus:outline-none text-sm"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Amount (KSh)"
+                    value={topUpAmount}
+                    onChange={(e) => setTopUpAmount(e.target.value)}
+                    min="1"
+                    className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-cyan-500 focus:outline-none text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleTopUp}
+                      disabled={topUpLoading}
+                      className="flex-1 bg-green-600 hover:bg-green-700 p-3 rounded-lg font-semibold transition disabled:opacity-50 text-sm active:scale-95"
+                    >
+                      {topUpLoading ? "Sending..." : "Send STK Push"}
+                    </button>
+                    <button
+                      onClick={() => setShowTopUp(false)}
+                      className="flex-1 bg-gray-700 hover:bg-gray-600 p-3 rounded-lg transition text-sm active:scale-95"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowTopUp(true)}
+                  className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 w-full p-3 rounded-xl mb-5 transition font-semibold text-sm active:scale-95"
+                >
+                  <Plus size={18} /> Top Up via M-Pesa
+                </button>
+              )}
+
+              {/* Transaction History */}
+              <div>
+                <h3 className="text-md font-semibold mb-3 flex items-center gap-2">
+                  <History size={18} /> Transaction History
+                </h3>
+                <input
+                  type="text"
+                  placeholder="Search transactions..."
+                  value={txSearch}
+                  onChange={(e) => setTxSearch(e.target.value)}
+                  className="mb-3 w-full p-2.5 rounded bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 text-sm"
+                />
+
+                {filteredTransactions.length === 0 ? (
+                  <p className="text-slate-400 text-center py-4 text-sm">No transactions yet.</p>
+                ) : (
+                  <ul className="space-y-2 max-h-52 overflow-y-auto">
+                    {filteredTransactions.map((tx, idx) => (
+                      <li key={idx} className="bg-gray-800 border border-gray-700 p-3 rounded-lg flex justify-between items-center hover:bg-gray-700 transition">
+                        <div>
+                          <p className="text-sm font-semibold">{tx.description}</p>
+                          <p className="text-xs text-slate-400">{tx.date}</p>
+                        </div>
+                        <span className={`font-bold text-sm ${tx.type === "deposit" ? "text-green-400" : "text-red-400"}`}>
+                          {tx.amount}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       <style>{`
-        @keyframes scaleUp { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0px); } }
+        @keyframes float {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-6px); }
+          100% { transform: translateY(0px); }
+        }
         .animate-float { animation: float 3s ease-in-out infinite; }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .shimmer { background: linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.2) 100%); background-size: 200% 100%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer 2.5s infinite; }
-        @keyframes slideIn { 0% { opacity: 0; transform: translateX(-30px); } 100% { opacity: 1; transform: translateX(0); } }
-        .animate-slideIn { animation: slideIn 0.5s ease-out; }
+
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        .animate-slide-up { animation: slideUp 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+
+        /* Safe area for notched phones */
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 8px); }
       `}</style>
     </div>
   );
