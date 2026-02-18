@@ -1,282 +1,136 @@
 // src/pages/PastPapersPage.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
-import { ArrowLeft, Download, Search, X, Wallet } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import api from "../Api";
+import { ArrowLeft, Search, X, Download, FileArchive, ChevronRight, Loader2 } from "lucide-react";
+import { getPastPapers, walletPurchase, initiateOneTimePurchase } from "../Api";
+
+const GRADS = ["from-purple-500 to-purple-700","from-pink-500 to-pink-700","from-blue-500 to-blue-700","from-green-500 to-green-700","from-rose-500 to-rose-700","from-indigo-500 to-indigo-700","from-cyan-500 to-cyan-700","from-orange-500 to-orange-700","from-teal-500 to-teal-700","from-yellow-500 to-yellow-600"];
+const grad = (i) => GRADS[i % GRADS.length];
 
 export default function PastPapersPage() {
   const navigate = useNavigate();
-  
-  const [pastPapers, setPastPapers] = useState([]);
+  const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [paymentModal, setPaymentModal] = useState(null);
-  const [mpesaPhone, setMpesaPhone] = useState("");
-  const [walletBalance, setWalletBalance] = useState(0);
+  const [error, setError] = useState(null);
+  const [curriculum, setCurriculum] = useState(null);
+  const [grade, setGrade] = useState(null);
+  const [subject, setSubject] = useState(null);
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState(null);
+  const [phone, setPhone] = useState("");
+  const [paying, setPaying] = useState(false);
 
-  // Fetch past papers from backend
+  const refs = useRef({});
+  const getRef = (k) => { if (!refs.current[k]) refs.current[k] = React.createRef(); return refs.current[k]; };
+  const tilt = (e, r) => { if (!r.current) return; const rect = r.current.getBoundingClientRect(); const rx = ((e.clientY - rect.top - rect.height / 2) / rect.height) * 10; const ry = ((e.clientX - rect.left - rect.width / 2) / rect.width) * 10; r.current.style.transform = `rotateX(${-rx}deg) rotateY(${ry}deg) scale(1.05)`; };
+  const untilt = (r) => { if (r.current) r.current.style.transform = "rotateX(0) rotateY(0) scale(1)"; };
+  const particlesInit = async (e) => { await loadSlim(e); };
+
   useEffect(() => {
-    const fetchPastPapers = async () => {
+    (async () => {
       try {
-        const [papersRes, walletRes] = await Promise.all([
-          api.get("resources/past-papers/"),
-          api.get("payments/wallet/").catch(() => ({ data: { balance: 0 } }))
-        ]);
-        setPastPapers(papersRes.data || []);
-        setWalletBalance(walletRes.data?.balance || 0);
-      } catch (error) {
-        console.error("Error fetching past papers:", error);
+        setLoading(true);
+        const res = await getPastPapers();
+        setPapers(res.data || []);
+      } catch (e) {
+        console.error(e);
+        setError("Failed to load past papers.");
       } finally {
         setLoading(false);
       }
-    };
-    fetchPastPapers();
+    })();
   }, []);
 
-  // Filter past papers based on search
-  const filteredPapers = pastPapers.filter(paper =>
-    paper.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    paper.year?.toString().includes(searchQuery)
-  );
+  const { curricula, grades, subjects, items } = useMemo(() => {
+    let filtered = papers;
+    if (curriculum) filtered = filtered.filter((p) => p.curriculum === curriculum);
+    if (grade) filtered = filtered.filter((p) => p.grade === grade);
+    if (subject) filtered = filtered.filter((p) => p.subject === subject);
+    const curricula = [...new Set(papers.map((p) => p.curriculum).filter(Boolean))].sort();
+    const grades = [...new Set(papers.filter((p) => !curriculum || p.curriculum === curriculum).map((p) => p.grade).filter(Boolean))].sort();
+    const subjects = [...new Set(papers.filter((p) => (!curriculum || p.curriculum === curriculum) && (!grade || p.grade === grade)).map((p) => p.subject).filter(Boolean))].sort();
+    return { curricula, grades, subjects, items: filtered };
+  }, [papers, curriculum, grade, subject]);
 
-  // Payment handlers
-  const handleWalletPurchase = async (paper) => {
-    if (walletBalance < parseFloat(paper.price)) {
-      alert("Insufficient wallet balance. Please top up your wallet.");
-      return;
-    }
+  const step = subject ? 3 : grade ? 2 : curriculum ? 1 : 0;
+  const options = useMemo(() => {
+    const q = search.toLowerCase();
+    if (step === 0) return curricula.filter((c) => c.toLowerCase().includes(q));
+    if (step === 1) return grades.filter((g) => g.toLowerCase().includes(q));
+    if (step === 2) return subjects.filter((s) => s.toLowerCase().includes(q));
+    return items.filter((p) => p.title?.toLowerCase().includes(q));
+  }, [step, curricula, grades, subjects, items, search]);
 
-    try {
-      const response = await api.post("payments/wallet/purchase/", {
-        resource_type: "pastpaper",
-        resource_id: paper.id
-      });
+  const pick = (val) => { setSearch(""); if (step === 0) setCurriculum(val); else if (step === 1) setGrade(val); else if (step === 2) setSubject(val); };
+  const goBack = () => { setSearch(""); if (subject) { setSubject(null); return; } if (grade) { setGrade(null); return; } if (curriculum) { setCurriculum(null); return; } navigate("/user-dashboard"); };
+  const breadcrumbs = [curriculum && { label: curriculum, clear: () => { setCurriculum(null); setGrade(null); setSubject(null); } }, grade && { label: grade, clear: () => { setGrade(null); setSubject(null); } }, subject && { label: subject, clear: () => setSubject(null) }].filter(Boolean);
+  const stepLabel = ["Select Curriculum", "Select Grade / Level", "Select Subject", subject ? `Past Papers — ${subject}` : ""][step];
 
-      if (response.data.success) {
-        alert("Purchase successful!");
-        setWalletBalance(prev => prev - parseFloat(paper.price));
-        handleDownload(paper);
-        setPaymentModal(null);
-      }
-    } catch (error) {
-      console.error("Wallet purchase error:", error);
-      alert(error.response?.data?.error || "Purchase failed. Please try again.");
-    }
-  };
-
-  const handleMpesaPurchase = async (paper) => {
-    if (!mpesaPhone) {
-      alert("Please enter your M-Pesa phone number.");
-      return;
-    }
-
-    try {
-      const response = await api.post("payments/purchase/resource/initiate/", {
-        resource_type: "pastpaper",
-        resource_id: paper.id,
-        phone_number: mpesaPhone
-      });
-
-      alert("M-Pesa STK Push sent! Please complete payment on your phone.");
-      setPaymentModal(null);
-    } catch (error) {
-      console.error("M-Pesa purchase error:", error);
-      alert(error.response?.data?.error || "Payment initiation failed. Please try again.");
-    }
-  };
-
-  const handleDownload = async (paper) => {
-    try {
-      const response = await api.get(`resources/past-papers/${paper.id}/download/`, {
-        responseType: 'blob'
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${paper.title}_${paper.year}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download error:", error);
-      alert(error.response?.data?.detail || "Download failed. Please try again.");
-    }
-  };
-
-  const particlesInit = async (engine) => {
-    await loadSlim(engine);
-  };
+  const payWallet = async () => { setPaying(true); try { await walletPurchase({ resource_id: modal.item.id, resource_type: "PastPaper" }); alert("Payment successful!"); setModal(null); } catch (e) { alert(e.response?.data?.error || "Wallet payment failed."); } finally { setPaying(false); } };
+  const payMpesa = async () => { if (!phone) { alert("Enter M-Pesa phone."); return; } setPaying(true); try { await initiateOneTimePurchase({ phone_number: phone, resource_id: modal.item.id, resource_type: "PastPaper" }); alert("STK Push sent!"); setModal(null); setPhone(""); } catch (e) { alert(e.response?.data?.error || "M-Pesa failed."); } finally { setPaying(false); } };
 
   return (
-    <div className="relative w-full min-h-screen text-white overflow-y-auto bg-slate-950">
-      {/* Background Particles */}
-      <Particles
-        id="tsparticles"
-        init={particlesInit}
-        className="absolute inset-0 -z-10"
-        options={{
-          background: { color: "#0B1220" },
-          fpsLimit: 60,
-          particles: {
-            number: { value: 55 },
-            color: { value: ["#FDE047", "#22D3EE", "#A78BFA"] },
-            opacity: { value: 0.25 },
-            size: { value: { min: 1, max: 3 } },
-            move: { enable: true, speed: 0.6 },
-            links: { enable: true, distance: 130, opacity: 0.2 },
-          },
-        }}
-      />
-
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <button
-              onClick={() => navigate("/user-dashboard")}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
-            >
-              <ArrowLeft size={18} /> Back
-            </button>
-
-            <div className="flex-1 max-w-md">
-              <div className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-2">
-                <Search size={18} className="text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search past papers..."
-                  className="w-full bg-transparent focus:outline-none text-white"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => navigate("/wallet")}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-black font-semibold transition-colors"
-            >
-              <Wallet size={18} /> KSh {walletBalance.toFixed(2)}
-            </button>
-          </div>
+    <div className="relative min-h-screen flex flex-col text-white bg-gray-900 overflow-x-hidden">
+      <Particles id="pp-bg" init={particlesInit} className="absolute inset-0 -z-10" options={{ background: { color: { value: "#0f172a" } }, fpsLimit: 60, particles: { number: { value: 90, density: { enable: true, area: 800 } }, color: { value: ["#38bdf8", "#a78bfa", "#f472b6", "#22c55e"] }, shape: { type: "circle" }, opacity: { value: 0.5 }, size: { value: { min: 3, max: 7 } }, move: { enable: true, speed: 1, outModes: "out", random: true } } }} />
+      <div className="sticky top-0 z-30 bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 px-4 py-3 flex items-center gap-3">
+        <button onClick={goBack} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm font-semibold transition-all hover:scale-105 active:scale-95 shrink-0"><ArrowLeft size={15} /> Back</button>
+        <div className="flex-1 flex items-center gap-2 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700/60 focus-within:border-purple-500/60 transition-colors">
+          <Search size={14} className="text-gray-500 shrink-0" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${stepLabel.toLowerCase()}…`} className="w-full bg-transparent outline-none text-sm placeholder-gray-600" />
+          {search && <button onClick={() => setSearch("")}><X size={12} className="text-gray-500 hover:text-white" /></button>}
         </div>
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 shrink-0"><FileArchive size={13} /> Past Papers</div>
       </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Past Papers</h1>
-
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
-            <p className="mt-4 text-slate-400">Loading past papers...</p>
-          </div>
-        ) : filteredPapers.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-slate-400 text-lg">
-              {searchQuery ? "No past papers found matching your search." : "No past papers available yet."}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPapers.map((paper) => (
-              <div
-                key={paper.id}
-                className="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-pink-500 transition-all hover:shadow-lg hover:shadow-pink-500/20"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <h2 className="text-xl font-bold text-pink-400 flex-1">{paper.title}</h2>
-                  <span className="text-sm font-bold bg-pink-500/20 text-pink-400 px-3 py-1 rounded-full ml-2">
-                    {paper.year}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-2xl font-bold text-yellow-400">
-                    KSh {parseFloat(paper.price || 0).toFixed(2)}
-                  </span>
-                  {parseFloat(paper.price) === 0 && (
-                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">FREE</span>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => {
-                    if (parseFloat(paper.price) === 0) {
-                      handleDownload(paper);
-                    } else {
-                      setPaymentModal(paper);
-                    }
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-pink-600 hover:bg-pink-700 transition-colors font-semibold"
-                >
-                  <Download size={18} />
-                  {parseFloat(paper.price) === 0 ? "Download Free" : "Purchase & Download"}
-                </button>
-              </div>
-            ))}
-          </div>
+      {breadcrumbs.length > 0 && (
+        <div className="px-4 pt-3 flex items-center gap-2 flex-wrap">
+          {breadcrumbs.map((b, i) => (<React.Fragment key={b.label}><button onClick={b.clear} className="text-xs px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition">{b.label}</button>{i < breadcrumbs.length - 1 && <ChevronRight size={11} className="text-gray-700" />}</React.Fragment>))}
+        </div>
+      )}
+      <div className="flex-1 px-4 py-6 pb-16">
+        {loading && <div className="flex flex-col items-center justify-center py-32 gap-3 text-purple-500"><Loader2 size={32} className="animate-spin" /><p className="text-sm font-medium">Loading past papers…</p></div>}
+        {!loading && error && <div className="text-center py-24 text-red-400 text-sm">{error}</div>}
+        {!loading && !error && papers.length === 0 && <div className="flex flex-col items-center justify-center py-32 gap-3 text-gray-600"><FileArchive size={48} className="opacity-40" /><p className="text-sm font-medium">No past papers uploaded yet.</p></div>}
+        {!loading && !error && papers.length > 0 && (
+          <>
+            <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-5">{stepLabel}</p>
+            <div className="grid gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {options.map((opt, i) => {
+                const isItem = step === 3;
+                const r = getRef(`${step}-${i}-${isItem ? opt.id : opt}`);
+                const displayText = isItem ? opt.title : opt;
+                return (
+                  <div key={isItem ? opt.id : opt} ref={r} className={`bg-gradient-to-br ${grad(i)} rounded-2xl shadow-2xl cursor-pointer transform transition duration-500 relative overflow-hidden animate-float ${isItem ? "p-5 flex flex-col gap-3" : "p-8"}`} onClick={isItem ? undefined : () => pick(opt)} onMouseMove={(e) => tilt(e, r)} onMouseLeave={() => untilt(r)}>
+                    <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-20 transition" />
+                    <h3 className={`font-semibold shimmer leading-snug ${isItem ? "text-sm flex-1" : "text-xl"}`}>{displayText}</h3>
+                    {isItem && <button onClick={() => setModal({ item: opt })} className="relative z-10 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold bg-black/25 hover:bg-black/50 border border-white/25 hover:border-white/60 backdrop-blur-sm transition-all hover:scale-105 active:scale-95"><Download size={11} /> Buy & Download</button>}
+                  </div>
+                );
+              })}
+              {options.length === 0 && <p className="col-span-full text-gray-600 text-sm py-12 text-center">{search ? `No results for "${search}".` : "Nothing here."}</p>}
+            </div>
+          </>
         )}
       </div>
-
-      {/* Payment Modal */}
-      {paymentModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Purchase Past Paper</h2>
-              <button onClick={() => setPaymentModal(null)} className="text-slate-400 hover:text-white">
-                <X size={20} />
-              </button>
+      {modal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
+          <div className="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden" style={{ animation: "scaleUp .25s ease" }}>
+            <div className="bg-gradient-to-r from-purple-600/30 to-pink-600/20 px-5 py-4 border-b border-gray-800 flex items-start justify-between">
+              <div><p className="text-xs text-gray-400 mb-0.5">Purchase Past Paper</p><h3 className="font-bold text-white text-sm">{modal.item.title}</h3><p className="text-xs text-gray-500 mt-0.5">{modal.item.subject} · {modal.item.grade} {modal.item.year && `· ${modal.item.year}`}</p></div>
+              <button onClick={() => setModal(null)} className="text-gray-500 hover:text-white transition"><X size={18} /></button>
             </div>
-
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-pink-400">{paymentModal.title}</h3>
-              <p className="text-sm text-slate-400 mt-1">Year: {paymentModal.year}</p>
-              <p className="text-2xl font-bold text-yellow-400 mt-2">
-                KSh {parseFloat(paymentModal.price).toFixed(2)}
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => handleWalletPurchase(paymentModal)}
-                className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-semibold transition-colors"
-              >
-                Pay with Wallet (KSh {walletBalance.toFixed(2)})
-              </button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-700"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-slate-900 text-slate-400">OR</span>
-                </div>
-              </div>
-
-              <input
-                type="tel"
-                placeholder="M-Pesa Phone (254XXXXXXXXX)"
-                value={mpesaPhone}
-                onChange={(e) => setMpesaPhone(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 focus:border-pink-500 focus:outline-none"
-              />
-
-              <button
-                onClick={() => handleMpesaPurchase(paymentModal)}
-                className="w-full bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-colors"
-              >
-                Pay with M-Pesa
-              </button>
+            <div className="px-5 py-5 flex flex-col gap-3">
+              <div className="flex items-baseline gap-1 mb-2"><span className="text-2xl font-bold text-purple-400">KSh {parseFloat(modal.item.price).toFixed(2)}</span></div>
+              <button onClick={payWallet} disabled={paying} className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 font-bold text-sm transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">{paying ? "Processing…" : "💳 Pay with Wallet"}</button>
+              <div className="flex items-center gap-3"><div className="flex-1 h-px bg-gray-800" /><span className="text-xs text-gray-600">or via M-Pesa</span><div className="flex-1 h-px bg-gray-800" /></div>
+              <input type="tel" placeholder="254XXXXXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-green-500 transition placeholder-gray-600" />
+              <button onClick={payMpesa} disabled={paying} className="w-full py-3 rounded-xl bg-green-700 hover:bg-green-600 font-bold text-sm transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">{paying ? "Sending…" : "📱 Send M-Pesa STK"}</button>
             </div>
           </div>
         </div>
       )}
+      <style>{`@keyframes scaleUp{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.animate-float{animation:float 3s ease-in-out infinite}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}.shimmer{background:linear-gradient(90deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,.6) 50%,rgba(255,255,255,.2) 100%);background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 2.5s infinite}`}</style>
     </div>
   );
 }
