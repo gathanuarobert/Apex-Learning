@@ -92,6 +92,7 @@ class Transaction(models.Model):
     TRANSACTION_TYPES = [
         ("deposit", "Deposit"),
         ("purchase", "Purchase"),
+        ("download", "Download"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
