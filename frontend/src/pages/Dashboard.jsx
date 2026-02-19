@@ -124,7 +124,7 @@ export default function AdminDashboard() {
       const [usersRes, transactionsRes, resourcesRes, categoriesRes] = await Promise.all([
         api.get("users/"),
         api.get("payments/admin/transactions/"),
-        api.get("resources/admin/all/"),
+        api.get("resources/notes/admin/all/"),  // Changed: admin/all is a custom action on notes viewset
         api.get("resources/news-categories/"),
       ]);
 
