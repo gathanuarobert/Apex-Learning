@@ -172,7 +172,8 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
         )
 
         file_path = resource.file.path
-        username = self.request.user.username
+        user = self.request.user
+        username = getattr(user, "username", None) or getattr(user, "email", "User")
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
         # PDF Protection (commented out encryption part due to Permissions import issue)
