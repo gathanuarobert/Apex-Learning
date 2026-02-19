@@ -12,7 +12,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
 
+
+class IsAdminOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_superuser
 
 
 class WalletDepositInitiateView(APIView):
@@ -116,6 +122,29 @@ class WalletDetailView(APIView):
             "balance": wallet.balance,
             "user": request.user.email
         })
+
+
+class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    """Admin-only endpoint to view all transactions"""
+    queryset = Transaction.objects.all().order_by('-created_at')
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAdminOnly]
+
+    @action(detail=False, methods=['get'], url_path='admin/transactions')
+    def admin_transactions(self, request):
+        """Get all transactions for admin dashboard"""
+        transactions = Transaction.objects.all().order_by('-created_at')
+        data = []
+        for tx in transactions:
+            data.append({
+                'id': tx.id,
+                'user': tx.user.email if tx.user else 'Unknown',
+                'transaction_type': tx.transaction_type,
+                'amount': str(tx.amount),
+                'status': tx.status,
+                'created_at': tx.created_at,
+            })
+        return Response(data)
 
 
 class TransactionHistoryView(APIView):
