@@ -1,3 +1,4 @@
+# resources/serializers.py
 from rest_framework import serializers
 from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory
 
@@ -12,6 +13,38 @@ class BaseFileSerializer(serializers.ModelSerializer):
         return None
 
 
+# ========== Lookup Model Serializers ==========
+class SubjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subject
+        fields = ['id', 'name']
+
+
+class GradeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Grade
+        fields = ['id', 'name']
+
+
+class EducationLevelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EducationLevel
+        fields = ['id', 'name']
+
+
+class TopicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Topic
+        fields = ['id', 'name']
+
+
+class NewsCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NewsCategory
+        fields = ['id', 'name']
+
+
+# ========== Resource Serializers ==========
 class NoteSerializer(BaseFileSerializer):
     # READ fields - return string names to frontend
     subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
