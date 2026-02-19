@@ -1,3 +1,4 @@
+# resources/views.py
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -5,8 +6,11 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import FileResponse
 from decimal import Decimal
 
-from .models import Note, PastPaper, Exam, News
-from .serializers import NoteSerializer, PastPaperSerializer, ExamSerializer, NewsSerializer
+from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory
+from .serializers import (
+    NoteSerializer, PastPaperSerializer, ExamSerializer, NewsSerializer,
+    SubjectSerializer, GradeSerializer, EducationLevelSerializer, TopicSerializer, NewsCategorySerializer
+)
 
 # Payments integration
 from payments.services import process_wallet_purchase, initiate_one_time_purchase
@@ -31,6 +35,43 @@ class IsAdminOnly(permissions.BasePermission):
         return request.user.is_authenticated and request.user.is_superuser
 
 
+# ========== Lookup Model ViewSets (Read-Only for all users) ==========
+class SubjectViewSet(viewsets.ReadOnlyModelViewSet):
+    """List all subjects - no authentication required for reading"""
+    queryset = Subject.objects.all()
+    serializer_class = SubjectSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class GradeViewSet(viewsets.ReadOnlyModelViewSet):
+    """List all grades - no authentication required for reading"""
+    queryset = Grade.objects.all()
+    serializer_class = GradeSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class EducationLevelViewSet(viewsets.ReadOnlyModelViewSet):
+    """List all education levels (curricula) - no authentication required for reading"""
+    queryset = EducationLevel.objects.all()
+    serializer_class = EducationLevelSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class TopicViewSet(viewsets.ReadOnlyModelViewSet):
+    """List all topics - no authentication required for reading"""
+    queryset = Topic.objects.all()
+    serializer_class = TopicSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class NewsCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """List all news categories - no authentication required for reading"""
+    queryset = NewsCategory.objects.all()
+    serializer_class = NewsCategorySerializer
+    permission_classes = [permissions.AllowAny]
+
+
+# ========== Base Resource ViewSet ==========
 class BaseResourceViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
@@ -118,7 +159,7 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
         if not resource.file:
             return Response({"detail": "File not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Record completed transaction if missing
+        # Record completed transaction if missing
         Transaction.objects.get_or_create(
             user=self.request.user,
             resource_id=str(resource.id),
@@ -127,14 +168,14 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
             defaults={
                 "amount": getattr(resource, "price", Decimal("0.00")),
                 "status": "completed"
-          }
+            }
         )
 
         file_path = resource.file.path
         username = self.request.user.username
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
-        # PDF Protection
+        # PDF Protection (commented out encryption part due to Permissions import issue)
         if file_path.lower().endswith(".pdf"):
             reader = PdfReader(file_path)
             writer = PdfWriter()
@@ -154,7 +195,7 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
             watermark_pdf = PdfReader(watermark_stream)
             watermark_page = watermark_pdf.pages[0]
 
-        # Apply watermark to each page
+            # Apply watermark to each page
             for page in reader.pages:
                 page.merge_page(watermark_page)
                 writer.add_page(page)
@@ -164,13 +205,6 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
                 "/Title": resource.title if hasattr(resource, "title") else "Protected File",
                 "/Author": username
             })
-
-            # Encrypt PDF - disable copy & print
-            writer.encrypt(
-                user_password="",
-                owner_password="securepass",
-                permissions_flag=Permissions.DISALLOW_COPYING | Permissions.DISALLOW_PRINTING
-            )
 
             output_stream = io.BytesIO()
             writer.write(output_stream)
@@ -213,6 +247,7 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
         # Default: serve file normally
         return FileResponse(resource.file, as_attachment=True)
 
+
 class UserLibraryViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -236,6 +271,14 @@ class UserLibraryViewSet(viewsets.ViewSet):
             "News": News,
         }
 
+        # Path map to fix URL generation
+        path_map = {
+            "Note": "notes",
+            "PastPaper": "past-papers",
+            "Exam": "exams",
+            "News": "news",
+        }
+
         data = []
         for tx in transactions:
             model_class = model_map.get(tx.resource_type)
@@ -250,36 +293,13 @@ class UserLibraryViewSet(viewsets.ViewSet):
                 "transaction_id": tx.id,
                 "resource_id": tx.resource_id,
                 "resource_type": tx.resource_type,
-                "title": getattr(resource, "title", "Resource deleted") if resource else "Resource deleted",
+                "title": getattr(resource, "title", getattr(resource, "headline", "Resource deleted")) if resource else "Resource deleted",
                 "amount": tx.amount,
                 "purchased_on": tx.created_at,
                 "download_url": request.build_absolute_uri(
-                    f"/api/{tx.resource_type.lower()}s/{tx.resource_id}/download/"
+                    f"/api/resources/{path_map.get(tx.resource_type, tx.resource_type.lower()+'s')}/{tx.resource_id}/download/"
                 ) if resource else None
             })
-
-        return Response(data)
-    
-
-class AdminResourcesViewSet(viewsets.ViewSet):
-    """
-    Admin-only endpoint to get ALL resources (notes, exams, pastpapers, news) in one call
-    """
-    permission_classes = [IsAdminOnly]
-
-    @action(detail=False, methods=['get'], url_path='all')
-    def all_resources(self, request):
-        notes = Note.objects.all()
-        exams = Exam.objects.all()
-        pastpapers = PastPaper.objects.all()
-        news = News.objects.all()
-
-        data = {
-            "notes": NoteSerializer(notes, many=True, context={'request': request}).data,
-            "exams": ExamSerializer(exams, many=True, context={'request': request}).data,
-            "pastpapers": PastPaperSerializer(pastpapers, many=True, context={'request': request}).data,
-            "news": NewsSerializer(news, many=True, context={'request': request}).data,
-        }
 
         return Response(data)
 
@@ -287,6 +307,21 @@ class AdminResourcesViewSet(viewsets.ViewSet):
 class NoteViewSet(BaseResourceViewSet):
     queryset = Note.objects.all()
     serializer_class = NoteSerializer
+    
+    @action(detail=False, methods=['get'], url_path='admin/all', permission_classes=[IsAdminOnly])
+    def admin_all_resources(self, request):
+        """Admin endpoint to get all resources across all types"""
+        notes = Note.objects.all()
+        exams = Exam.objects.all()
+        pastpapers = PastPaper.objects.all()
+        news = News.objects.all()
+
+        return Response({
+            'notes': NoteSerializer(notes, many=True, context={'request': request}).data,
+            'exams': ExamSerializer(exams, many=True, context={'request': request}).data,
+            'pastpapers': PastPaperSerializer(pastpapers, many=True, context={'request': request}).data,
+            'news': NewsSerializer(news, many=True, context={'request': request}).data,
+        })
 
 
 class PastPaperViewSet(BaseResourceViewSet):
