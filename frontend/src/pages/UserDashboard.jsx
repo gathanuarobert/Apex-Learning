@@ -259,6 +259,12 @@ export default function UserDashboard() {
       };
       const endpoint = typeMap[item.resource_type] || "notes";
 
+      // Show downloading indicator
+      const downloadingToast = document.createElement('div');
+      downloadingToast.className = 'fixed top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-slide-in';
+      downloadingToast.innerHTML = '<svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Downloading...';
+      document.body.appendChild(downloadingToast);
+
       const response = await api.get(`resources/${endpoint}/${item.resource_id}/download/`, {
         responseType: 'blob'
       });
@@ -266,14 +272,46 @@ export default function UserDashboard() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${item.item}.pdf`);
+      
+      // Extract file extension from content-type or default to pdf
+      const contentType = response.headers['content-type'];
+      let extension = 'pdf';
+      if (contentType) {
+        if (contentType.includes('pdf')) extension = 'pdf';
+        else if (contentType.includes('word')) extension = 'docx';
+        else if (contentType.includes('doc')) extension = 'doc';
+      }
+      
+      link.setAttribute('download', `${item.item}.${extension}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+
+      // Remove downloading toast and show success
+      downloadingToast.remove();
+      const successToast = document.createElement('div');
+      successToast.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in';
+      successToast.textContent = '✓ Download complete!';
+      document.body.appendChild(successToast);
+      setTimeout(() => successToast.remove(), 3000);
+
     } catch (err) {
       console.error("Download failed:", err);
-      alert(err.response?.data?.detail || "Download failed. Please try again.");
+      
+      // Remove any existing toasts
+      document.querySelectorAll('.fixed.top-20.right-4').forEach(el => el.remove());
+      
+      const errorMsg = err.response?.status === 402 
+        ? "Payment required. This resource is not free."
+        : err.response?.data?.detail || "Download failed. Please try again.";
+      
+      // Show error toast
+      const errorToast = document.createElement('div');
+      errorToast.className = 'fixed top-20 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in';
+      errorToast.textContent = `✗ ${errorMsg}`;
+      document.body.appendChild(errorToast);
+      setTimeout(() => errorToast.remove(), 5000);
     }
   };
 
@@ -675,6 +713,12 @@ export default function UserDashboard() {
           to   { transform: translateY(0);    opacity: 1; }
         }
         .animate-slide-up { animation: slideUp 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+        .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
 
         /* Safe area for notched phones */
         .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 8px); }

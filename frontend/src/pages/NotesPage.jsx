@@ -5,6 +5,7 @@ import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { ArrowLeft, Search, X, Download, FileText, ChevronRight, Loader2 } from "lucide-react";
 import { getNotes, walletPurchase, initiateOneTimePurchase } from "../Api";
+import api from "../Api";
 
 const GRADS = ["from-blue-500 to-blue-700","from-purple-500 to-purple-700","from-pink-500 to-pink-700","from-green-500 to-green-700","from-cyan-500 to-cyan-700","from-orange-500 to-orange-700","from-teal-500 to-teal-700","from-rose-500 to-rose-700","from-indigo-500 to-indigo-700","from-yellow-500 to-yellow-600"];
 const grad = (i) => GRADS[i % GRADS.length];
@@ -68,6 +69,53 @@ export default function NotesPage() {
   const breadcrumbs = [curriculum && { label: curriculum, clear: () => { setCurriculum(null); setGrade(null); setSubject(null); } }, grade && { label: grade, clear: () => { setGrade(null); setSubject(null); } }, subject && { label: subject, clear: () => setSubject(null) }].filter(Boolean);
   const stepLabel = ["Select Curriculum", "Select Grade / Level", "Select Subject", subject ? `Notes — ${subject}` : ""][step];
 
+  // Handle resource button click - check if free or paid
+  const handleResourceClick = (item) => {
+    const price = parseFloat(item.price || 0);
+    if (price === 0) {
+      // Free resource - download directly
+      handleDirectDownload(item);
+    } else {
+      // Paid resource - show payment modal
+      setModal({ item });
+    }
+  };
+
+  // Direct download for free resources
+  const handleDirectDownload = async (item) => {
+    try {
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] flex items-center gap-2 animate-slide-in';
+      toast.innerHTML = '<svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Downloading free resource...';
+      document.body.appendChild(toast);
+
+      const response = await api.get(`resources/notes/${item.id}/download/`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${item.title || 'note'}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.remove();
+      const successToast = document.createElement('div');
+      successToast.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] animate-slide-in';
+      successToast.textContent = '✓ Free download complete!';
+      document.body.appendChild(successToast);
+      setTimeout(() => successToast.remove(), 3000);
+    } catch (err) {
+      console.error("Download failed:", err);
+      document.querySelectorAll('.fixed.top-20.right-4').forEach(el => el.remove());
+      const errorToast = document.createElement('div');
+      errorToast.className = 'fixed top-20 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] animate-slide-in';
+      errorToast.textContent = `✗ ${err.response?.data?.detail || "Download failed"}`;
+      document.body.appendChild(errorToast);
+      setTimeout(() => errorToast.remove(), 5000);
+    }
+  };
+
   const payWallet = async () => { setPaying(true); try { await walletPurchase({ resource_id: modal.item.id, resource_type: "Note" }); alert("Payment successful!"); setModal(null); } catch (e) { alert(e.response?.data?.error || "Wallet payment failed."); } finally { setPaying(false); } };
   const payMpesa = async () => { if (!phone) { alert("Enter M-Pesa phone."); return; } setPaying(true); try { await initiateOneTimePurchase({ phone_number: phone, resource_id: modal.item.id, resource_type: "Note" }); alert("STK Push sent!"); setModal(null); setPhone(""); } catch (e) { alert(e.response?.data?.error || "M-Pesa failed."); } finally { setPaying(false); } };
 
@@ -100,11 +148,17 @@ export default function NotesPage() {
                 const isItem = step === 3;
                 const r = getRef(`${step}-${i}-${isItem ? opt.id : opt}`);
                 const displayText = isItem ? opt.title : opt;
+                const isFree = isItem && parseFloat(opt.price || 0) === 0;
                 return (
                   <div key={isItem ? opt.id : opt} ref={r} className={`bg-gradient-to-br ${grad(i)} rounded-2xl shadow-2xl cursor-pointer transform transition duration-500 relative overflow-hidden animate-float ${isItem ? "p-5 flex flex-col gap-3" : "p-8"}`} onClick={isItem ? undefined : () => pick(opt)} onMouseMove={(e) => tilt(e, r)} onMouseLeave={() => untilt(r)}>
                     <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-20 transition" />
+                    {isFree && <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">FREE</div>}
                     <h3 className={`font-semibold shimmer leading-snug ${isItem ? "text-sm flex-1" : "text-xl"}`}>{displayText}</h3>
-                    {isItem && <button onClick={() => setModal({ item: opt })} className="relative z-10 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold bg-black/25 hover:bg-black/50 border border-white/25 hover:border-white/60 backdrop-blur-sm transition-all hover:scale-105 active:scale-95"><Download size={11} /> Buy & Download</button>}
+                    {isItem && (
+                      <button onClick={() => handleResourceClick(opt)} className="relative z-10 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold bg-black/25 hover:bg-black/50 border border-white/25 hover:border-white/60 backdrop-blur-sm transition-all hover:scale-105 active:scale-95">
+                        <Download size={11} /> {isFree ? 'Download Free' : 'Buy & Download'}
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -130,7 +184,7 @@ export default function NotesPage() {
           </div>
         </div>
       )}
-      <style>{`@keyframes scaleUp{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.animate-float{animation:float 3s ease-in-out infinite}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}.shimmer{background:linear-gradient(90deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,.6) 50%,rgba(255,255,255,.2) 100%);background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 2.5s infinite}`}</style>
+      <style>{`@keyframes scaleUp{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.animate-float{animation:float 3s ease-in-out infinite}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}.shimmer{background:linear-gradient(90deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,.6) 50%,rgba(255,255,255,.2) 100%);background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 2.5s infinite}@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}.animate-slide-in{animation:slideIn 0.3s ease-out forwards}`}</style>
     </div>
   );
 }
