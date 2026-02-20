@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { X, Upload, Loader2 } from "lucide-react";
 import api from "../Api";
 
-export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
+export default function UploadResourceModal({ isOpen, onClose, onSuccess, editResource }) {
   const [resourceType, setResourceType] = useState("Note");
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
@@ -62,6 +62,49 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
     if (isOpen) fetchOptions();
   }, [isOpen]);
 
+  // Populate form when editing
+  useEffect(() => {
+    if (editResource && isOpen) {
+      console.log("Editing resource:", editResource);
+      
+      // Set resource type
+      setResourceType(editResource.type);
+      
+      // Common fields
+      setTitle(editResource.title || editResource.headline || "");
+      setPrice(editResource.price || "");
+      
+      // Description/content
+      if (editResource.type === "Note") {
+        setDescription(editResource.content || "");
+      } else if (editResource.type === "Exam") {
+        setDescription(editResource.description || "");
+        setDate(editResource.date || "");
+      } else if (editResource.type === "News") {
+        setHeadline(editResource.headline || "");
+        setBody(editResource.body || "");
+      }
+      
+      // Dropdown selections - need to find IDs from dropdown options
+      // For now, just set empty - user will need to re-select
+      // In a production app, you'd store the IDs in the resource object
+      setCurriculum("");
+      setGrade("");
+      setSubject("");
+      setTopic("");
+      setCategory("");
+      
+      // Past paper year
+      if (editResource.type === "Past Paper") {
+        setYear(editResource.year || "");
+      }
+      
+    } else if (!editResource && isOpen) {
+      // Reset form for new upload
+      resetForm();
+    }
+  }, [editResource, isOpen]);
+
   const resetForm = () => {
     setResourceType("Note");
     setTitle("");
@@ -91,7 +134,8 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
         return;
       }
     } else {
-      if (!title || !file) {
+      // When editing, file is optional (user can keep existing file)
+      if (!title || (!file && !editResource)) {
         setError("Title and file are required.");
         return;
       }
@@ -106,10 +150,10 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
         formData.append("headline", headline);
         formData.append("body", body);
         if (category) formData.append("category_id", category);
-        if (file) formData.append("file", file);
+        if (file) formData.append("file", file); // Optional when editing
       } else {
         formData.append("title", title);
-        formData.append("file", file);
+        if (file) formData.append("file", file); // Optional when editing
         if (price) formData.append("price", price);
         if (curriculum) formData.append("education_level_id", curriculum);
         if (grade) formData.append("grade_id", grade);
@@ -134,19 +178,30 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
         Note: "resources/notes/",
         Exam: "resources/exams/",
         PastPaper: "resources/past-papers/",
+        "Past Paper": "resources/past-papers/",
         News: "resources/news/",
       };
       
-      await api.post(endpoints[resourceType], formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      if (editResource) {
+        // PATCH request for editing
+        await api.patch(`${endpoints[resourceType]}${editResource.id}/`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("Resource updated successfully!");
+      } else {
+        // POST request for new upload
+        await api.post(endpoints[resourceType], formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("Resource uploaded successfully!");
+      }
       
       resetForm();
       onSuccess();
       onClose();
     } catch (err) {
-      console.error("Upload failed:", err);
-      setError(err.response?.data?.error || "Upload failed. Please try again.");
+      console.error("Upload/Edit failed:", err);
+      setError(err.response?.data?.error || "Operation failed. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -159,7 +214,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
       <div className="bg-[#0b1220] border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="bg-gradient-to-r from-cyan-600/20 to-blue-600/20 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Upload Resource</h2>
+          <h2 className="text-xl font-bold text-white">
+            {editResource ? "Edit Resource" : "Upload New Resource"}
+          </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">
             <X size={24} />
           </button>
@@ -173,17 +230,19 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* Resource Type */}
+          {/* Resource Type - Disabled when editing */}
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-2">Resource Type</label>
             <select
               value={resourceType}
               onChange={(e) => setResourceType(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
+              disabled={!!editResource}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="Note">Note</option>
               <option value="Exam">Exam</option>
               <option value="PastPaper">Past Paper</option>
+              <option value="Past Paper">Past Paper</option>
               <option value="News">News</option>
             </select>
           </div>
@@ -227,7 +286,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Featured Image (optional)</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Featured Image {editResource && "(upload new to replace)"}
+                </label>
                 <input
                   type="file"
                   onChange={(e) => setFile(e.target.files[0])}
@@ -309,7 +370,7 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
                 </div>
               </div>
 
-              {resourceType === "PastPaper" && (
+              {(resourceType === "PastPaper" || resourceType === "Past Paper") && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-300 mb-2">Year</label>
                   <input
@@ -358,15 +419,19 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">File *</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  File {editResource ? "(upload new to replace)" : "*"}
+                </label>
                 <input
                   type="file"
                   onChange={(e) => setFile(e.target.files[0])}
                   accept=".pdf,.doc,.docx"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-400 focus:outline-none focus:border-cyan-500 transition"
-                  required
+                  required={!editResource}
                 />
-                <p className="text-xs text-slate-500 mt-1">Accepted: PDF, DOC, DOCX</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {editResource ? "Leave empty to keep existing file. " : ""}Accepted: PDF, DOC, DOCX
+                </p>
               </div>
             </>
           )}
@@ -388,12 +453,12 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess }) {
               {uploading ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
-                  Uploading...
+                  {editResource ? "Updating..." : "Uploading..."}
                 </>
               ) : (
                 <>
                   <Upload size={18} />
-                  Upload
+                  {editResource ? "Update Resource" : "Upload Resource"}
                 </>
               )}
             </button>
