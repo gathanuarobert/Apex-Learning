@@ -6,7 +6,7 @@ import { jwtDecode } from "jwt-decode";
 import ReCAPTCHA from "react-google-recaptcha";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
-import { loginUser } from "../Api"; // ✅ import login API
+import { loginUser } from "../Api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -16,7 +16,8 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [userRole, setUserRole] = useState(null);
   const [token, setToken] = useState(null);
-  const [recaptchaToken, setRecaptchaToken] = useState(""); // ✅ store recaptcha token
+  const [recaptchaToken, setRecaptchaToken] = useState("");
+  const [loading, setLoading] = useState(false); // Loading state
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
@@ -36,60 +37,61 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validateEmail(formData.email)) {
-    alert("Please enter a valid email from allowed domains.");
-    return;
-  }
-  if (formData.password.length < 8) {
-    alert("Password must be at least 8 characters.");
-    return;
-  }
-
-  if (!recaptchaToken) {
-    alert("Please complete the reCAPTCHA.");
-    return;
-  }
-
-  try {
-    const response = await loginUser({
-      ...formData,
-      recaptcha: recaptchaToken,
-    });
-
-    const data = response.data;
-
-    // ⚠️ depending on your backend, adjust field names
-    const access = data.access || data.token?.access;
-    const refresh = data.refresh || data.token?.refresh;
-    const user = data.user;
-
-    if (access && refresh) {
-      localStorage.setItem("access", access);
-      localStorage.setItem("refresh", refresh);
+    if (!validateEmail(formData.email)) {
+      alert("Please enter a valid email from allowed domains.");
+      return;
+    }
+    if (formData.password.length < 8) {
+      alert("Password must be at least 8 characters.");
+      return;
     }
 
-    setUserRole(user.role);
-
-    // Navigate after login
-    if (user.is_superuser || user.role === "admin") {
-      navigate("/dashboard");
-    } else {
-      navigate("/user-dashboard");
+    if (!recaptchaToken) {
+      alert("Please complete the reCAPTCHA.");
+      return;
     }
-  } catch (err) {
-    console.error(err);
-    alert(err.response?.data?.detail || "Login failed. Check your credentials.");
-  }
-};
 
+    setLoading(true);
+
+    try {
+      const response = await loginUser({
+        ...formData,
+        recaptcha: recaptchaToken,
+      });
+
+      const data = response.data;
+
+      const access = data.access || data.token?.access;
+      const refresh = data.refresh || data.token?.refresh;
+      const user = data.user;
+
+      if (access && refresh) {
+        localStorage.setItem("access", access);
+        localStorage.setItem("refresh", refresh);
+      }
+
+      setUserRole(user.role);
+
+      // Navigate after login
+      if (user.is_superuser || user.role === "admin") {
+        navigate("/dashboard");
+      } else {
+        navigate("/user-dashboard");
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || "Login failed. Check your credentials.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     const decoded = jwtDecode(credentialResponse.credential);
     console.log("Google user:", decoded);
 
-    // Optional: send decoded.email to backend for Google login
     const role = decoded.email === "admin@example.com" ? "admin" : "user";
     setUserRole(role);
     navigate(role === "admin" ? "/admin-dashboard" : "/dashboard");
@@ -100,7 +102,7 @@ const Login = () => {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4">
       {/* Particles */}
       <Particles
         id="tsparticles"
@@ -145,20 +147,41 @@ const Login = () => {
       />
 
       {/* Aura Glow */}
-      <div className="absolute w-96 h-96 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 blur-3xl opacity-30 animate-auraglow"></div>
+      <div className="absolute w-72 sm:w-96 h-72 sm:h-96 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 blur-3xl opacity-30 animate-auraglow"></div>
+
+      {/* ✅ NEW: Back to Home Button */}
+      <button
+        onClick={() => navigate("/")}
+        className="absolute top-4 left-4 z-20 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
+      >
+        <svg 
+          className="w-5 h-5 group-hover:-translate-x-1 transition-transform" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        <span className="hidden sm:inline">Back to Home</span>
+      </button>
 
       {/* Login Card */}
-      <div className="relative z-10 w-full max-w-md bg-gray-900/80 shadow-2xl border border-gray-700 rounded-2xl p-8 space-y-6 text-white backdrop-blur-lg animate-slideUp">
-        <h2 className="text-3xl font-extrabold text-center text-blue-400">
-          Apex Learning Login
-        </h2>
-        <p className="text-gray-400 text-center text-sm">
-          Sign in to continue your learning journey
-        </p>
+      <div className="relative z-10 w-full max-w-md bg-gray-900/80 shadow-2xl border border-gray-700 rounded-2xl p-6 sm:p-8 space-y-6 text-white backdrop-blur-lg animate-slideUp">
+        
+        {/* Header */}
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-blue-400">
+            Welcome Back!
+          </h2>
+          <p className="text-gray-400 text-sm mt-2">
+            Sign in to continue your learning journey
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email Input */}
           <div>
-            <label className="block text-gray-300 mb-1">Email</label>
+            <label className="block text-gray-300 mb-1 text-sm font-medium">Email</label>
             <input
               type="email"
               name="email"
@@ -170,8 +193,9 @@ const Login = () => {
             />
           </div>
 
+          {/* Password Input */}
           <div className="relative">
-            <label className="block text-gray-300 mb-1">Password</label>
+            <label className="block text-gray-300 mb-1 text-sm font-medium">Password</label>
             <input
               type={showPassword ? "text" : "password"}
               name="password"
@@ -186,29 +210,62 @@ const Login = () => {
               type="button"
               onClick={togglePasswordVisibility}
               className="absolute top-9 right-3 text-blue-400 hover:text-blue-300 transition"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? "🙈" : "👁️"}
             </button>
           </div>
 
+          {/* ✅ NEW: Forgot Password Link */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => navigate("/forgot-password")}
+              className="text-sm text-blue-400 hover:text-blue-300 transition hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
+
           {/* reCAPTCHA */}
-          <div className="mt-4 flex justify-center">
+          <div className="flex justify-center">
             <ReCAPTCHA
               ref={recaptchaRef}
-               sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-              onChange={(token) => setRecaptchaToken(token)}   // ✅ capture token
+              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+              onChange={(token) => setRecaptchaToken(token)}
             />
           </div>
 
+          {/* Login Button with Loading State */}
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/30 transition-transform transform hover:scale-105"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/30 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            Login
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Signing in...
+              </span>
+            ) : (
+              "Sign In"
+            )}
           </button>
 
-          <div className="text-center text-gray-500 text-sm">or</div>
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-700"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-900/80 text-gray-500">Or continue with</span>
+            </div>
+          </div>
 
+          {/* Google Login */}
           <div className="flex justify-center">
             <GoogleLogin
               onSuccess={handleGoogleLoginSuccess}
@@ -219,7 +276,53 @@ const Login = () => {
             />
           </div>
         </form>
+
+        {/* ✅ CRITICAL: Sign Up Link - Main UX Fix! */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-700"></div>
+          </div>
+        </div>
+
+        <div className="text-center space-y-2">
+          <p className="text-gray-400 text-sm">
+            Don't have an account?{" "}
+            <button
+              onClick={() => navigate("/register")}
+              className="text-blue-400 hover:text-blue-300 font-semibold transition-colors hover:underline"
+            >
+              Sign up here
+            </button>
+          </p>
+          <p className="text-gray-500 text-xs">
+            Join thousands of students learning with Apex Learning Hub
+          </p>
+        </div>
       </div>
+
+      {/* Animations */}
+      <style>{`
+        @keyframes slideUp { 
+          from { opacity: 0; transform: translateY(30px); } 
+          to { opacity: 1; transform: translateY(0); } 
+        }
+        .animate-slideUp { 
+          animation: slideUp 0.8s ease-out; 
+        }
+        
+        @keyframes auraglow { 
+          0% { transform: translate(-50%, -50%) rotate(0deg); } 
+          50% { transform: translate(-48%, -52%) rotate(180deg); } 
+          100% { transform: translate(-50%, -50%) rotate(360deg); } 
+        }
+        .animate-auraglow { 
+          top: 50%; 
+          left: 50%; 
+          position: absolute; 
+          animation: auraglow 12s linear infinite; 
+          z-index: 1; 
+        }
+      `}</style>
     </div>
   );
 };
