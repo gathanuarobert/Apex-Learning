@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 from .views import (
     WalletDepositInitiateView,
     OneTimePurchaseInitiateView,
@@ -6,8 +7,12 @@ from .views import (
     mpesa_callback_view,
     TransactionHistoryView,
     AdminTransactionHistoryView,
-    WalletDetailView,  # Add this import
+    WalletDetailView,
+    TransactionViewSet    # Add this import
 )
+
+router = DefaultRouter()
+router.register(r'admin/transactions-viewset', TransactionViewSet, basename='transaction-viewset')
 
 urlpatterns = [
     path("wallet/deposit/initiate/", WalletDepositInitiateView.as_view(), name="wallet-deposit-initiate"),
