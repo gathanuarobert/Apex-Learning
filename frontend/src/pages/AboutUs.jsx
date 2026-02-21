@@ -41,47 +41,48 @@ const AboutUs = () => {
       ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  // ✅ Fixed typewriter function (handles emojis & prevents undefined)
+  // ✅ FIXED typewriter function - properly handles emojis and prevents duplicates
   const typeWriter = (text, setter, onComplete) => {
     let index = 0;
-    setter(""); // Reset state to ensure a clean start
-    const chars = Array.from(text); // <-- FIX: split text into full characters
+    const chars = Array.from(text); // Split into proper characters (handles emojis correctly)
+    
+    setter(""); // Clear any existing text
+    
     const interval = setInterval(() => {
-      setter((prev) => {
-        if (index < chars.length) {
-          const nextChar = chars[index];
-          index++;
-          return prev + nextChar;
-        } else {
-          clearInterval(interval);
-          if (onComplete) onComplete();
-          return prev;
-        }
-      });
+      if (index < chars.length) {
+        const currentText = chars.slice(0, index + 1).join(""); // Build string from scratch each time
+        setter(currentText);
+        index++;
+      } else {
+        clearInterval(interval);
+        if (onComplete) onComplete();
+      }
     }, 80);
+    
+    return () => clearInterval(interval); // Cleanup function
   };
 
   useEffect(() => {
-    typeWriter("📚 About Us", setMainHeading, () => {
+    const cleanup1 = typeWriter("📚 About Us", setMainHeading, () => {
       setShowIntroParagraph(true);
       setTimeout(() => {
         scrollToRef(introRef);
-        typeWriter(
+        const cleanup2 = typeWriter(
           "Empowering Students. Simplifying Learning.",
           setIntroHeading,
           () => {
             setShowOfferParagraph(true);
             setTimeout(() => {
               scrollToRef(offerRef);
-              typeWriter("🎯 What We Offer", setOfferHeading, () => {
+              const cleanup3 = typeWriter("🎯 What We Offer", setOfferHeading, () => {
                 setBulletIndex(0);
                 setTimeout(() => {
                   scrollToRef(missionRef);
-                  typeWriter("👩‍🏫 Our Mission", setMissionHeading, () => {
+                  const cleanup4 = typeWriter("👩‍🏫 Our Mission", setMissionHeading, () => {
                     setShowMissionParagraph(true);
                     setTimeout(() => {
                       scrollToRef(serveRef);
-                      typeWriter("🌍 Who We Serve", setServeHeading, () => {
+                      const cleanup5 = typeWriter("🌍 Who We Serve", setServeHeading, () => {
                         setShowServeParagraph(true);
                       });
                     }, 1200);
@@ -93,6 +94,11 @@ const AboutUs = () => {
         );
       }, 1200);
     });
+    
+    // Cleanup on unmount
+    return () => {
+      if (cleanup1) cleanup1();
+    };
   }, []);
 
   useEffect(() => {
@@ -177,14 +183,16 @@ const AboutUs = () => {
         {/* Main Heading */}
         <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-400 mb-4 glow-pulse">
           {mainHeading}
-          <span className="border-r-2 border-blue-400 animate-caret"></span>
+          {mainHeading && mainHeading.length < 13 && (
+            <span className="border-r-2 border-blue-400 animate-caret"></span>
+          )}
         </h1>
 
         {/* Intro */}
         <div ref={introRef} className="mt-6 animate-slideUp">
           <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-2 glow-pulse">
             {introHeading}
-            {introHeading && (
+            {introHeading && introHeading.length < 40 && (
               <span className="border-r-2 border-blue-300 animate-caret"></span>
             )}
           </h2>
@@ -203,7 +211,7 @@ const AboutUs = () => {
         <div ref={offerRef} className="mt-8 sm:mt-10 animate-slideUp">
           <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-2 glow-pulse">
             {offerHeading}
-            {offerHeading && (
+            {offerHeading && offerHeading.length < 18 && (
               <span className="border-r-2 border-blue-300 animate-caret"></span>
             )}
           </h2>
@@ -236,7 +244,7 @@ const AboutUs = () => {
         <div ref={missionRef} className="mt-8 sm:mt-10 animate-slideUp">
           <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-2 glow-pulse">
             {missionHeading}
-            {missionHeading && (
+            {missionHeading && missionHeading.length < 15 && (
               <span className="border-r-2 border-blue-300 animate-caret"></span>
             )}
           </h2>
@@ -252,7 +260,7 @@ const AboutUs = () => {
         <div ref={serveRef} className="mt-8 sm:mt-10 animate-slideUp">
           <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-2 glow-pulse">
             {serveHeading}
-            {serveHeading && (
+            {serveHeading && serveHeading.length < 16 && (
               <span className="border-r-2 border-blue-300 animate-caret"></span>
             )}
           </h2>
