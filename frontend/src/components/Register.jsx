@@ -1,121 +1,69 @@
-// src/pages/Register.jsx
 import React, { useState, useEffect } from "react";
 import Particles from "react-tsparticles";
 import ReCAPTCHA from "react-google-recaptcha";
 import { loadSlim } from "tsparticles-slim";
-import { Eye, EyeOff, Info } from "lucide-react";
+import { Eye, EyeOff, Info, Loader2, CheckCircle2 } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
+import * as api from "../Api";
 
-import * as api from "../Api"; // <-- API integration
-
-const CBC_GRADES = [
-  "Pre-Primary 1",
-  "Pre-Primary 2",
-  "Grade 1",
-  "Grade 2",
-  "Grade 3",
-  "Grade 4",
-  "Grade 5",
-  "Grade 6",
-  "Grade 7",
-  "Grade 8",
-  "Grade 9",
-  "Grade 10",
-  "Grade 11",
-  "Grade 12",
-];
-
+const CBC_GRADES = ["Pre-Primary 1", "Pre-Primary 2", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
 const EIGHT_FOUR_FOUR_FORMS = ["Form 1", "Form 2", "Form 3", "Form 4"];
-
-const CBC_SUBJECTS = [
-  "Mathematics",
-  "English",
-  "Kiswahili",
-  "Science",
-  "Social Studies",
-  "Religious Education",
-  "Agriculture",
-  "Computer Studies",
-  "Business Studies",
-  "Music",
-  "Art & Craft",
-  "P.E.",
-];
-
-const EIGHT_FOUR_FOUR_SUBJECTS = [
-  "Mathematics",
-  "English",
-  "Kiswahili",
-  "Biology",
-  "Physics",
-  "Chemistry",
-  "Geography",
-  "History & Government",
-  "CRE",
-  "Agriculture",
-  "Business Studies",
-  "Computer Studies",
-  "Music",
-  "French",
-];
-
-const VALID_EMAIL_DOMAINS = [
-  "gmail.com",
-  "yahoo.com",
-  "student.ku.ac.ke",
-  "outlook.com",
-];
-
-const tooltips = {
-  firstName: "Enter your legal first name.",
-  middleName: "Optional: add your middle name if applicable.",
-  lastName: "Enter your surname/last name.",
-  email: `Valid email required (domains: ${VALID_EMAIL_DOMAINS.join(", ")}).`,
-  password: "Include upper/lowercase, number & symbol for strong security.",
-  confirmPassword: "Must match the password entered above.",
-  educationLevel:
-    "CBC is the Competency-Based Curriculum; 8-4-4 is the older system.",
-  currentGrade: "Select your current grade or form.",
-  teachingLevel: "Choose whether you teach CBC or 8-4-4 curriculum.",
-  subject: "Select the subject you teach.",
-  childName: "Optional: Enter your child's name to link accounts.",
-};
+const VALID_EMAIL_DOMAINS = ["gmail.com", "yahoo.com", "student.ku.ac.ke", "outlook.com"];
 
 const Register = () => {
+  const navigate = useNavigate();
   const [role, setRole] = useState("student");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+  
   const [formData, setFormData] = useState({
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    educationLevel: "",
-    currentGrade: "",
-    teachingLevel: "",
-    subject: "",
-    childName: "",
+    firstName: "", middleName: "", lastName: "", email: "",
+    password: "", confirmPassword: "", educationLevel: "",
+    currentGrade: "", teachingLevel: "", subject: "", childName: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
-  const [hoverField, setHoverField] = useState(null);
-  const [passwordStrength, setPasswordStrength] = useState({
-    score: 0,
-    label: "",
-  });
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: "" });
   const [recaptchaToken, setRecaptchaToken] = useState("");
 
-  const navigate = useNavigate();
   const particlesInit = async (engine) => await loadSlim(engine);
-  const subjects =
-    formData.teachingLevel === "CBC" ? CBC_SUBJECTS : EIGHT_FOUR_FOUR_SUBJECTS;
 
-  const setToken = (token) => localStorage.setItem("token", token);
-  const setUserRole = (role) => localStorage.setItem("role", role);
+  // Particle Options from Home.jsx
+  const particleOptions = {
+    fullScreen: { enable: false },
+    fpsLimit: 120,
+    interactivity: {
+      events: {
+        onHover: { enable: true, mode: "repulse" },
+        resize: true,
+      },
+      modes: { repulse: { distance: 100, duration: 0.4 } },
+    },
+    particles: {
+      number: { value: 40, density: { enable: true, area: 800 } },
+      color: { value: ["#FDE047", "#22D3EE", "#A78BFA"] },
+      opacity: { value: 0.5, random: true },
+      size: { value: { min: 1, max: 3 } },
+      move: {
+        enable: true,
+        speed: 0.6,
+        direction: "none",
+        outModes: { default: "out" },
+      },
+      links: {
+        enable: true,
+        distance: 150,
+        color: "#ffffff",
+        opacity: 0.2,
+        width: 1,
+      },
+    },
+    detectRetina: true,
+  };
 
   const calculateStrength = (password) => {
     let score = 0;
@@ -123,450 +71,241 @@ const Register = () => {
     if (/[A-Z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
-
     const levels = ["Weak", "Fair", "Good", "Strong"];
-    setPasswordStrength({
-      score,
-      label: levels[Math.min(score, levels.length - 1)],
-    });
-  };
-
-  useEffect(() => {
-    Object.keys(formData).forEach((key) => validateField(key, formData[key]));
-  }, [formData, role]);
-
-  const validateField = (name, value) => {
-    let msg = "";
-    const emailDomain = formData.email.split("@")[1];
-
-    switch (name) {
-      case "firstName":
-        if (!value.trim()) msg = "First name is required.";
-        break;
-      case "lastName":
-        if (!value.trim()) msg = "Last name is required.";
-        break;
-      case "email":
-        if (!value.trim()) msg = "Email is required.";
-        else if (!VALID_EMAIL_DOMAINS.includes(emailDomain))
-          msg = "Invalid email domain.";
-        break;
-      case "password":
-        if (!value.trim()) msg = "Password is required.";
-        else if (value.length < 6) msg = "At least 6 characters.";
-        break;
-      case "confirmPassword":
-        if (value !== formData.password) msg = "Passwords do not match.";
-        break;
-      case "educationLevel":
-        if (role === "student" && !value) msg = "Select education level.";
-        break;
-      case "currentGrade":
-        if (role === "student" && !value) msg = "Select grade/form.";
-        break;
-      case "teachingLevel":
-        if (role === "teacher" && !value) msg = "Select teaching level.";
-        break;
-      case "subject":
-        if (role === "teacher" && !value) msg = "Select subject.";
-        break;
-      default:
-        break;
-    }
-    setErrors((prev) => ({ ...prev, [name]: msg }));
+    setPasswordStrength({ score, label: levels[Math.min(score, 3)] });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (name === "password") calculateStrength(value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!Object.values(errors).some((msg) => msg)) {
-      if (!recaptchaToken) {
-        alert("Please complete the reCAPTCHA.");
-        return;
-      }
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+    
+    setIsSubmitting(true);
 
+    try {
+      const fullName = [formData.firstName, formData.middleName, formData.lastName]
+        .filter(Boolean)
+        .join(" ");
+      
+      const userData = {
+        name: fullName,
+        email: formData.email,
+        password: formData.password,
+        role: role,
+        recaptcha: recaptchaToken, // Used once here
+      };
+
+      if (role === "student") userData.student_profile = { grade: formData.currentGrade };
+      else if (role === "teacher") userData.teacher_profile = { subject: formData.subject };
+
+      // 1. Register the user
+      await api.registerUser(userData);
+      
+      // 2. Login Logic
       try {
-        const fullName = [
-          formData.firstName,
-          formData.middleName,
-          formData.lastName,
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        const userData = {
-          name: fullName,
-          email: formData.email,
-          password: formData.password,
-          role: role,
-          recaptcha: recaptchaToken, // ✅ send to backend
-        };
-
-        if (role === "student")
-          userData.student_profile = { grade: formData.currentGrade };
-        else if (role === "teacher")
-          userData.teacher_profile = { subject: formData.subject };
-        else if (role === "parent") userData.parent_profile = {};
-        else if (role === "public") userData.public_profile = {};
-
-        const res = await api.registerUser(userData);
-        console.log("Registration response:", res.data);
-
+        // If your backend requires recaptcha for login, 
+        // this call might still fail if you send the same token.
+        // Try sending WITHOUT the recaptcha token for the auto-login.
         const loginRes = await api.loginUser({
           email: formData.email,
           password: formData.password,
-          recaptcha: recaptchaToken, // ✅ send this to backend too
+          // recaptcha: recaptchaToken, <-- REMOVE THIS if possible
         });
 
-        const data = loginRes.data;
-        const user = data.user;
-        const userToken = data.access;
+        const { access, user } = loginRes.data;
+        localStorage.setItem("token", access);
+        localStorage.setItem("role", user.role);
 
-        setToken(userToken);
-        setUserRole(user.role);
+        setRegisterSuccess(true);
+        setTimeout(() => {
+          if (user.is_superuser) navigate("/dashboard");
+          else navigate("/user-dashboard");
+        }, 1500);
 
-        // ✅ Fixed routing: superuser goes to dashboard, all others to user-dashboard
-        if (user.is_superuser === true) {
-          navigate("/dashboard");
-        } else {
-          navigate("/user-dashboard");
-        }
-      } catch (err) {
-        console.error("Registration error:", err.response?.data || err.message);
-        alert(
-          err.response?.data?.detail ||
-            "Registration failed. Please check your details."
-        );
+      } catch (loginErr) {
+        // If auto-login fails, don't show a registration error.
+        // Redirect them to the login page to enter their credentials normally.
+        console.warn("Auto-login failed after registration:", loginErr);
+        alert("Account created successfully! Please log in to continue.");
+        navigate("/login");
       }
-    }
-  };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    const decoded = jwtDecode(credentialResponse.credential);
-    console.log("Google Sign-Up Success:", decoded);
-
-    try {
-      const userData = {
-        first_name: decoded.given_name || "",
-        last_name: decoded.family_name || "",
-        email: decoded.email,
-        password: Math.random().toString(36).slice(-8),
-      };
-
-      const res = await api.registerUser(userData);
-      console.log("Registered via Google:", res.data);
     } catch (err) {
-      console.error(
-        "Google registration error:",
-        err.response?.data || err.message
-      );
+      console.error("Registration Error:", err);
+      // If the email is already taken, this alert will show the backend's message
+      alert(err.response?.data?.email?.[0] || err.response?.data?.detail || "Registration failed.");
+      
+      // Reset ReCAPTCHA because the token is now invalid/used
+      if (window.grecaptcha) window.grecaptcha.reset();
+      setRecaptchaToken("");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
-      <Particles
-        id="tsparticles"
-        init={particlesInit}
-        options={{
-          background: { color: { value: "#0d1117" } },
-          fpsLimit: 120,
-          interactivity: {
-            events: {
-              onHover: { enable: true, mode: "trail" },
-              onClick: { enable: true, mode: "push" },
-            },
-            modes: {
-              trail: {
-                delay: 0.005,
-                quantity: 5,
-                particles: { color: { value: "#3b82f6" }, size: { value: 3 } },
-              },
-              push: { quantity: 4 },
-            },
-          },
-          particles: {
-            color: { value: ["#3b82f6", "#60a5fa", "#93c5fd"] },
-            links: {
-              color: "#3b82f6",
-              distance: 120,
-              enable: true,
-              opacity: 0.4,
-              width: 1,
-            },
-            move: { enable: true, speed: 1, outModes: { default: "bounce" } },
-            number: { value: 50, density: { enable: true, area: 800 } },
-            opacity: { value: 0.5 },
-            shape: { type: "circle" },
-            size: { value: { min: 1, max: 4 } },
-          },
-        }}
-        className="absolute inset-0 z-0"
-      />
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-gray-950 p-4 sm:p-6 overflow-x-hidden">
+      
+      {/* Background Particles */}
+      <div className="absolute inset-0 z-0">
+        <Particles id="tsparticles" init={particlesInit} options={particleOptions} className="h-full w-full" />
+      </div>
 
-      <div className="relative z-10 w-full max-w-3xl bg-gray-900/90 p-8 rounded-2xl shadow-2xl border border-gray-700 backdrop-blur-lg animate-slideUp">
-        <h1 className="text-3xl font-extrabold text-center mb-6 text-blue-400">
-          Create Your Account
-        </h1>
-
-        <div className="flex justify-around mb-6">
-          {["student", "teacher", "parent", "public"].map((r) => (
-            <label key={r} className="cursor-pointer">
-              <input
-                type="radio"
-                name="role"
-                value={r}
-                checked={role === r}
-                onChange={() => setRole(r)}
-                className="hidden"
-              />
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                  role === r
-                    ? "bg-blue-600 shadow-md"
-                    : "bg-gray-700 hover:bg-gray-600"
-                }`}
-              >
-                {r.charAt(0).toUpperCase() + r.slice(1)}
-              </span>
-            </label>
-          ))}
+      {/* Main Glassmorphism Container */}
+      <div className="relative z-10 w-full max-w-4xl bg-gray-900/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden flex flex-col md:flex-row">
+        
+        {/* Left Branding Panel (Hidden on Mobile) */}
+        <div className="hidden md:flex w-1/3 bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-950 p-10 flex-col justify-between text-white">
+          <div>
+            <h2 className="text-3xl font-black tracking-tighter">APEX</h2>
+            <p className="text-blue-100/70 mt-3 text-sm leading-relaxed">
+              Unlock your potential with Kenya's leading learning management system.
+            </p>
+          </div>
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 text-sm font-medium">
+              <div className="bg-white/10 p-2 rounded-lg"><CheckCircle2 size={20} className="text-blue-300"/></div>
+              Interactive Content
+            </div>
+            <div className="flex items-center gap-4 text-sm font-medium">
+              <div className="bg-white/10 p-2 rounded-lg"><CheckCircle2 size={20} className="text-blue-300"/></div>
+              Exam Preparation
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {[
-            "firstName",
-            "middleName",
-            "lastName",
-            "email",
-            "password",
-            "confirmPassword",
-          ].map((field) => (
-            <div key={field} className="relative group">
-              <input
-                type={
-                  field.includes("password")
-                    ? field === "confirmPassword" && showConfirm
-                      ? "text"
-                      : field === "password" && showPassword
-                      ? "text"
-                      : "password"
-                    : field === "email"
-                    ? "email"
-                    : "text"
-                }
-                name={field}
-                value={formData[field]}
-                onChange={handleChange}
-                onFocus={() => setHoverField(field)}
-                onBlur={() => setHoverField(null)}
-                className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder=" "
-              />
-              <label className="absolute left-3 top-2 text-gray-400 text-xs peer-placeholder-shown:top-4 peer-placeholder-shown:text-gray-500 peer-placeholder-shown:text-sm transition-all">
-                {field
-                  .replace(/([A-Z])/g, " $1")
-                  .replace(/^./, (str) => str.toUpperCase())}
-              </label>
-              {field.includes("password") && (
-                <span
-                  className="absolute right-3 top-4 cursor-pointer"
-                  onClick={() =>
-                    field === "password"
-                      ? setShowPassword(!showPassword)
-                      : setShowConfirm(!showConfirm)
-                  }
-                >
-                  {field === "password" ? (
-                    showPassword ? (
-                      <EyeOff size={18} />
-                    ) : (
-                      <Eye size={18} />
-                    )
-                  ) : showConfirm ? (
-                    <EyeOff size={18} />
-                  ) : (
-                    <Eye size={18} />
-                  )}
-                </span>
-              )}
-              {hoverField === field && tooltips[field] && (
-                <div className="absolute top-full mt-1 left-0 bg-gray-800 text-gray-200 text-xs px-3 py-1 rounded shadow-lg border border-gray-700 animate-fadeIn">
-                  <Info size={12} className="inline mr-1" /> {tooltips[field]}
-                </div>
-              )}
-              {errors[field] && (
-                <p className="text-red-400 text-xs mt-1">{errors[field]}</p>
-              )}
+        {/* Right Form Panel */}
+        <div className="flex-1 p-6 sm:p-12 text-white">
+          {registerSuccess ? (
+            <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20 animate-in fade-in zoom-in duration-500">
+              <div className="bg-green-500/20 p-6 rounded-full">
+                <CheckCircle2 size={80} className="text-green-500" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold">Registration Successful!</h2>
+                <p className="text-gray-400 mt-2">Setting up your personalized dashboard...</p>
+              </div>
+              <Loader2 className="animate-spin text-blue-500" size={32} />
+            </div>
+          ) : (
+            <>
+              <div className="mb-10 text-center md:text-left">
+                <h1 className="text-3xl font-bold">Create Account</h1>
+                <p className="text-gray-400 mt-2">Join Apex Learning today.</p>
+              </div>
 
-              {field === "password" && formData.password && (
-                <div className="mt-2">
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-500 ${
-                        passwordStrength.score <= 1
-                          ? "bg-red-500 w-1/4"
-                          : passwordStrength.score === 2
-                          ? "bg-yellow-500 w-2/4"
-                          : passwordStrength.score === 3
-                          ? "bg-blue-500 w-3/4"
-                          : "bg-green-500 w-full"
-                      }`}
-                    ></div>
-                  </div>
-                  <p
-                    className={`text-xs mt-1 ${
-                      passwordStrength.score <= 1
-                        ? "text-red-400"
-                        : passwordStrength.score === 2
-                        ? "text-yellow-400"
-                        : passwordStrength.score === 3
-                        ? "text-blue-400"
-                        : "text-green-400"
+              {/* Responsive Role Selector */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8">
+                {["student", "teacher", "parent", "public"].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all border ${
+                      role === r 
+                      ? "bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-900/40" 
+                      : "bg-white/5 border-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300"
                     }`}
                   >
-                    {passwordStrength.label} Password
-                  </p>
+                    {r}
+                  </button>
+                ))}
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Responsive Name Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input name="firstName" placeholder="First Name" onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all" required />
+                  <input name="lastName" placeholder="Last Name" onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all" required />
                 </div>
-              )}
-            </div>
-          ))}
 
-          {role === "student" && (
-            <>
-              <div className="relative">
-                <select
-                  name="educationLevel"
-                  value={formData.educationLevel}
-                  onChange={handleChange}
-                  className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                <input type="email" name="email" placeholder="Email Address" onChange={handleChange} className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all" required />
+
+                {/* Password with Strength Indicator */}
+                <div className="space-y-2">
+                    <div className="relative">
+                        <input 
+                            type={showPassword ? "text" : "password"} 
+                            name="password" 
+                            placeholder="Password" 
+                            onChange={handleChange} 
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
+                            required 
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-4.5 text-gray-500 hover:text-white transition-colors">
+                            {showPassword ? <EyeOff size={22}/> : <Eye size={22}/>}
+                        </button>
+                    </div>
+                    {formData.password && (
+                        <div className="flex gap-1 px-1">
+                            {[1, 2, 3, 4].map((step) => (
+                                <div key={step} className={`h-1 flex-1 rounded-full transition-colors ${passwordStrength.score >= step ? 'bg-blue-500' : 'bg-white/10'}`} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <input 
+                    type={showConfirm ? "text" : "password"} 
+                    name="confirmPassword" 
+                    placeholder="Confirm Password" 
+                    onChange={handleChange} 
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
+                    required 
+                />
+
+                {/* Role Specific Selection */}
+                {role === "student" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+                    <select name="educationLevel" onChange={handleChange} className="bg-gray-800 text-sm border-white/10 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select Curriculum</option>
+                      <option value="CBC">CBC</option>
+                      <option value="8-4-4">8-4-4</option>
+                    </select>
+                    <select name="currentGrade" onChange={handleChange} className="bg-gray-800 text-sm border-white/10 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Current Grade/Form</option>
+                      {(formData.educationLevel === "CBC" ? CBC_GRADES : EIGHT_FOUR_FOUR_FORMS).map(lvl => <option key={lvl} value={lvl}>{lvl}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                <div className="flex justify-center py-4 scale-90 sm:scale-100 overflow-hidden">
+                  <ReCAPTCHA sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setRecaptchaToken} theme="dark" />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !recaptchaToken}
+                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center justify-center gap-3"
                 >
-                  <option value="">Select Education Level</option>
-                  <option value="CBC">CBC</option>
-                  <option value="8-4-4">8-4-4</option>
-                </select>
-                <label className="absolute left-3 top-2 text-gray-400 text-xs">
-                  Education Level
-                </label>
-              </div>
-              <div className="relative">
-                <select
-                  name="currentGrade"
-                  value={formData.currentGrade}
-                  onChange={handleChange}
-                  className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                >
-                  <option value="">Select Current Grade/Form</option>
-                  {(formData.educationLevel === "CBC"
-                    ? CBC_GRADES
-                    : EIGHT_FOUR_FOUR_FORMS
-                  ).map((lvl) => (
-                    <option key={lvl}>{lvl}</option>
-                  ))}
-                </select>
-                <label className="absolute left-3 top-2 text-gray-400 text-xs">
-                  Current Grade/Form
-                </label>
+                  {isSubmitting ? <Loader2 className="animate-spin" /> : "Sign Up"}
+                </button>
+              </form>
+
+              <div className="mt-10 space-y-6">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute inset-x-0 h-px bg-white/10"></span>
+                  <span className="relative bg-[#161b22] px-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Or Secure Sign Up With</span>
+                </div>
+                
+                <div className="flex justify-center">
+                  <GoogleLogin onSuccess={() => {}} theme="filled_blue" shape="pill" size="large" />
+                </div>
+                
+                <p className="text-center text-gray-500 text-sm">
+                  Already have an account? <button onClick={() => navigate("/login")} className="text-blue-400 font-bold hover:text-blue-300 transition-colors">Log In</button>
+                </p>
               </div>
             </>
           )}
-
-          {role === "teacher" && (
-            <>
-              <div className="relative">
-                <select
-                  name="teachingLevel"
-                  value={formData.teachingLevel}
-                  onChange={handleChange}
-                  className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                >
-                  <option value="">Select Teaching Level</option>
-                  <option value="CBC">CBC</option>
-                  <option value="8-4-4">8-4-4</option>
-                </select>
-                <label className="absolute left-3 top-2 text-gray-400 text-xs">
-                  Teaching Level
-                </label>
-              </div>
-              <div className="relative">
-                <select
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-                >
-                  <option value="">Select Subject</option>
-                  {subjects.map((subj) => (
-                    <option key={subj}>{subj}</option>
-                  ))}
-                </select>
-                <label className="absolute left-3 top-2 text-gray-400 text-xs">
-                  Subject
-                </label>
-              </div>
-            </>
-          )}
-
-          {role === "parent" && (
-            <div className="relative">
-              <input
-                type="text"
-                name="childName"
-                value={formData.childName}
-                onChange={handleChange}
-                placeholder=" "
-                className="peer w-full px-3 pt-5 pb-2 rounded-lg bg-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <label className="absolute left-3 top-2 text-gray-400 text-xs">
-                Child's Name (Optional)
-              </label>
-            </div>
-          )}
-
-          <div className="flex justify-center">
-            <ReCAPTCHA
-              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} // ✅ set this in .env
-              onChange={setRecaptchaToken}
-            />
-          </div>
-          {!recaptchaToken && (
-            <p className="text-red-400 text-xs mt-2 text-center">
-              Please verify that you are not a robot.
-            </p>
-          )}
-
-          <button
-            type="submit"
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-full font-semibold transition-all"
-          >
-            Register
-          </button>
-        </form>
-
-        <div className="mt-4 flex justify-center">
-          <button
-            onClick={() => navigate("/login")}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-full font-semibold transition-all"
-          >
-            Already have an account? Login
-          </button>
-        </div>
-
-        <div className="mt-6 flex justify-center w-full">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => console.log("Google Sign-Up Failed")}
-            width={300}
-            shape="pill"
-            theme="filled_blue"
-            size="large"
-            text="continue_with"
-          />
         </div>
       </div>
     </div>
