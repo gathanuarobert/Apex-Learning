@@ -1,19 +1,19 @@
 import base64
 import requests
 from datetime import datetime
-import os
 import logging
 import re
+from decouple import config
 
 logger = logging.getLogger(__name__)
 
-# Environment variables
-MPESA_ENV = os.getenv('MPESA_ENV', 'sandbox')
-CONSUMER_KEY = os.getenv('MPESA_CONSUMER_KEY')
-CONSUMER_SECRET = os.getenv('MPESA_CONSUMER_SECRET')
-SHORTCODE = os.getenv('MPESA_SHORTCODE')
-PASSKEY = os.getenv('MPESA_PASSKEY')
-CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL')
+# Environment variables (using python-decouple)
+MPESA_ENV = config('MPESA_ENV', default='sandbox')
+CONSUMER_KEY = config('MPESA_CONSUMER_KEY')
+CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET')
+SHORTCODE = config('MPESA_SHORTCODE')
+PASSKEY = config('MPESA_PASSKEY')
+CALLBACK_URL = config('MPESA_CALLBACK_URL')
 
 # Fail fast if critical env vars are missing
 if not all([CONSUMER_KEY, CONSUMER_SECRET, SHORTCODE, PASSKEY, CALLBACK_URL]):
@@ -47,7 +47,7 @@ def sanitize_phone(phone):
     if phone.startswith("+254"):
         phone = phone[1:]
     elif phone.startswith("254"):
-        pass  # already fine
+        pass
     elif phone.startswith("07") or phone.startswith("01"):
         phone = "254" + phone[1:]
     else:
@@ -61,10 +61,16 @@ def sanitize_phone(phone):
 
 def send_stk_push(phone_number, amount):
     try:
-        access_token = get_access_token()
+        # Generate password BEFORE using it
         password, timestamp = generate_password()
-
         phone_number = sanitize_phone(phone_number)
+        access_token = get_access_token()
+
+        # Debug logs
+        print("SHORTCODE:", SHORTCODE)
+        print("CALLBACK:", CALLBACK_URL)
+        print("PHONE:", phone_number)
+        print("PASSWORD:", password)
 
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -87,7 +93,15 @@ def send_stk_push(phone_number, amount):
 
         url = f"{BASE_URL}/mpesa/stkpush/v1/processrequest"
         response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError:
+            # Log full response for debugging
+            logger.error("STK Push failed with status %s", response.status_code)
+            logger.error("STK Push request payload: %s", payload)
+            logger.error("STK Push response body: %s", response.text)
+            raise
 
         # Mask phone for logs
         masked_phone = phone_number[:5] + '****' + phone_number[-2:]
