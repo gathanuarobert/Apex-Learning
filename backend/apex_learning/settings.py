@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 from datetime import timedelta
 
 
@@ -20,8 +20,9 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env
-# load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env")
 BASE_DIR = Path(__file__).resolve().parent.parent
+# print("ENV LOADED DB_HOST:", os.getenv("DB_HOST"))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -92,11 +93,11 @@ WSGI_APPLICATION = 'apex_learning.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv("DB_NAME", "alearning_db"),          # your database name
-        'USER': os.getenv("DB_USER", "alearn_user"),               # your database user
-        'PASSWORD': os.getenv("DB_PASSWORD", "Gathanua@254"),      # the password you set
-        'HOST': os.getenv("DB_HOST", "localhost"),                 # usually localhost
-        'PORT': os.getenv("DB_PORT", "3306"),                      # default MariaDB/MySQL port
+        'NAME': os.getenv("DB_NAME"),          # your database name
+        'USER': os.getenv("DB_USER"),               # your database user
+        'PASSWORD': os.getenv("DB_PASSWORD"),      # the password you set
+        'HOST': os.getenv("DB_HOST"),                 # usually localhost
+        'PORT': os.getenv("DB_PORT"),                      # default MariaDB/MySQL port
     }
 }
 
@@ -123,7 +124,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", "6LfeDb8rAAAAAPQnlJsepRtPM92ycZgLeJFemYvW")
+RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY")
 
 
 
