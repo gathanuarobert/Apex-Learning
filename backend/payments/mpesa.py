@@ -26,7 +26,7 @@ BASE_URL = "https://sandbox.safaricom.co.ke" if MPESA_ENV == 'sandbox' else "htt
 def get_access_token():
     try:
         url = f"{BASE_URL}/oauth/v1/generate?grant_type=client_credentials"
-        res = requests.get(url, auth=(CONSUMER_KEY, CONSUMER_SECRET))
+        res = requests.get(url, auth=(CONSUMER_KEY, CONSUMER_SECRET), timeout=60)
         res.raise_for_status()
         return res.json().get('access_token')
     except requests.RequestException as e:
@@ -92,7 +92,7 @@ def send_stk_push(phone_number, amount):
         }
 
         url = f"{BASE_URL}/mpesa/stkpush/v1/processrequest"
-        response = requests.post(url, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
 
         try:
             response.raise_for_status()
