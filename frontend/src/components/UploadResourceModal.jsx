@@ -3,37 +3,42 @@ import React, { useState, useEffect } from "react";
 import { X, Upload, Loader2 } from "lucide-react";
 import api from "../Api";
 
-export default function UploadResourceModal({ isOpen, onClose, onSuccess, editResource }) {
+export default function UploadResourceModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  editResource,
+}) {
   const [resourceType, setResourceType] = useState("Note");
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
-  
+
   // Dropdowns data
   const [curricula, setCurricula] = useState([]);
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
   const [categories, setCategories] = useState([]);
-  
+
   // Selected values
   const [curriculum, setCurriculum] = useState("");
   const [grade, setGrade] = useState("");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [category, setCategory] = useState("");
-  
+
   // PastPaper specific
   const [year, setYear] = useState("");
-  
+
   // Exam specific
   const [date, setDate] = useState("");
-  
+
   // News specific
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
-  
+
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
@@ -41,14 +46,15 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [currRes, gradeRes, subjRes, topicRes, catRes] = await Promise.all([
-          api.get("resources/education-levels/"),
-          api.get("resources/grades/"),
-          api.get("resources/subjects/"),
-          api.get("resources/topics/"),
-          api.get("resources/news-categories/"),
-        ]);
-        
+        const [currRes, gradeRes, subjRes, topicRes, catRes] =
+          await Promise.all([
+            api.get("resources/education-levels/"),
+            api.get("resources/grades/"),
+            api.get("resources/subjects/"),
+            api.get("resources/topics/"),
+            api.get("resources/news-categories/"),
+          ]);
+
         setCurricula(currRes.data || []);
         setGrades(gradeRes.data || []);
         setSubjects(subjRes.data || []);
@@ -58,7 +64,7 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
         console.error("Failed to fetch dropdown options:", err);
       }
     };
-    
+
     if (isOpen) fetchOptions();
   }, [isOpen]);
 
@@ -66,14 +72,14 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
   useEffect(() => {
     if (editResource && isOpen) {
       console.log("Editing resource:", editResource);
-      
+
       // Set resource type
       setResourceType(editResource.type);
-      
+
       // Common fields
       setTitle(editResource.title || editResource.headline || "");
       setPrice(editResource.price || "");
-      
+
       // Description/content
       if (editResource.type === "Note") {
         setDescription(editResource.content || "");
@@ -84,7 +90,7 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
         setHeadline(editResource.headline || "");
         setBody(editResource.body || "");
       }
-      
+
       // Dropdown selections - need to find IDs from dropdown options
       // For now, just set empty - user will need to re-select
       // In a production app, you'd store the IDs in the resource object
@@ -93,12 +99,11 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
       setSubject("");
       setTopic("");
       setCategory("");
-      
+
       // Past paper year
       if (editResource.type === "Past Paper") {
         setYear(editResource.year || "");
       }
-      
     } else if (!editResource && isOpen) {
       // Reset form for new upload
       resetForm();
@@ -126,7 +131,7 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    
+
     // Validation
     if (resourceType === "News") {
       if (!headline || !body) {
@@ -140,12 +145,12 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
         return;
       }
     }
-    
+
     setUploading(true);
-    
+
     try {
       const formData = new FormData();
-      
+
       if (resourceType === "News") {
         formData.append("headline", headline);
         formData.append("body", body);
@@ -159,21 +164,21 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
         if (grade) formData.append("grade_id", grade);
         if (subject) formData.append("subject_id", subject);
         if (topic) formData.append("topic_id", topic);
-        
+
         if (resourceType === "Note" && description) {
           formData.append("content", description);
         }
-        
+
         if (resourceType === "Exam") {
           if (date) formData.append("date", date);
           if (description) formData.append("description", description);
         }
-        
+
         if (resourceType === "PastPaper" && year) {
           formData.append("year", year);
         }
       }
-      
+
       const endpoints = {
         Note: "resources/notes/",
         Exam: "resources/exams/",
@@ -181,12 +186,16 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
         "Past Paper": "resources/past-papers/",
         News: "resources/news/",
       };
-      
+
       if (editResource) {
         // PATCH request for editing
-        await api.patch(`${endpoints[resourceType]}${editResource.id}/`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.patch(
+          `${endpoints[resourceType]}${editResource.id}/`,
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          },
+        );
         alert("Resource updated successfully!");
       } else {
         // POST request for new upload
@@ -195,13 +204,18 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
         });
         alert("Resource uploaded successfully!");
       }
-      
+
       resetForm();
       onSuccess();
       onClose();
     } catch (err) {
       console.error("Upload/Edit failed:", err);
-      setError(err.response?.data?.error || "Operation failed. Please try again.");
+      console.error("Response data:", JSON.stringify(err.response?.data)); // ADD THIS
+      setError(
+        err.response?.data?.error ||
+          JSON.stringify(err.response?.data) ||
+          "Operation failed.",
+      );
     } finally {
       setUploading(false);
     }
@@ -210,20 +224,32 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-[#0b1220] border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0b1220] border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="bg-gradient-to-r from-cyan-600/20 to-blue-600/20 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
           <h2 className="text-xl font-bold text-white">
             {editResource ? "Edit Resource" : "Upload New Resource"}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition">
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition"
+          >
             <X size={24} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 space-y-4 max-h-[70vh] overflow-y-auto"
+        >
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
               {error}
@@ -232,7 +258,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
 
           {/* Resource Type - Disabled when editing */}
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">Resource Type</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">
+              Resource Type
+            </label>
             <select
               value={resourceType}
               onChange={(e) => setResourceType(e.target.value)}
@@ -251,7 +279,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
           {resourceType === "News" ? (
             <>
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Headline *</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Headline *
+                </label>
                 <input
                   type="text"
                   value={headline}
@@ -262,7 +292,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Body *</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Body *
+                </label>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
@@ -273,7 +305,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Category</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Category
+                </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -281,7 +315,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                 >
                   <option value="">Select category (optional)</option>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -301,7 +337,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
             <>
               {/* Common fields for Note/Exam/PastPaper */}
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Title *</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Title *
+                </label>
                 <input
                   type="text"
                   value={title}
@@ -314,7 +352,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Curriculum</label>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Curriculum
+                  </label>
                   <select
                     value={curriculum}
                     onChange={(e) => setCurriculum(e.target.value)}
@@ -322,12 +362,16 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                   >
                     <option value="">Select...</option>
                     {curricula.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Grade</label>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Grade
+                  </label>
                   <select
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
@@ -335,7 +379,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                   >
                     <option value="">Select...</option>
                     {grades.map((g) => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -343,7 +389,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Subject</label>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Subject
+                  </label>
                   <select
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
@@ -351,12 +399,16 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                   >
                     <option value="">Select...</option>
                     {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Topic</label>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Topic
+                  </label>
                   <select
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
@@ -364,15 +416,20 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                   >
                     <option value="">Select...</option>
                     {topics.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {(resourceType === "PastPaper" || resourceType === "Past Paper") && (
+              {(resourceType === "PastPaper" ||
+                resourceType === "Past Paper") && (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Year</label>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Year
+                  </label>
                   <input
                     type="number"
                     value={year}
@@ -385,7 +442,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
 
               {resourceType === "Exam" && (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Exam Date</label>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Exam Date
+                  </label>
                   <input
                     type="date"
                     value={date}
@@ -396,7 +455,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
               )}
 
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Price (KSh)</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Price (KSh)
+                </label>
                 <input
                   type="number"
                   step="0.01"
@@ -408,7 +469,9 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Description</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Description
+                </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -430,7 +493,8 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                   required={!editResource}
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  {editResource ? "Leave empty to keep existing file. " : ""}Accepted: PDF, DOC, DOCX
+                  {editResource ? "Leave empty to keep existing file. " : ""}
+                  Accepted: PDF, DOC, DOCX
                 </p>
               </div>
             </>
