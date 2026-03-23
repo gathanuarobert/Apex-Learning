@@ -33,7 +33,15 @@ SECRET_KEY = 'django-insecure-c-+p_hr9_1r1)!o#(3h#d+dz*uxfr73d07$%3&sl!b%x3no1j4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'thunderous-accordable-marivel.ngrok-free.dev',  # add this
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://thunderous-accordable-marivel.ngrok-free.dev',
+]
 
 
 # Application definition
@@ -120,7 +128,7 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    "http://localhost:5173", "http://localhost:5174",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
