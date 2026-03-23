@@ -22,32 +22,25 @@ import api, { getCurrentUser, getLibrary } from "../Api";
 export default function UserDashboard() {
   const navigate = useNavigate();
 
-  // Sidebar
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Wallet modal
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [txSearch, setTxSearch] = useState("");
 
-  // Top-up state
-  const [topUpPhone, setTopUpPhone] = useState("");
+  // Top-up state — no phone number needed anymore
   const [topUpAmount, setTopUpAmount] = useState("");
   const [topUpLoading, setTopUpLoading] = useState(false);
   const [showTopUp, setShowTopUp] = useState(false);
 
-  // User info
   const [currentUser, setCurrentUser] = useState(null);
-
-  // Tabs — track previous tab so closing wallet restores it
   const [activeTab, setActiveTab] = useState("dashboard");
   const [prevTab, setPrevTab] = useState("dashboard");
   const [downloads, setDownloads] = useState([]);
   const [dlSearch, setDlSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Cards
   const cards = [
     { title: "Notes", icon: <FileText size={36} />, color: "from-blue-500 to-blue-700", route: "/notes" },
     { title: "Exams", icon: <BookOpen size={36} />, color: "from-purple-500 to-purple-700", route: "/exams" },
@@ -57,18 +50,15 @@ export default function UserDashboard() {
 
   const cardRefs = useRef(cards.map(() => React.createRef()));
 
-  // Helper: open wallet without losing current tab
   const openWallet = () => {
     setPrevTab(activeTab);
     setWalletOpen(true);
   };
 
-  // Helper: close wallet and restore previous tab
   const closeWallet = () => {
     setWalletOpen(false);
   };
 
-  // Desktop sidebar navigation
   const navItems = [
     { icon: Home, label: "dashboard", onClick: () => setActiveTab("dashboard") },
     { icon: Wallet, label: "wallet", onClick: openWallet },
@@ -88,7 +78,6 @@ export default function UserDashboard() {
     },
   ];
 
-  // Mobile bottom nav items (condensed)
   const mobileNavItems = [
     { icon: Home, label: "dashboard", onClick: () => setActiveTab("dashboard") },
     { icon: User, label: "credentials", onClick: () => setActiveTab("credentials") },
@@ -117,7 +106,6 @@ export default function UserDashboard() {
 
   const particlesInit = async (engine) => { await loadSlim(engine); };
 
-  // Card tilt handlers
   const handleMouseMove = (e, cardRef) => {
     const card = cardRef.current;
     const rect = card.getBoundingClientRect();
@@ -129,11 +117,11 @@ export default function UserDashboard() {
     const rotateY = ((x - centerX) / centerX) * 10;
     card.style.transform = `rotateX(${-rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
   };
+
   const handleMouseLeave = (cardRef) => {
     cardRef.current.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
   };
 
-  // ---------------------- FETCH WALLET BALANCE ----------------------
   const fetchWalletBalance = async () => {
     try {
       const res = await api.get("payments/wallet/");
@@ -144,7 +132,6 @@ export default function UserDashboard() {
     }
   };
 
-  // ---------------------- FETCH TRANSACTIONS ----------------------
   const fetchTransactions = async () => {
     try {
       const res = await api.get("payments/transactions/");
@@ -164,7 +151,6 @@ export default function UserDashboard() {
     }
   };
 
-  // ---------------------- FETCH LIBRARY/DOWNLOADS ----------------------
   const fetchLibrary = async () => {
     try {
       const res = await getLibrary();
@@ -184,7 +170,6 @@ export default function UserDashboard() {
     }
   };
 
-  // ---------------------- FETCH USER INFO ----------------------
   const fetchUserInfo = async () => {
     try {
       const res = await getCurrentUser();
@@ -194,7 +179,6 @@ export default function UserDashboard() {
     }
   };
 
-  // ---------------------- FETCH ALL DATA ----------------------
   const fetchAllData = async () => {
     setLoading(true);
     await Promise.all([
@@ -215,32 +199,20 @@ export default function UserDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // ---------------------- WALLET TOP-UP (M-Pesa) ----------------------
+  // ---------------------- WALLET TOP-UP (Pesapal) ----------------------
   const handleTopUp = async () => {
-    if (!topUpPhone || !topUpAmount) {
-      alert("Please enter phone number and amount.");
-      return;
-    }
-    if (parseFloat(topUpAmount) <= 0) {
+    if (!topUpAmount || parseFloat(topUpAmount) <= 0) {
       alert("Please enter a valid amount.");
       return;
     }
 
     setTopUpLoading(true);
     try {
-      await api.post("payments/wallet/deposit/initiate/", {
-        phone_number: topUpPhone,
+      const res = await api.post("payments/wallet/deposit/initiate/", {
         amount: topUpAmount,
       });
-      alert("M-Pesa STK Push sent! Complete payment on your phone. Balance will update shortly.");
-      setShowTopUp(false);
-      setTopUpPhone("");
-      setTopUpAmount("");
-
-      setTimeout(() => {
-        fetchWalletBalance();
-        fetchTransactions();
-      }, 10000);
+      // Redirect to Pesapal checkout
+      window.location.href = res.data.redirect_url;
     } catch (err) {
       console.error("Top-up failed:", err);
       alert(err.response?.data?.error || "Top-up failed. Please try again.");
@@ -259,7 +231,6 @@ export default function UserDashboard() {
       };
       const endpoint = typeMap[item.resource_type] || "notes";
 
-      // Show downloading indicator
       const downloadingToast = document.createElement('div');
       downloadingToast.className = 'fixed top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-slide-in';
       downloadingToast.innerHTML = '<svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Downloading...';
@@ -272,8 +243,7 @@ export default function UserDashboard() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      
-      // Extract file extension from content-type or default to pdf
+
       const contentType = response.headers['content-type'];
       let extension = 'pdf';
       if (contentType) {
@@ -281,14 +251,13 @@ export default function UserDashboard() {
         else if (contentType.includes('word')) extension = 'docx';
         else if (contentType.includes('doc')) extension = 'doc';
       }
-      
+
       link.setAttribute('download', `${item.item}.${extension}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      // Remove downloading toast and show success
       downloadingToast.remove();
       const successToast = document.createElement('div');
       successToast.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in';
@@ -298,15 +267,12 @@ export default function UserDashboard() {
 
     } catch (err) {
       console.error("Download failed:", err);
-      
-      // Remove any existing toasts
       document.querySelectorAll('.fixed.top-20.right-4').forEach(el => el.remove());
-      
-      const errorMsg = err.response?.status === 402 
+
+      const errorMsg = err.response?.status === 402
         ? "Payment required. This resource is not free."
         : err.response?.data?.detail || "Download failed. Please try again.";
-      
-      // Show error toast
+
       const errorToast = document.createElement('div');
       errorToast.className = 'fixed top-20 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in';
       errorToast.textContent = `✗ ${errorMsg}`;
@@ -315,7 +281,6 @@ export default function UserDashboard() {
     }
   };
 
-  // ---------------------- FILTERS ----------------------
   const filteredTransactions = transactions.filter(tx =>
     tx.date?.includes(txSearch) ||
     tx.description?.toLowerCase().includes(txSearch.toLowerCase()) ||
@@ -328,12 +293,10 @@ export default function UserDashboard() {
     dl.type?.toLowerCase().includes(dlSearch.toLowerCase())
   );
 
-  // Determine what content to show (wallet open doesn't change activeTab anymore)
   const visibleTab = activeTab;
 
   return (
     <div className="relative min-h-screen flex text-white bg-gray-900 overflow-hidden">
-      {/* Particles */}
       <Particles
         id="tsparticles"
         init={particlesInit}
@@ -356,7 +319,6 @@ export default function UserDashboard() {
       <aside
         className={`hidden md:flex fixed top-0 left-0 h-full bg-gradient-to-b from-gray-800/80 via-gray-900/80 to-gray-800/80 backdrop-blur-md border-r border-gray-700 shadow-lg z-20 flex-col transform transition-all duration-300 ${sidebarOpen ? "w-64" : "w-20"}`}
       >
-        {/* Sidebar Header */}
         <div className="p-4 flex items-center justify-between border-b border-gray-700 sticky top-0 bg-gradient-to-b from-gray-800/90 to-gray-900/90 z-10">
           <h1 className={`text-lg font-bold tracking-wide transition-all duration-300 ${sidebarOpen ? "block" : "hidden"}`}>
             Apex Learning
@@ -402,8 +364,6 @@ export default function UserDashboard() {
       {/* ======================== MOBILE TOP BAR ======================== */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 bg-gray-900/90 backdrop-blur-md border-b border-gray-700/60 shadow-lg">
         <h1 className="text-base font-bold tracking-wide text-white">Apex Learning</h1>
-
-        {/* Wallet pill — visible on mobile top bar */}
         <button
           onClick={openWallet}
           className="flex items-center gap-1.5 bg-green-600/90 hover:bg-green-500 px-3 py-1.5 rounded-full text-sm font-semibold shadow transition-all active:scale-95"
@@ -434,15 +394,11 @@ export default function UserDashboard() {
       <main
         className={`
           flex-1 overflow-y-auto max-h-screen transition-all duration-300
-          /* desktop: respect sidebar width */
-          md:ml-20 
+          md:ml-20
           ${sidebarOpen ? "md:ml-64" : "md:ml-20"}
-          /* mobile: full width, padded top for topbar, bottom for bottom nav */
           pt-16 pb-24 md:pt-6 md:pb-6 px-4 md:px-6
         `}
       >
-
-        {/* Dashboard */}
         {visibleTab === "dashboard" && (
           <div>
             <div className="mb-6">
@@ -451,7 +407,6 @@ export default function UserDashboard() {
               </h2>
               <p className="text-slate-400 mt-1 text-sm md:text-base">What would you like to study today?</p>
             </div>
-
             <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-2">
               {cards.map((card, idx) => (
                 <div
@@ -471,7 +426,6 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* Credentials */}
         {visibleTab === "credentials" && (
           <div className="max-w-xl mx-auto bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
             <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
@@ -500,7 +454,6 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* Downloads Library */}
         {visibleTab === "downloads" && (
           <div className="max-w-3xl mx-auto bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
             <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
@@ -577,19 +530,16 @@ export default function UserDashboard() {
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4"
           onClick={(e) => { if (e.target === e.currentTarget) closeWallet(); }}
         >
-          {/* Bottom sheet on mobile, centered modal on desktop */}
           <div className="
             bg-gray-900 border border-gray-700 shadow-2xl w-full overflow-y-auto
             rounded-t-3xl max-h-[90vh] md:rounded-2xl md:max-w-md md:max-h-[90vh]
             animate-slide-up md:animate-none
           ">
-            {/* Drag handle — mobile only */}
             <div className="flex justify-center pt-3 pb-1 md:hidden">
               <div className="w-10 h-1 rounded-full bg-gray-600" />
             </div>
 
             <div className="p-5 md:p-6">
-              {/* Header */}
               <div className="flex justify-between items-center mb-5">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <Wallet size={20} /> My Wallet
@@ -623,14 +573,7 @@ export default function UserDashboard() {
               {/* Top Up Section */}
               {showTopUp ? (
                 <div className="bg-gray-800 rounded-xl p-4 mb-5 space-y-3">
-                  <h3 className="font-semibold text-cyan-400">Top Up via M-Pesa</h3>
-                  <input
-                    type="tel"
-                    placeholder="Phone Number (254XXXXXXXXX)"
-                    value={topUpPhone}
-                    onChange={(e) => setTopUpPhone(e.target.value)}
-                    className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-cyan-500 focus:outline-none text-sm"
-                  />
+                  <h3 className="font-semibold text-cyan-400">Top Up via Pesapal</h3>
                   <input
                     type="number"
                     placeholder="Amount (KSh)"
@@ -639,13 +582,16 @@ export default function UserDashboard() {
                     min="1"
                     className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-cyan-500 focus:outline-none text-sm"
                   />
+                  <p className="text-xs text-slate-400">
+                    You'll be redirected to Pesapal to complete payment via M-Pesa, card, or other methods.
+                  </p>
                   <div className="flex gap-2">
                     <button
                       onClick={handleTopUp}
                       disabled={topUpLoading}
                       className="flex-1 bg-green-600 hover:bg-green-700 p-3 rounded-lg font-semibold transition disabled:opacity-50 text-sm active:scale-95"
                     >
-                      {topUpLoading ? "Sending..." : "Send STK Push"}
+                      {topUpLoading ? "Redirecting..." : "Proceed to Payment"}
                     </button>
                     <button
                       onClick={() => setShowTopUp(false)}
@@ -660,7 +606,7 @@ export default function UserDashboard() {
                   onClick={() => setShowTopUp(true)}
                   className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 w-full p-3 rounded-xl mb-5 transition font-semibold text-sm active:scale-95"
                 >
-                  <Plus size={18} /> Top Up via M-Pesa
+                  <Plus size={18} /> Top Up Wallet
                 </button>
               )}
 
@@ -676,7 +622,6 @@ export default function UserDashboard() {
                   onChange={(e) => setTxSearch(e.target.value)}
                   className="mb-3 w-full p-2.5 rounded bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 text-sm"
                 />
-
                 {filteredTransactions.length === 0 ? (
                   <p className="text-slate-400 text-center py-4 text-sm">No transactions yet.</p>
                 ) : (
@@ -720,7 +665,6 @@ export default function UserDashboard() {
         }
         .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
 
-        /* Safe area for notched phones */
         .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 8px); }
       `}</style>
     </div>

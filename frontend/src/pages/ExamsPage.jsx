@@ -1,10 +1,10 @@
-// src/pages/ExamsPage.jsx - WITH FREE RESOURCE HANDLING
+// src/pages/ExamsPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { ArrowLeft, Search, X, Download, BookOpen, ChevronRight, Loader2 } from "lucide-react";
-import { getExams, walletPurchase, initiateOneTimePurchase } from "../Api";
+import { getExams, walletPurchase } from "../Api";
 import api from "../Api";
 
 const GRADS = ["from-green-500 to-green-700","from-blue-500 to-blue-700","from-purple-500 to-purple-700","from-pink-500 to-pink-700","from-teal-500 to-teal-700","from-cyan-500 to-cyan-700","from-orange-500 to-orange-700","from-rose-500 to-rose-700","from-indigo-500 to-indigo-700","from-yellow-500 to-yellow-600"];
@@ -20,7 +20,6 @@ export default function ExamsPage() {
   const [subject, setSubject] = useState(null);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null);
-  const [phone, setPhone] = useState("");
   const [paying, setPaying] = useState(false);
 
   const refs = useRef({});
@@ -69,6 +68,15 @@ export default function ExamsPage() {
   const breadcrumbs = [curriculum && { label: curriculum, clear: () => { setCurriculum(null); setGrade(null); setSubject(null); } }, grade && { label: grade, clear: () => { setGrade(null); setSubject(null); } }, subject && { label: subject, clear: () => setSubject(null) }].filter(Boolean);
   const stepLabel = ["Select Curriculum", "Select Grade / Level", "Select Subject", subject ? `Exams — ${subject}` : ""][step];
 
+  const showToast = (msg, color = "green") => {
+    document.querySelectorAll('.fixed.top-20.right-4').forEach(el => el.remove());
+    const toast = document.createElement('div');
+    toast.className = `fixed top-20 right-4 bg-${color}-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] animate-slide-in`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+  };
+
   const handleResourceClick = (item) => {
     const price = parseFloat(item.price || 0);
     if (price === 0) {
@@ -84,7 +92,6 @@ export default function ExamsPage() {
       toast.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] flex items-center gap-2 animate-slide-in';
       toast.innerHTML = '<svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Downloading free exam...';
       document.body.appendChild(toast);
-
       const response = await api.get(`resources/exams/${item.id}/download/`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -94,26 +101,41 @@ export default function ExamsPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-
       toast.remove();
-      const successToast = document.createElement('div');
-      successToast.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] animate-slide-in';
-      successToast.textContent = '✓ Free download complete!';
-      document.body.appendChild(successToast);
-      setTimeout(() => successToast.remove(), 3000);
+      showToast('✓ Free download complete!');
     } catch (err) {
       console.error("Download failed:", err);
-      document.querySelectorAll('.fixed.top-20.right-4').forEach(el => el.remove());
-      const errorToast = document.createElement('div');
-      errorToast.className = 'fixed top-20 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] animate-slide-in';
-      errorToast.textContent = `✗ ${err.response?.data?.detail || "Download failed"}`;
-      document.body.appendChild(errorToast);
-      setTimeout(() => errorToast.remove(), 5000);
+      showToast(`✗ ${err.response?.data?.detail || "Download failed"}`, "red");
     }
   };
 
-  const payWallet = async () => { setPaying(true); try { await walletPurchase({ resource_id: modal.item.id, resource_type: "Exam" }); alert("Payment successful!"); setModal(null); } catch (e) { alert(e.response?.data?.error || "Wallet payment failed."); } finally { setPaying(false); } };
-  const payMpesa = async () => { if (!phone) { alert("Enter M-Pesa phone."); return; } setPaying(true); try { await initiateOneTimePurchase({ phone_number: phone, resource_id: modal.item.id, resource_type: "Exam" }); alert("STK Push sent!"); setModal(null); setPhone(""); } catch (e) { alert(e.response?.data?.error || "M-Pesa failed."); } finally { setPaying(false); } };
+  const payWallet = async () => {
+    setPaying(true);
+    try {
+      await walletPurchase({ resource_id: modal.item.id, resource_type: "Exam" });
+      setModal(null);
+      showToast('✓ Purchase successful! Find it in My Library.');
+    } catch (e) {
+      alert(e.response?.data?.error || e.response?.data?.message || "Wallet payment failed.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const payPesapal = async () => {
+    setPaying(true);
+    try {
+      const res = await api.post("payments/purchase/resource/initiate/", {
+        resource_id: modal.item.id,
+        resource_type: "Exam",
+      });
+      window.location.href = res.data.redirect_url;
+    } catch (e) {
+      alert(e.response?.data?.error || "Payment failed.");
+    } finally {
+      setPaying(false);
+    }
+  };
 
   return (
     <div className="relative min-h-screen flex flex-col text-white bg-gray-900 overflow-x-hidden">
@@ -173,9 +195,8 @@ export default function ExamsPage() {
             <div className="px-5 py-5 flex flex-col gap-3">
               <div className="flex items-baseline gap-1 mb-2"><span className="text-2xl font-bold text-green-400">KSh {parseFloat(modal.item.price).toFixed(2)}</span></div>
               <button onClick={payWallet} disabled={paying} className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-bold text-sm transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">{paying ? "Processing…" : "💳 Pay with Wallet"}</button>
-              <div className="flex items-center gap-3"><div className="flex-1 h-px bg-gray-800" /><span className="text-xs text-gray-600">or via M-Pesa</span><div className="flex-1 h-px bg-gray-800" /></div>
-              <input type="tel" placeholder="254XXXXXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-green-500 transition placeholder-gray-600" />
-              <button onClick={payMpesa} disabled={paying} className="w-full py-3 rounded-xl bg-green-700 hover:bg-green-600 font-bold text-sm transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">{paying ? "Sending…" : "📱 Send M-Pesa STK"}</button>
+              <div className="flex items-center gap-3"><div className="flex-1 h-px bg-gray-800" /><span className="text-xs text-gray-600">or pay via Pesapal</span><div className="flex-1 h-px bg-gray-800" /></div>
+              <button onClick={payPesapal} disabled={paying} className="w-full py-3 rounded-xl bg-green-700 hover:bg-green-600 font-bold text-sm transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">{paying ? "Redirecting…" : "📱 Pay via Pesapal (M-Pesa/Card)"}</button>
             </div>
           </div>
         </div>
