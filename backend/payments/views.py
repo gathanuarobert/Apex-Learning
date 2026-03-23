@@ -1,19 +1,17 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
-from rest_framework import status
-from .serializers import PaymentSerializer, WalletSerializer, TransactionSerializer
-from .services import initiate_wallet_deposit, initiate_one_time_purchase, handle_mpesa_callback, process_wallet_purchase
-from .models import Payment, Wallet, Transaction
-from .services import get_resource
-import json
-from decimal import Decimal, InvalidOperation
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
-from rest_framework import viewsets, permissions
+from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action
+from decimal import Decimal, InvalidOperation
+
+from .serializers import PaymentSerializer, WalletSerializer, TransactionSerializer
+from .services import (
+    initiate_wallet_deposit, initiate_one_time_purchase,
+    handle_pesapal_ipn, process_wallet_purchase, get_resource
+)
+from .models import Payment, Wallet, Transaction
 
 
 class IsAdminOnly(permissions.BasePermission):
@@ -28,20 +26,17 @@ class WalletDepositInitiateView(APIView):
         try:
             amount = Decimal(request.data.get("amount"))
         except (TypeError, InvalidOperation):
-            return Response({"error": "Invalid amount"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid amount"}, status=400)
 
-        phone_number = request.data.get('phone_number')
-        if not amount or not phone_number:
-            return Response({'error': 'amount and phone_number are required'}, status=status.HTTP_400_BAD_REQUEST)
+        if amount <= 0:
+            return Response({"error": "Amount must be greater than zero"}, status=400)
 
-        payment, resp = initiate_wallet_deposit(request.user, amount, phone_number)
+        payment, redirect_url = initiate_wallet_deposit(request.user, amount)
         return Response({
-            'message': 'STK push initiated for wallet deposit',
-            'payment': PaymentSerializer(payment).data,
-            'provider_response': resp
-        }, status=status.HTTP_201_CREATED)
-
-
+            "message": "Redirect user to the Pesapal checkout URL to complete payment.",
+            "redirect_url": redirect_url,
+            "payment_id": str(payment.id),
+        }, status=201)
 
 
 class OneTimePurchaseInitiateView(APIView):
@@ -50,36 +45,63 @@ class OneTimePurchaseInitiateView(APIView):
     def post(self, request):
         resource_type = request.data.get("resource_type")
         resource_id = request.data.get("resource_id")
-        phone_number = request.data.get("phone_number")
 
-        if not resource_type or not resource_id or not phone_number:
+        if not resource_type or not resource_id:
             return Response(
-                {"error": "resource_type, resource_id, and phone_number are required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+                {"error": "resource_type and resource_id are required."}, status=400)
 
         try:
             resource, amount = get_resource(resource_type, resource_id)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=400)
         except LookupError as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": str(e)}, status=404)
         except AttributeError as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=500)
 
-        payment, resp = initiate_one_time_purchase(request.user, resource, phone_number)
-
+        payment, redirect_url = initiate_one_time_purchase(request.user, resource)
         return Response({
-            "message": f"STK push initiated for one-time {resource_type} purchase",
-            "payment": PaymentSerializer(payment).data,
-            "provider_response": resp
-        }, status=status.HTTP_201_CREATED)
+            "message": f"Redirect user to Pesapal to complete {resource_type} purchase.",
+            "redirect_url": redirect_url,
+            "payment_id": str(payment.id),
+        }, status=201)
 
 
-@api_view(["POST"])
-def mpesa_callback_view(request):
-    result = handle_mpesa_callback(request)
-    return Response(result)
+class PesapalIPNView(APIView):
+    """Pesapal POSTs here when payment status changes."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        order_tracking_id = request.data.get("OrderTrackingId")
+        merchant_reference = request.data.get("OrderMerchantReference")
+
+        if order_tracking_id and merchant_reference:
+            handle_pesapal_ipn(order_tracking_id, merchant_reference)
+
+        # Pesapal requires this exact response format or it keeps retrying
+        return Response({
+            "orderNotificationType": "IPNCHANGE",
+            "orderTrackingId": order_tracking_id,
+            "orderMerchantReference": merchant_reference,
+            "status": 200,
+        })
+
+
+class PaymentCallbackView(APIView):
+    """Browser lands here after user pays on Pesapal checkout page."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        payment_id = request.query_params.get("ref")
+        try:
+            payment = Payment.objects.get(id=payment_id)
+            return Response({
+                "status": payment.status,
+                "purpose": payment.purpose,
+                "amount": payment.amount,
+            })
+        except Payment.DoesNotExist:
+            return Response({"error": "Payment not found."}, status=404)
 
 
 class WalletPurchaseAPIView(APIView):
@@ -91,81 +113,44 @@ class WalletPurchaseAPIView(APIView):
 
         if not resource_type or not resource_id:
             return Response(
-                {"error": "Both resource_type and resource_id are required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+                {"error": "resource_type and resource_id are required."}, status=400)
 
         try:
             resource, amount = get_resource(resource_type, resource_id)
-        except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except LookupError as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-        except AttributeError as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except (ValueError, LookupError, AttributeError) as e:
+            return Response({"error": str(e)}, status=400)
 
         result = process_wallet_purchase(request.user, resource)
-
-        if result["success"]:
-            return Response(result, status=status.HTTP_200_OK)
-        return Response(result, status=status.HTTP_402_PAYMENT_REQUIRED)
+        return Response(result,
+                        status=200 if result["success"] else 402)
 
 
-
-# In payments/views.py
 class WalletDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         wallet, _ = Wallet.objects.get_or_create(user=request.user)
-        return Response({
-            "balance": wallet.balance,
-            "user": request.user.email
-        })
-
-
-class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
-    """Admin-only endpoint to view all transactions"""
-    queryset = Transaction.objects.all().order_by('-created_at')
-    serializer_class = TransactionSerializer
-    permission_classes = [IsAdminOnly]
-
-    @action(detail=False, methods=['get'], url_path='admin/transactions')
-    def admin_transactions(self, request):
-        """Get all transactions for admin dashboard"""
-        transactions = Transaction.objects.all().order_by('-created_at')
-        data = []
-        for tx in transactions:
-            data.append({
-                'id': tx.id,
-                'user': tx.user.email if tx.user else 'Unknown',
-                'transaction_type': tx.transaction_type,
-                'amount': str(tx.amount),
-                'status': tx.status,
-                'created_at': tx.created_at,
-            })
-        return Response(data)
+        return Response({"balance": wallet.balance, "user": request.user.email})
 
 
 class TransactionHistoryView(APIView):
-    """
-    Return a list of all user transactions (separate endpoint from wallet if needed).
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        transactions = Transaction.objects.filter(user=request.user).order_by("-created_at")
-        serializer = TransactionSerializer(transactions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        transactions = Transaction.objects.filter(
+            user=request.user).order_by("-created_at")
+        return Response(TransactionSerializer(transactions, many=True).data)
+
 
 class AdminTransactionHistoryView(APIView):
-    """
-    Admin-only endpoint to see ALL transactions from all users
-    """
     permission_classes = [IsAdminUser]
 
     def get(self, request):
         transactions = Transaction.objects.all().order_by("-created_at")
-        serializer = TransactionSerializer(transactions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(TransactionSerializer(transactions, many=True).data)
+
+
+class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Transaction.objects.all().order_by('-created_at')
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAdminOnly]
