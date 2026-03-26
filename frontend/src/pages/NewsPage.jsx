@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
-import { ArrowLeft, Search, Newspaper, Calendar, Tag } from "lucide-react";
+import { ArrowLeft, Search, Newspaper, Calendar, Tag, Download, X, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../Api";
 
@@ -12,9 +12,8 @@ export default function NewsPage() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedNews, setSelectedNews] = useState(null); // For reading full article
+  const [selectedNews, setSelectedNews] = useState(null);
 
-  // Fetch news from backend
   useEffect(() => {
     const fetchNews = async () => {
       try {
@@ -29,7 +28,6 @@ export default function NewsPage() {
     fetchNews();
   }, []);
 
-  // Filter news based on search
   const filteredNews = news.filter(item =>
     item.headline?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.body?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -38,6 +36,27 @@ export default function NewsPage() {
   const particlesInit = async (engine) => {
     await loadSlim(engine);
   };
+
+  // Determine file type from URL
+  const getFileType = (url) => {
+    if (!url) return null;
+    const ext = url.split('.').pop().split('?')[0].toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
+    if (ext === 'pdf') return 'pdf';
+    return 'download';
+  };
+
+  const handleDownload = (url) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = url.split('/').pop();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const fileUrl = selectedNews?.file_url || selectedNews?.file;
+  const fileType = getFileType(fileUrl);
 
   return (
     <div className="relative w-full min-h-screen text-white overflow-y-auto bg-slate-950">
@@ -84,7 +103,6 @@ export default function NewsPage() {
               </div>
             </div>
 
-            {/* News icon badge to match theme */}
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-green-700 font-semibold">
               <Newspaper size={18} /> News
             </div>
@@ -94,8 +112,6 @@ export default function NewsPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-
-        {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white">Latest News</h1>
           <p className="text-slate-400 mt-1">Stay up to date with the latest updates and announcements</p>
@@ -121,13 +137,8 @@ export default function NewsPage() {
                 className="bg-slate-900 rounded-2xl border border-slate-800 hover:border-green-500 transition-all hover:shadow-lg hover:shadow-green-500/20 overflow-hidden flex flex-col cursor-pointer group"
                 onClick={() => setSelectedNews(item)}
               >
-                {/* Color accent bar at top - matches green theme */}
                 <div className="h-1.5 w-full bg-gradient-to-r from-green-500 to-green-700" />
-
-                {/* Card Body */}
                 <div className="p-6 flex flex-col flex-1">
-
-                  {/* Category Badge */}
                   {item.category && (
                     <div className="flex items-center gap-1 mb-3">
                       <Tag size={12} className="text-green-400" />
@@ -136,18 +147,12 @@ export default function NewsPage() {
                       </span>
                     </div>
                   )}
-
-                  {/* Headline */}
                   <h2 className="text-lg font-bold text-white mb-3 group-hover:text-green-400 transition-colors line-clamp-2">
                     {item.headline}
                   </h2>
-
-                  {/* Body Preview */}
                   <p className="text-slate-400 text-sm leading-relaxed line-clamp-3 flex-1">
                     {item.body}
                   </p>
-
-                  {/* Footer */}
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
                     <div className="flex items-center gap-1 text-slate-500 text-xs">
                       <Calendar size={12} />
@@ -180,9 +185,8 @@ export default function NewsPage() {
         >
           <div
             className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full my-8 overflow-hidden"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal accent bar */}
             <div className="h-2 w-full bg-gradient-to-r from-green-500 to-green-700" />
 
             <div className="p-6">
@@ -203,7 +207,7 @@ export default function NewsPage() {
                   onClick={() => setSelectedNews(null)}
                   className="ml-4 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg p-2 transition-colors flex-shrink-0"
                 >
-                  ✕
+                  <X size={18} />
                 </button>
               </div>
 
@@ -222,7 +226,6 @@ export default function NewsPage() {
                 </span>
               </div>
 
-              {/* Divider */}
               <div className="border-t border-slate-800 mb-6" />
 
               {/* Full Body */}
@@ -230,21 +233,65 @@ export default function NewsPage() {
                 {selectedNews.body}
               </div>
 
-              {/* File attachment if exists */}
-              {selectedNews.file_url && (
-                <div className="mt-6 pt-6 border-t border-slate-800">
-                  <a
-                    href={selectedNews.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-colors w-fit"
-                  >
-                    <Newspaper size={18} /> View Attachment
-                  </a>
+              {/* Attachment Section */}
+              {fileUrl && (
+                <div className="mt-6 pt-6 border-t border-slate-800 space-y-4">
+                  <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+                    Attachment
+                  </p>
+
+                  {/* Image — show inline */}
+                  {fileType === 'image' && (
+                    <img
+                      src={fileUrl}
+                      alt="News attachment"
+                      className="w-full rounded-xl border border-slate-700 object-contain max-h-96"
+                    />
+                  )}
+
+                  {/* PDF — embed in modal */}
+                  {fileType === 'pdf' && (
+                    <div className="rounded-xl overflow-hidden border border-slate-700">
+                      <iframe
+                        src={fileUrl}
+                        title="PDF Attachment"
+                        className="w-full h-96"
+                      />
+                      {/* Also offer download for mobile where iframes don't work well */}
+                      <div className="bg-slate-800 px-4 py-2 flex justify-end">
+                        <button
+                          onClick={() => handleDownload(fileUrl)}
+                          className="flex items-center gap-2 text-green-400 hover:text-green-300 text-sm font-semibold transition-colors"
+                        >
+                          <Download size={14} /> Download PDF
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other files — download button */}
+                  {fileType === 'download' && (
+                    <button
+                      onClick={() => handleDownload(fileUrl)}
+                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-colors"
+                    >
+                      <Download size={18} /> Download Attachment
+                    </button>
+                  )}
+
+                  {/* For images, also offer download */}
+                  {fileType === 'image' && (
+                    <button
+                      onClick={() => handleDownload(fileUrl)}
+                      className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
+                    >
+                      <Download size={14} /> Download image
+                    </button>
+                  )}
                 </div>
               )}
 
-              {/* Close button at bottom */}
+              {/* Close button */}
               <div className="mt-6 pt-4 border-t border-slate-800">
                 <button
                   onClick={() => setSelectedNews(null)}
