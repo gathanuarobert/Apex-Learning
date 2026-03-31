@@ -12,22 +12,15 @@ const Login = () => {
   const navigate = useNavigate();
   const recaptchaRef = useRef(null);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "" });
-  const [userRole, setUserRole] = useState(null);
-  const [token, setToken] = useState(null);
+  const [showPassword, setShowPassword]   = useState(false);
+  const [formData, setFormData]           = useState({ email: "", password: "" });
   const [recaptchaToken, setRecaptchaToken] = useState("");
-  const [loading, setLoading] = useState(false); // Loading state
+  const [loading, setLoading]             = useState(false);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const validateEmail = (email) => {
-    const allowedDomains = [
-      "gmail.com",
-      "yahoo.com",
-      "outlook.com",
-      "student.ku.ac.ke",
-    ];
+    const allowedDomains = ["gmail.com", "yahoo.com", "outlook.com", "student.ku.ac.ke"];
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const domain = email.split("@")[1];
     return emailRegex.test(email) && allowedDomains.includes(domain);
@@ -47,7 +40,6 @@ const Login = () => {
       alert("Password must be at least 8 characters.");
       return;
     }
-
     if (!recaptchaToken) {
       alert("Please complete the reCAPTCHA.");
       return;
@@ -61,20 +53,10 @@ const Login = () => {
         recaptcha: recaptchaToken,
       });
 
-      const data = response.data;
+      // ✅ Tokens are now in HttpOnly cookies set by the backend.
+      // We only use the user object from the response body for navigation.
+      const user = response.data.user;
 
-      const access = data.access || data.token?.access;
-      const refresh = data.refresh || data.token?.refresh;
-      const user = data.user;
-
-      if (access && refresh) {
-        localStorage.setItem("access", access);
-        localStorage.setItem("refresh", refresh);
-      }
-
-      setUserRole(user.role);
-
-      // Navigate after login
       if (user.is_superuser || user.role === "admin") {
         navigate("/dashboard");
       } else {
@@ -83,6 +65,10 @@ const Login = () => {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.detail || "Login failed. Check your credentials.");
+
+      // Reset reCAPTCHA after failed attempt
+      if (recaptchaRef.current) recaptchaRef.current.reset();
+      setRecaptchaToken("");
     } finally {
       setLoading(false);
     }
@@ -91,9 +77,7 @@ const Login = () => {
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     const decoded = jwtDecode(credentialResponse.credential);
     console.log("Google user:", decoded);
-
     const role = decoded.email === "admin@example.com" ? "admin" : "user";
-    setUserRole(role);
     navigate(role === "admin" ? "/admin-dashboard" : "/dashboard");
   };
 
@@ -120,23 +104,14 @@ const Login = () => {
               trail: {
                 delay: 0.005,
                 quantity: 5,
-                particles: {
-                  color: { value: "#3b82f6" },
-                  size: { value: 3 },
-                },
+                particles: { color: { value: "#3b82f6" }, size: { value: 3 } },
               },
               push: { quantity: 4 },
             },
           },
           particles: {
             color: { value: ["#3b82f6", "#60a5fa", "#93c5fd"] },
-            links: {
-              color: "#3b82f6",
-              distance: 120,
-              enable: true,
-              opacity: 0.4,
-              width: 1,
-            },
+            links: { color: "#3b82f6", distance: 120, enable: true, opacity: 0.4, width: 1 },
             move: { enable: true, speed: 1, outModes: { default: "bounce" } },
             number: { value: 50, density: { enable: true, area: 800 } },
             opacity: { value: 0.5 },
@@ -149,17 +124,12 @@ const Login = () => {
       {/* Aura Glow */}
       <div className="absolute w-72 sm:w-96 h-72 sm:h-96 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 blur-3xl opacity-30 animate-auraglow"></div>
 
-      {/* ✅ NEW: Back to Home Button */}
+      {/* Back to Home Button */}
       <button
         onClick={() => navigate("/")}
         className="absolute top-4 left-4 z-20 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
       >
-        <svg 
-          className="w-5 h-5 group-hover:-translate-x-1 transition-transform" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         <span className="hidden sm:inline">Back to Home</span>
@@ -167,19 +137,15 @@ const Login = () => {
 
       {/* Login Card */}
       <div className="relative z-10 w-full max-w-md bg-gray-900/80 shadow-2xl border border-gray-700 rounded-2xl p-6 sm:p-8 space-y-6 text-white backdrop-blur-lg animate-slideUp">
-        
+
         {/* Header */}
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-blue-400">
-            Welcome Back!
-          </h2>
-          <p className="text-gray-400 text-sm mt-2">
-            Sign in to continue your learning journey
-          </p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-blue-400">Welcome Back!</h2>
+          <p className="text-gray-400 text-sm mt-2">Sign in to continue your learning journey</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email Input */}
+          {/* Email */}
           <div>
             <label className="block text-gray-300 mb-1 text-sm font-medium">Email</label>
             <input
@@ -193,7 +159,7 @@ const Login = () => {
             />
           </div>
 
-          {/* Password Input */}
+          {/* Password */}
           <div className="relative">
             <label className="block text-gray-300 mb-1 text-sm font-medium">Password</label>
             <input
@@ -210,13 +176,12 @@ const Login = () => {
               type="button"
               onClick={togglePasswordVisibility}
               className="absolute top-9 right-3 text-blue-400 hover:text-blue-300 transition"
-              aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? "🙈" : "👁️"}
             </button>
           </div>
 
-          {/* ✅ NEW: Forgot Password Link */}
+          {/* Forgot Password */}
           <div className="flex justify-end">
             <button
               type="button"
@@ -236,7 +201,7 @@ const Login = () => {
             />
           </div>
 
-          {/* Login Button with Loading State */}
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -277,13 +242,6 @@ const Login = () => {
           </div>
         </form>
 
-        {/* ✅ CRITICAL: Sign Up Link - Main UX Fix! */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-700"></div>
-          </div>
-        </div>
-
         <div className="text-center space-y-2">
           <p className="text-gray-400 text-sm">
             Don't have an account?{" "}
@@ -300,27 +258,21 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Animations */}
       <style>{`
-        @keyframes slideUp { 
-          from { opacity: 0; transform: translateY(30px); } 
-          to { opacity: 1; transform: translateY(0); } 
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        .animate-slideUp { 
-          animation: slideUp 0.8s ease-out; 
+        .animate-slideUp { animation: slideUp 0.8s ease-out; }
+
+        @keyframes auraglow {
+          0%   { transform: translate(-50%, -50%) rotate(0deg); }
+          50%  { transform: translate(-48%, -52%) rotate(180deg); }
+          100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
-        
-        @keyframes auraglow { 
-          0% { transform: translate(-50%, -50%) rotate(0deg); } 
-          50% { transform: translate(-48%, -52%) rotate(180deg); } 
-          100% { transform: translate(-50%, -50%) rotate(360deg); } 
-        }
-        .animate-auraglow { 
-          top: 50%; 
-          left: 50%; 
-          position: absolute; 
-          animation: auraglow 12s linear infinite; 
-          z-index: 1; 
+        .animate-auraglow {
+          top: 50%; left: 50%; position: absolute;
+          animation: auraglow 12s linear infinite; z-index: 1;
         }
       `}</style>
     </div>
