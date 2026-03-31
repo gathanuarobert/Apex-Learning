@@ -3,16 +3,24 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.generics import ListAPIView, DestroyAPIView
 from rest_framework.permissions import IsAdminUser
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
 from .models import User, ParentProfile, StudentProfile
 from .serializers import UserSerializer, LoginSerializer, ParentProfileSerializer
 from django.conf import settings
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def verify_recaptcha(token):
     """
     Verify the Google reCAPTCHA token with Google's API.
+    In DEBUG mode, skip verification.
     """
+    if settings.DEBUG:
+        return True
     url = "https://www.google.com/recaptcha/api/siteverify"
     data = {
         "secret": settings.RECAPTCHA_SECRET_KEY,
@@ -26,7 +34,99 @@ def verify_recaptcha(token):
         return False
 
 
-# Create your views here.
+# ============================================
+# COOKIE HELPERS
+# ============================================
+
+def _set_auth_cookies(response, access_token, refresh_token=None):
+    """
+    Attach JWT tokens as HttpOnly cookies to any Response object.
+    Secure flag is on in production (DEBUG=False).
+    """
+    secure   = not settings.DEBUG
+    samesite = getattr(settings, 'JWT_AUTH_COOKIE_SAMESITE', 'Lax')
+
+    access_cookie  = getattr(settings, 'JWT_AUTH_COOKIE',         'apex_access')
+    refresh_cookie = getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', 'apex_refresh')
+
+    response.set_cookie(
+        key=access_cookie,
+        value=str(access_token),
+        httponly=True,
+        secure=secure,
+        samesite=samesite,
+        max_age=60 * 15,        # 15 minutes — matches SIMPLE_JWT ACCESS_TOKEN_LIFETIME
+        path='/',
+    )
+
+    if refresh_token is not None:
+        response.set_cookie(
+            key=refresh_cookie,
+            value=str(refresh_token),
+            httponly=True,
+            secure=secure,
+            samesite=samesite,
+            max_age=60 * 60 * 24 * 7,   # 7 days
+            path='/',
+        )
+
+    return response
+
+
+def _clear_auth_cookies(response):
+    """Expire both auth cookies."""
+    access_cookie  = getattr(settings, 'JWT_AUTH_COOKIE',         'apex_access')
+    refresh_cookie = getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', 'apex_refresh')
+    response.delete_cookie(access_cookie,  path='/')
+    response.delete_cookie(refresh_cookie, path='/')
+    return response
+
+
+# ============================================
+# AUTH VIEWS
+# ============================================
+
+class CookieTokenRefreshView(APIView):
+    """
+    Reads the refresh token from the HttpOnly cookie and returns
+    a new access token as a cookie (not in the response body).
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        refresh_cookie = getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', 'apex_refresh')
+        refresh_token  = request.COOKIES.get(refresh_cookie)
+
+        if not refresh_token:
+            return Response(
+                {'error': 'No refresh token provided'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        try:
+            refresh    = RefreshToken(refresh_token)
+            new_access = refresh.access_token
+
+            rotate = getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', False)
+
+            response = Response({'detail': 'Token refreshed'}, status=status.HTTP_200_OK)
+            _set_auth_cookies(
+                response,
+                access_token=new_access,
+                refresh_token=str(refresh) if rotate else None,
+            )
+            return response
+
+        except Exception as e:
+            logger.warning(f"[TokenRefresh] Failed: {e}")
+            response = Response(
+                {'error': 'Invalid or expired refresh token'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+            _clear_auth_cookies(response)
+            return response
+
+
 class UserListView(ListAPIView):
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserSerializer
@@ -37,7 +137,8 @@ class UserDeleteView(DestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
-    
+
+
 class RegistrationUserView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -52,19 +153,24 @@ class RegistrationUserView(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return Response({
-                'message': 'User registered successfully',
-                'user': UserSerializer(user).data
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+            # ✅ Issue tokens and set cookies so the user is logged in immediately
+            refresh = RefreshToken.for_user(user)
+            response = Response({
+                'message': 'User registered successfully',
+                'user': UserSerializer(user).data,
+            }, status=status.HTTP_201_CREATED)
+            _set_auth_cookies(response, refresh.access_token, str(refresh))
+            return response
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        # ✅ Check reCAPTCHA
+        # Check reCAPTCHA
         recaptcha_token = request.data.get("recaptcha")
         if not recaptcha_token or not verify_recaptcha(recaptcha_token):
             return Response(
@@ -72,21 +178,61 @@ class LoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ✅ Continue with normal login
         serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
-            return Response(serializer.validated_data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ LoginSerializer.validate() already calls authenticate() and builds
+        # the refresh token internally. We re-authenticate here to get the actual
+        # User model instance so we can issue fresh cookies via RefreshToken.for_user().
+        # This avoids relying on the serialized dict which is not a model instance.
+        email    = request.data.get('email')
+        password = request.data.get('password')
+        user     = authenticate(request, email=email, password=password)
+
+        if user is None:
+            return Response(
+                {'detail': 'Invalid credentials'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        refresh = RefreshToken.for_user(user)
+
+        response = Response({
+            'user': UserSerializer(user).data,
+        }, status=status.HTTP_200_OK)
+
+        _set_auth_cookies(response, refresh.access_token, str(refresh))
+        return response
+
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        refresh_cookie = getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', 'apex_refresh')
+        refresh_token  = request.COOKIES.get(refresh_cookie)
+
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception as e:
+                logger.warning(f"[Logout] Could not blacklist token: {e}")
+
+        response = Response(
+            {'message': 'Logged out successfully'},
+            status=status.HTTP_205_RESET_CONTENT
+        )
+        _clear_auth_cookies(response)
+        return response
+
+
 class CurrentUserView(APIView):
-    """
-    Return the currently authenticated user's details
-    """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)    
+        return Response(UserSerializer(request.user).data)
 
 
 class AddChildrenToParentView(APIView):
@@ -95,16 +241,25 @@ class AddChildrenToParentView(APIView):
     def post(self, request):
         user = request.user
         if user.role != 'parent':
-            return Response({'detail': 'Only parent profiles can add children'}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'detail': 'Only parent profiles can add children'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         try:
             parent_profile = ParentProfile.objects.get(user=user)
         except ParentProfile.DoesNotExist:
-            return Response({'detail': 'Parent profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response(
+                {'detail': 'Parent profile does not exist'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         child_ids = request.data.get('children', [])
         if not isinstance(child_ids, list):
-            return Response({'detail': 'Children must be a list of student profile IDs'}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {'detail': 'Children must be a list of student profile IDs'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         children = StudentProfile.objects.filter(id__in=child_ids)
         parent_profile.children.set(children)
         parent_profile.save()
