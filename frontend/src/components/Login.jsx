@@ -7,6 +7,7 @@ import ReCAPTCHA from "react-google-recaptcha";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { loginUser } from "../Api";
+import api from "../Api"
 
 const Login = () => {
   const navigate = useNavigate();
@@ -75,12 +76,21 @@ const Login = () => {
   };
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
-    const decoded = jwtDecode(credentialResponse.credential);
-    console.log("Google user:", decoded);
-    const role = decoded.email === "admin@example.com" ? "admin" : "user";
-    navigate(role === "admin" ? "/admin-dashboard" : "/dashboard");
-  };
-
+    try {
+        const response = await api.post("users/google-login/", {
+            credential: credentialResponse.credential,
+        });
+        const user = response.data.user;
+        if (user.is_superuser || user.role === "admin") {
+            navigate("/dashboard");
+        } else {
+            navigate("/user-dashboard");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Google login failed. Please try again.");
+    }
+};
   const particlesInit = async (engine) => {
     await loadSlim(engine);
   };

@@ -8,8 +8,11 @@ from django.contrib.auth import authenticate
 from .models import User, ParentProfile, StudentProfile
 from .serializers import UserSerializer, LoginSerializer, ParentProfileSerializer
 from django.conf import settings
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 import requests
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +88,35 @@ def _clear_auth_cookies(response):
 # ============================================
 # AUTH VIEWS
 # ============================================
+class GoogleLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        credential = request.data.get("credential")
+        if not credential:
+            return Response({"detail": "No credential provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            idinfo = id_token.verify_oauth2_token(
+                credential,
+                google_requests.Request(),
+                os.environ.get("VITE_GOOGLE_CLIENT_ID")
+            )
+            email = idinfo.get("email")
+            name  = idinfo.get("name", "")
+
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={"name": name, "role": "public"}
+            )
+
+            refresh  = RefreshToken.for_user(user)
+            response = Response({"user": UserSerializer(user).data}, status=status.HTTP_200_OK)
+            _set_auth_cookies(response, refresh.access_token, str(refresh))
+            return response
+
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class CookieTokenRefreshView(APIView):
     """
