@@ -109,18 +109,20 @@ export default function NotesPage() {
     }
   };
 
-  const payWallet = async () => {
-    setPaying(true);
-    try {
-      await walletPurchase({ resource_id: modal.item.id, resource_type: "Note" });
-      setModal(null);
-      showToast('✓ Purchase successful! Find it in My Library.');
-    } catch (e) {
-      alert(e.response?.data?.error || e.response?.data?.message || "Wallet payment failed.");
-    } finally {
-      setPaying(false);
-    }
-  };
+ const payWallet = async () => {
+  setPaying(true);
+  try {
+    await walletPurchase({ resource_id: modal.item.id, resource_type: "Note" });
+    const purchasedItem = modal.item;
+    setModal(null);
+    showToast('✓ Purchase successful! Starting download…');
+    await handleDirectDownload(purchasedItem);
+  } catch (e) {
+    alert(e.response?.data?.error || e.response?.data?.message || "Wallet payment failed.");
+  } finally {
+    setPaying(false);
+  }
+};
 
   const payPesapal = async () => {
     setPaying(true);

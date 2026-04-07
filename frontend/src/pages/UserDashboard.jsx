@@ -18,6 +18,7 @@ import {
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import api, { getCurrentUser, getLibrary } from "../Api";
+import { useLocation } from "react-router-dom";
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -294,6 +295,25 @@ export default function UserDashboard() {
   );
 
   const visibleTab = activeTab;
+
+  const location = useLocation();
+
+useEffect(() => {
+  if (location.state?.refreshWallet) {
+    fetchWalletBalance();
+    fetchTransactions();
+    // Clear state so it doesn't re-trigger
+    navigate(location.pathname, { replace: true, state: {} });
+  }
+  if (location.state?.refreshLibrary) {
+    fetchLibrary();
+    fetchWalletBalance();
+    fetchTransactions();
+    setActiveTab("downloads");
+    // Clear state so it doesn't re-trigger
+    navigate(location.pathname, { replace: true, state: {} });
+  }
+}, [location.state]);
 
   return (
     <div className="relative min-h-screen flex text-white bg-gray-900 overflow-hidden">

@@ -7,6 +7,7 @@ export default function PaymentComplete() {
   const [status, setStatus] = useState("checking");
   const navigate = useNavigate();
   const ref = searchParams.get("ref");
+  const orderTrackingId = searchParams.get("OrderTrackingId");
 
   useEffect(() => {
     if (!ref) {
@@ -15,14 +16,16 @@ export default function PaymentComplete() {
     }
     const check = async () => {
       try {
-        const res = await api.get(`payments/payment/callback/?ref=${ref}`);
+        const res = await api.get(
+          `payments/payment/callback/?ref=${ref}&OrderTrackingId=${orderTrackingId}`,
+        );
         setStatus(res.data.status);
       } catch {
         setStatus("failed");
       }
     };
     check();
-  }, [ref]);
+  }, [ref, orderTrackingId]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center px-4">
@@ -40,11 +43,12 @@ export default function PaymentComplete() {
               Payment Successful!
             </h2>
             <p className="text-slate-400 text-sm mb-6">
-              Your payment was confirmed. Check My Library to download your
-              resource.
+              Your wallet has been topped up successfully!
             </p>
             <button
-              onClick={() => navigate("/user-dashboard")}
+              onClick={() =>
+                navigate("/user-dashboard", { state: { refreshWallet: true } })
+              }
               className="bg-green-600 hover:bg-green-700 px-6 py-2.5 rounded-lg transition font-semibold w-full active:scale-95"
             >
               Go to Dashboard
@@ -61,7 +65,9 @@ export default function PaymentComplete() {
               We're waiting for confirmation. Your balance will update shortly.
             </p>
             <button
-              onClick={() => navigate("/user-dashboard")}
+              onClick={() =>
+                navigate("/user-dashboard", { state: { refreshWallet: true } })
+              }
               className="bg-yellow-600 hover:bg-yellow-700 px-6 py-2.5 rounded-lg transition font-semibold w-full active:scale-95"
             >
               Go to Dashboard
