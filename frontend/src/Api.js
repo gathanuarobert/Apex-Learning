@@ -6,8 +6,8 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/",
   timeout: 30000,
   headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
   },
   // ✅ Sends HttpOnly cookies automatically on every request
   withCredentials: true,
@@ -27,6 +27,14 @@ api.interceptors.request.use(
     // Let axios set Content-Type automatically for FormData
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
+    }
+
+    // ✅ Add timestamp to all GET requests to bust browser cache
+    if (config.method === 'get') {
+      config.params = {
+        ...config.params,
+        _t: Date.now(),
+      };
     }
 
     return config;
@@ -127,11 +135,10 @@ export const walletPurchase          = (data) => api.post("payments/wallet/purch
 export const mpesaCallback           = (data) => api.post("payments/mpesa-callback/", data);
 
 // ------------------- RESOURCES -------------------
-export const getNotes      = () => api.get("resources/notes/");
-export const getExams      = () => api.get("resources/exams/");
-export const getPastPapers = () => api.get("resources/past-papers/");
-export const getNews       = () => api.get("resources/news/");
-export const getLibrary    = () => api.get("resources/library/my-downloads/");
+export const getLibrary    = () => api.get("resources/library/my-downloads/", { params: { _t: Date.now() } });
+export const getNotes      = () => api.get("resources/notes/", { params: { _t: Date.now() } });
+export const getExams      = () => api.get("resources/exams/", { params: { _t: Date.now() } });
+export const getPastPapers = () => api.get("resources/past-papers/", { params: { _t: Date.now() } });
 
 // ------------------- M-PESA -------------------
 const getTimestamp = () => {
