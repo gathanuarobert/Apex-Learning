@@ -104,17 +104,14 @@ def process_wallet_purchase(user, resource):
         return {"success": False, "message": "Resource does not have a price."}
 
     if amount <= 0:
-        existing = Transaction.objects.filter(
-            user=user, resource_id=resource.id,
+        Transaction.objects.get_or_create(
+            user=user,
+            resource_id=resource.id,
             resource_type=resource.__class__.__name__,
-            transaction_type="download", status="completed"
-        ).exists()
-        if not existing:
-            Transaction.objects.create(
-                user=user, transaction_type="download", amount=0,
-                status="completed", resource_id=resource.id,
-                resource_type=resource.__class__.__name__,
-            )
+            transaction_type="purchase",   # ✅ correct
+            status="completed",
+            defaults={"amount": Decimal("0.00")}
+        )
         return {"success": True, "message": "Free resource. Download ready.", "is_free": True}
 
     try:
