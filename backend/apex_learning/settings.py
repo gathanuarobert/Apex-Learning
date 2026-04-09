@@ -21,6 +21,8 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') + [
     'thunderous-accordable-marivel.ngrok-free.dev',
+    'apexlearning.co.ke',     
+    'www.apexlearning.co.ke', 
 ]
 
 CSRF_TRUSTED_ORIGINS = os.getenv(
@@ -52,6 +54,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
