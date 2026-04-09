@@ -129,7 +129,7 @@ CSRF_COOKIE_HTTPONLY = False  # Must be False so JS can read csrftoken cookie
 # -------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:5174'
+    'http://localhost:5173,http://localhost:5174',
 ).split(',')
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
@@ -170,6 +170,13 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # STATIC FILES
 # -------------------------------------------------------------------
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# -------------------------------------------------------------------
+# CACHE CONTROL
+# -------------------------------------------------------------------
+CACHE_MIDDLEWARE_SECONDS = 0
 
 # -------------------------------------------------------------------
 # PASSWORD VALIDATION
