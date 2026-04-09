@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action
 from decimal import Decimal, InvalidOperation
+from .services import handle_pesapal_ipn
 
 from .serializers import PaymentSerializer, WalletSerializer, TransactionSerializer
 from .services import (
@@ -71,14 +72,23 @@ class PesapalIPNView(APIView):
     """Pesapal POSTs here when payment status changes."""
     permission_classes = [AllowAny]
 
-    def post(self, request):
-        order_tracking_id = request.data.get("OrderTrackingId")
-        merchant_reference = request.data.get("OrderMerchantReference")
-
+    def get(self, request):
+        order_tracking_id = request.query_params.get("OrderTrackingId")
+        merchant_reference = request.query_params.get("OrderMerchantReference")
         if order_tracking_id and merchant_reference:
             handle_pesapal_ipn(order_tracking_id, merchant_reference)
+        return Response({
+            "orderNotificationType": "IPNCHANGE",
+            "orderTrackingId": order_tracking_id,
+            "orderMerchantReference": merchant_reference,
+            "status": 200,
+        })
 
-        # Pesapal requires this exact response format or it keeps retrying
+    def post(self, request):
+        order_tracking_id = request.data.get("OrderTrackingId") or request.query_params.get("OrderTrackingId")
+        merchant_reference = request.data.get("OrderMerchantReference") or request.query_params.get("OrderMerchantReference")
+        if order_tracking_id and merchant_reference:
+            handle_pesapal_ipn(order_tracking_id, merchant_reference)
         return Response({
             "orderNotificationType": "IPNCHANGE",
             "orderTrackingId": order_tracking_id,
@@ -93,8 +103,15 @@ class PaymentCallbackView(APIView):
 
     def get(self, request):
         payment_id = request.query_params.get("ref")
+        order_tracking_id = request.query_params.get("OrderTrackingId")
         try:
             payment = Payment.objects.get(id=payment_id)
+
+            # Try to fulfill payment using tracking ID from callback
+            if order_tracking_id and payment.status != "completed":
+                handle_pesapal_ipn(order_tracking_id, str(payment.id))
+                payment.refresh_from_db()
+
             return Response({
                 "status": payment.status,
                 "purpose": payment.purpose,
