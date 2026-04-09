@@ -112,7 +112,7 @@ export default function PastPapersPage() {
   const payWallet = async () => {
   setPaying(true);
   try {
-    await walletPurchase({ resource_id: modal.item.id, resource_type: "Past Paper" });
+    await walletPurchase({ resource_id: modal.item.id, resource_type: "PastPaper" });
     const purchasedItem = modal.item;
     setModal(null);
     showToast('✓ Purchase successful! Starting download…');
