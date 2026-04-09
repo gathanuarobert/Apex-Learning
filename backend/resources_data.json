@@ -1,0 +1,4668 @@
+[
+{
+  "model": "resources.subject",
+  "pk": 1,
+  "fields": {
+    "name": "Language Activities"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 2,
+  "fields": {
+    "name": "Mathematical Activities"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 3,
+  "fields": {
+    "name": "Environmental Activities"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 4,
+  "fields": {
+    "name": "Psychomotor & Creative"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 5,
+  "fields": {
+    "name": "Religious Activities"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 6,
+  "fields": {
+    "name": "English"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 7,
+  "fields": {
+    "name": "Kiswahili"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 8,
+  "fields": {
+    "name": "Mathematics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 9,
+  "fields": {
+    "name": "Religious Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 10,
+  "fields": {
+    "name": "Creative Arts"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 11,
+  "fields": {
+    "name": "Movement"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 12,
+  "fields": {
+    "name": "Science & Technology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 13,
+  "fields": {
+    "name": "Social Studies"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 14,
+  "fields": {
+    "name": "Religious Education (CRE/IRE/HRE)"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 15,
+  "fields": {
+    "name": "Home Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 16,
+  "fields": {
+    "name": "Agriculture"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 17,
+  "fields": {
+    "name": "Art & Craft"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 18,
+  "fields": {
+    "name": "Music"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 19,
+  "fields": {
+    "name": "Physical & Health Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 20,
+  "fields": {
+    "name": "ICT"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 21,
+  "fields": {
+    "name": "Indigenous Languages"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 22,
+  "fields": {
+    "name": "Foreign Languages"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 23,
+  "fields": {
+    "name": "Integrated Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 24,
+  "fields": {
+    "name": "Pre-Technical Studies"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 25,
+  "fields": {
+    "name": "Business Studies"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 26,
+  "fields": {
+    "name": "Health Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 27,
+  "fields": {
+    "name": "Sports & Physical Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 28,
+  "fields": {
+    "name": "Visual Arts"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 29,
+  "fields": {
+    "name": "Performing Arts"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 30,
+  "fields": {
+    "name": "Life Skills Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 31,
+  "fields": {
+    "name": "Computer Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 32,
+  "fields": {
+    "name": "Kenyan Sign Language"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 33,
+  "fields": {
+    "name": "Foreign Language"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 34,
+  "fields": {
+    "name": "Physics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 35,
+  "fields": {
+    "name": "Chemistry"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 36,
+  "fields": {
+    "name": "Biology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 37,
+  "fields": {
+    "name": "History"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 38,
+  "fields": {
+    "name": "Geography"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 39,
+  "fields": {
+    "name": "Art & Design"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 40,
+  "fields": {
+    "name": "French"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 41,
+  "fields": {
+    "name": "German"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 42,
+  "fields": {
+    "name": "Arabic"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 43,
+  "fields": {
+    "name": "Physical Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 44,
+  "fields": {
+    "name": "Life Skills"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 45,
+  "fields": {
+    "name": "History & Government"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 46,
+  "fields": {
+    "name": "CRE"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 47,
+  "fields": {
+    "name": "IRE"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 48,
+  "fields": {
+    "name": "HRE"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 49,
+  "fields": {
+    "name": "Computer Studies"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 50,
+  "fields": {
+    "name": "Programming I"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 51,
+  "fields": {
+    "name": "Discrete Mathematics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 52,
+  "fields": {
+    "name": "Data Structures"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 53,
+  "fields": {
+    "name": "Algorithms"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 54,
+  "fields": {
+    "name": "Computer Architecture"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 55,
+  "fields": {
+    "name": "Operating Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 56,
+  "fields": {
+    "name": "Database Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 57,
+  "fields": {
+    "name": "Computer Networks"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 58,
+  "fields": {
+    "name": "Software Engineering"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 59,
+  "fields": {
+    "name": "Web Development"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 60,
+  "fields": {
+    "name": "Mobile Development"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 61,
+  "fields": {
+    "name": "Artificial Intelligence"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 62,
+  "fields": {
+    "name": "Machine Learning"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 63,
+  "fields": {
+    "name": "Human-Computer Interaction"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 64,
+  "fields": {
+    "name": "Information Security"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 65,
+  "fields": {
+    "name": "Distributed Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 66,
+  "fields": {
+    "name": "Cloud Computing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 67,
+  "fields": {
+    "name": "Project/Capstone"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 68,
+  "fields": {
+    "name": "IT Fundamentals"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 69,
+  "fields": {
+    "name": "Networking Essentials"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 70,
+  "fields": {
+    "name": "Systems Administration"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 71,
+  "fields": {
+    "name": "Database Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 72,
+  "fields": {
+    "name": "Web Technologies"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 73,
+  "fields": {
+    "name": "IT Project Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 74,
+  "fields": {
+    "name": "Cybersecurity Basics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 75,
+  "fields": {
+    "name": "Cloud Platforms"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 76,
+  "fields": {
+    "name": "Enterprise Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 77,
+  "fields": {
+    "name": "Emerging Technologies"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 78,
+  "fields": {
+    "name": "Anatomy"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 79,
+  "fields": {
+    "name": "Physiology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 80,
+  "fields": {
+    "name": "Biochemistry"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 81,
+  "fields": {
+    "name": "Pathology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 82,
+  "fields": {
+    "name": "Pharmacology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 83,
+  "fields": {
+    "name": "Microbiology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 84,
+  "fields": {
+    "name": "Community Health"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 85,
+  "fields": {
+    "name": "Internal Medicine"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 86,
+  "fields": {
+    "name": "Surgery"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 87,
+  "fields": {
+    "name": "Obstetrics & Gynaecology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 88,
+  "fields": {
+    "name": "Pediatrics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 89,
+  "fields": {
+    "name": "Psychiatry"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 90,
+  "fields": {
+    "name": "Family Medicine"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 91,
+  "fields": {
+    "name": "Radiology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 92,
+  "fields": {
+    "name": "Emergency Medicine"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 93,
+  "fields": {
+    "name": "Ethics & Jurisprudence"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 94,
+  "fields": {
+    "name": "Fundamentals of Nursing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 95,
+  "fields": {
+    "name": "Medical-Surgical Nursing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 96,
+  "fields": {
+    "name": "Maternal & Child Health"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 97,
+  "fields": {
+    "name": "Mental Health Nursing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 98,
+  "fields": {
+    "name": "Community Health Nursing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 99,
+  "fields": {
+    "name": "Nursing Research"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 100,
+  "fields": {
+    "name": "Leadership & Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 101,
+  "fields": {
+    "name": "Critical Care Nursing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 102,
+  "fields": {
+    "name": "Principles of Public Health"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 103,
+  "fields": {
+    "name": "Epidemiology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 104,
+  "fields": {
+    "name": "Biostatistics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 105,
+  "fields": {
+    "name": "Environmental Health"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 106,
+  "fields": {
+    "name": "Health Promotion"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 107,
+  "fields": {
+    "name": "Health Policy & Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 108,
+  "fields": {
+    "name": "Occupational Health"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 109,
+  "fields": {
+    "name": "Disease Surveillance"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 110,
+  "fields": {
+    "name": "Global Health"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 111,
+  "fields": {
+    "name": "Research Methods"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 112,
+  "fields": {
+    "name": "Legal Systems & Methods"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 113,
+  "fields": {
+    "name": "Constitutional Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 114,
+  "fields": {
+    "name": "Criminal Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 115,
+  "fields": {
+    "name": "Law of Contract"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 116,
+  "fields": {
+    "name": "Tort Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 117,
+  "fields": {
+    "name": "Property Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 118,
+  "fields": {
+    "name": "Administrative Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 119,
+  "fields": {
+    "name": "Equity & Trusts"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 120,
+  "fields": {
+    "name": "Company Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 121,
+  "fields": {
+    "name": "Commercial Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 122,
+  "fields": {
+    "name": "Evidence"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 123,
+  "fields": {
+    "name": "Civil Procedure"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 124,
+  "fields": {
+    "name": "Criminal Procedure"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 125,
+  "fields": {
+    "name": "Public International Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 126,
+  "fields": {
+    "name": "Tax Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 127,
+  "fields": {
+    "name": "Labour Law"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 128,
+  "fields": {
+    "name": "Jurisprudence"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 129,
+  "fields": {
+    "name": "Legal Research & Writing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 130,
+  "fields": {
+    "name": "Principles of Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 131,
+  "fields": {
+    "name": "Financial Accounting"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 132,
+  "fields": {
+    "name": "Cost & Management Accounting"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 133,
+  "fields": {
+    "name": "Corporate Finance"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 134,
+  "fields": {
+    "name": "Marketing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 135,
+  "fields": {
+    "name": "Human Resource Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 136,
+  "fields": {
+    "name": "Operations Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 137,
+  "fields": {
+    "name": "Business Analytics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 138,
+  "fields": {
+    "name": "Entrepreneurship"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 139,
+  "fields": {
+    "name": "Strategic Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 140,
+  "fields": {
+    "name": "International Business"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 141,
+  "fields": {
+    "name": "Business Ethics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 142,
+  "fields": {
+    "name": "Microeconomics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 143,
+  "fields": {
+    "name": "Macroeconomics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 144,
+  "fields": {
+    "name": "Mathematical Economics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 145,
+  "fields": {
+    "name": "Econometrics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 146,
+  "fields": {
+    "name": "Development Economics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 147,
+  "fields": {
+    "name": "Public Finance"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 148,
+  "fields": {
+    "name": "International Economics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 149,
+  "fields": {
+    "name": "Monetary Economics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 150,
+  "fields": {
+    "name": "Industrial Organization"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 151,
+  "fields": {
+    "name": "Labor Economics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 152,
+  "fields": {
+    "name": "Educational Psychology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 153,
+  "fields": {
+    "name": "Curriculum Development"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 154,
+  "fields": {
+    "name": "Instructional Methods"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 155,
+  "fields": {
+    "name": "Measurement & Evaluation"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 156,
+  "fields": {
+    "name": "Philosophy of Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 157,
+  "fields": {
+    "name": "Sociology of Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 158,
+  "fields": {
+    "name": "Educational Technology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 159,
+  "fields": {
+    "name": "Guidance & Counseling"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 160,
+  "fields": {
+    "name": "Teaching Practice"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 161,
+  "fields": {
+    "name": "Foundations of Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 162,
+  "fields": {
+    "name": "Pedagogy for Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 163,
+  "fields": {
+    "name": "Assessment in Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 164,
+  "fields": {
+    "name": "ICT in Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 165,
+  "fields": {
+    "name": "Research Methods in Education"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 166,
+  "fields": {
+    "name": "Mathematics Content"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 167,
+  "fields": {
+    "name": "Physics Content"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 168,
+  "fields": {
+    "name": "Chemistry Content"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 169,
+  "fields": {
+    "name": "Biology Content"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 170,
+  "fields": {
+    "name": "Engineering Mathematics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 171,
+  "fields": {
+    "name": "Engineering Drawing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 172,
+  "fields": {
+    "name": "Materials Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 173,
+  "fields": {
+    "name": "Strength of Materials"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 174,
+  "fields": {
+    "name": "Fluid Mechanics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 175,
+  "fields": {
+    "name": "Surveying"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 176,
+  "fields": {
+    "name": "Structural Analysis"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 177,
+  "fields": {
+    "name": "Reinforced Concrete Design"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 178,
+  "fields": {
+    "name": "Steel Design"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 179,
+  "fields": {
+    "name": "Transportation Engineering"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 180,
+  "fields": {
+    "name": "Geotechnical Engineering"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 181,
+  "fields": {
+    "name": "Water Resources Engineering"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 182,
+  "fields": {
+    "name": "Environmental Engineering"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 183,
+  "fields": {
+    "name": "Construction Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 184,
+  "fields": {
+    "name": "Thermodynamics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 185,
+  "fields": {
+    "name": "Machine Design"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 186,
+  "fields": {
+    "name": "Manufacturing Processes"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 187,
+  "fields": {
+    "name": "Dynamics & Control"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 188,
+  "fields": {
+    "name": "Heat Transfer"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 189,
+  "fields": {
+    "name": "Mechatronics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 190,
+  "fields": {
+    "name": "Power Plant Engineering"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 191,
+  "fields": {
+    "name": "Automobile Engineering"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 192,
+  "fields": {
+    "name": "Circuit Theory"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 193,
+  "fields": {
+    "name": "Electromagnetics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 194,
+  "fields": {
+    "name": "Signals & Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 195,
+  "fields": {
+    "name": "Digital Electronics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 196,
+  "fields": {
+    "name": "Control Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 197,
+  "fields": {
+    "name": "Communication Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 198,
+  "fields": {
+    "name": "Power Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 199,
+  "fields": {
+    "name": "Embedded Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 200,
+  "fields": {
+    "name": "Renewable Energy Systems"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 201,
+  "fields": {
+    "name": "Microprocessors"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 202,
+  "fields": {
+    "name": "Crop Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 203,
+  "fields": {
+    "name": "Soil Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 204,
+  "fields": {
+    "name": "Animal Science"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 205,
+  "fields": {
+    "name": "Horticulture"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 206,
+  "fields": {
+    "name": "Agricultural Economics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 207,
+  "fields": {
+    "name": "Irrigation & Drainage"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 208,
+  "fields": {
+    "name": "Postharvest Technology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 209,
+  "fields": {
+    "name": "Farm Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 210,
+  "fields": {
+    "name": "Agricultural Extension"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 211,
+  "fields": {
+    "name": "Sustainable Agriculture"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 212,
+  "fields": {
+    "name": "Environmental Chemistry"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 213,
+  "fields": {
+    "name": "Ecology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 214,
+  "fields": {
+    "name": "GIS & Remote Sensing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 215,
+  "fields": {
+    "name": "Environmental Impact Assessment"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 216,
+  "fields": {
+    "name": "Climate Change"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 217,
+  "fields": {
+    "name": "Sustainability & Policy"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 218,
+  "fields": {
+    "name": "Waste Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 219,
+  "fields": {
+    "name": "Natural Resource Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 220,
+  "fields": {
+    "name": "Food Production"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 221,
+  "fields": {
+    "name": "Food & Beverage Service"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 222,
+  "fields": {
+    "name": "Front Office Operations"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 223,
+  "fields": {
+    "name": "Housekeeping"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 224,
+  "fields": {
+    "name": "Tourism Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 225,
+  "fields": {
+    "name": "Events Management"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 226,
+  "fields": {
+    "name": "Sustainable Tourism"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 227,
+  "fields": {
+    "name": "Hospitality Marketing"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 228,
+  "fields": {
+    "name": "News Writing & Reporting"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 229,
+  "fields": {
+    "name": "Media Law & Ethics"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 230,
+  "fields": {
+    "name": "Broadcast Journalism"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 231,
+  "fields": {
+    "name": "Digital Media Production"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 232,
+  "fields": {
+    "name": "Public Relations"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 233,
+  "fields": {
+    "name": "Investigative Journalism"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 234,
+  "fields": {
+    "name": "Multimedia Storytelling"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 235,
+  "fields": {
+    "name": "Architectural Design Studios"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 236,
+  "fields": {
+    "name": "History & Theory of Architecture"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 237,
+  "fields": {
+    "name": "Building Technology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 238,
+  "fields": {
+    "name": "Structures"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 239,
+  "fields": {
+    "name": "Urban Design"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 240,
+  "fields": {
+    "name": "Environmental Control"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 241,
+  "fields": {
+    "name": "Professional Practice"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 242,
+  "fields": {
+    "name": "Introduction to Psychology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 243,
+  "fields": {
+    "name": "Developmental Psychology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 244,
+  "fields": {
+    "name": "Social Psychology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 245,
+  "fields": {
+    "name": "Cognitive Psychology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 246,
+  "fields": {
+    "name": "Psychological Assessment"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 247,
+  "fields": {
+    "name": "Abnormal Psychology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 248,
+  "fields": {
+    "name": "Counseling Psychology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 249,
+  "fields": {
+    "name": "Industrial/Organizational Psychology"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 250,
+  "fields": {
+    "name": "Medicine (MBChB)"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 251,
+  "fields": {
+    "name": "Law (LLB)"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 252,
+  "fields": {
+    "name": "Business Administration"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 253,
+  "fields": {
+    "name": "Education (Arts)"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 254,
+  "fields": {
+    "name": "Engineering (Civil)"
+  }
+},
+{
+  "model": "resources.subject",
+  "pk": 255,
+  "fields": {
+    "name": "Nursing"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 1,
+  "fields": {
+    "name": "Pre-Primary 1"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 2,
+  "fields": {
+    "name": "Pre-Primary 2"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 3,
+  "fields": {
+    "name": "Grade 1"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 4,
+  "fields": {
+    "name": "Grade 2"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 5,
+  "fields": {
+    "name": "Grade 3"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 6,
+  "fields": {
+    "name": "Grade 4"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 7,
+  "fields": {
+    "name": "Grade 5"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 8,
+  "fields": {
+    "name": "Grade 6"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 9,
+  "fields": {
+    "name": "Grade 7"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 10,
+  "fields": {
+    "name": "Grade 8"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 11,
+  "fields": {
+    "name": "Grade 9"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 12,
+  "fields": {
+    "name": "Grade 10"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 13,
+  "fields": {
+    "name": "Grade 11"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 14,
+  "fields": {
+    "name": "Grade 12"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 15,
+  "fields": {
+    "name": "Form 1"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 16,
+  "fields": {
+    "name": "Form 2"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 17,
+  "fields": {
+    "name": "Form 3"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 18,
+  "fields": {
+    "name": "Form 4"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 19,
+  "fields": {
+    "name": "Computer Science"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 20,
+  "fields": {
+    "name": "Information Technology"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 21,
+  "fields": {
+    "name": "Medicine (MBChB)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 22,
+  "fields": {
+    "name": "Nursing"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 23,
+  "fields": {
+    "name": "Public Health"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 24,
+  "fields": {
+    "name": "Law (LLB)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 25,
+  "fields": {
+    "name": "Business Administration"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 26,
+  "fields": {
+    "name": "Economics"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 27,
+  "fields": {
+    "name": "Education (Arts)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 28,
+  "fields": {
+    "name": "Education (Science)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 29,
+  "fields": {
+    "name": "Engineering (Civil)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 30,
+  "fields": {
+    "name": "Engineering (Mechanical)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 31,
+  "fields": {
+    "name": "Engineering (Electrical & Electronic)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 32,
+  "fields": {
+    "name": "Agricultural Science"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 33,
+  "fields": {
+    "name": "Environmental Studies"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 34,
+  "fields": {
+    "name": "Hospitality & Tourism"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 35,
+  "fields": {
+    "name": "Journalism & Mass Communication"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 36,
+  "fields": {
+    "name": "Architecture & Built Environment"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 37,
+  "fields": {
+    "name": "Psychology"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 38,
+  "fields": {
+    "name": "Grade 10 (Senior Secondary)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 39,
+  "fields": {
+    "name": "Grade 11 (Senior Secondary)"
+  }
+},
+{
+  "model": "resources.grade",
+  "pk": 40,
+  "fields": {
+    "name": "Grade 12 (Senior Secondary)"
+  }
+},
+{
+  "model": "resources.educationlevel",
+  "pk": 1,
+  "fields": {
+    "name": "CBC"
+  }
+},
+{
+  "model": "resources.educationlevel",
+  "pk": 2,
+  "fields": {
+    "name": "8-4-4"
+  }
+},
+{
+  "model": "resources.educationlevel",
+  "pk": 3,
+  "fields": {
+    "name": "University"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 1,
+  "fields": {
+    "name": "Alphabet"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 2,
+  "fields": {
+    "name": "Sounds"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 3,
+  "fields": {
+    "name": "Simple Words"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 4,
+  "fields": {
+    "name": "Counting 1-20"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 5,
+  "fields": {
+    "name": "Shapes"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 6,
+  "fields": {
+    "name": "Patterns"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 7,
+  "fields": {
+    "name": "Plants"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 8,
+  "fields": {
+    "name": "Animals"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 9,
+  "fields": {
+    "name": "Weather"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 10,
+  "fields": {
+    "name": "Drawing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 11,
+  "fields": {
+    "name": "Singing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 12,
+  "fields": {
+    "name": "Movement"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 13,
+  "fields": {
+    "name": "Stories"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 14,
+  "fields": {
+    "name": "Values"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 15,
+  "fields": {
+    "name": "Reading Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 16,
+  "fields": {
+    "name": "Storytelling"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 17,
+  "fields": {
+    "name": "Rhymes"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 18,
+  "fields": {
+    "name": "Numbers 1-50"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 19,
+  "fields": {
+    "name": "Addition Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 20,
+  "fields": {
+    "name": "Seasons"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 21,
+  "fields": {
+    "name": "Habitat"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 22,
+  "fields": {
+    "name": "Painting"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 23,
+  "fields": {
+    "name": "Drama"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 24,
+  "fields": {
+    "name": "Dance"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 25,
+  "fields": {
+    "name": "Songs"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 26,
+  "fields": {
+    "name": "Good Habits"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 27,
+  "fields": {
+    "name": "Reading"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 28,
+  "fields": {
+    "name": "Writing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 29,
+  "fields": {
+    "name": "Simple Grammar"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 30,
+  "fields": {
+    "name": "Matamshi"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 31,
+  "fields": {
+    "name": "Kusoma"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 32,
+  "fields": {
+    "name": "Kuandika"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 33,
+  "fields": {
+    "name": "Numbers 1-100"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 34,
+  "fields": {
+    "name": "Addition"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 35,
+  "fields": {
+    "name": "Subtraction"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 36,
+  "fields": {
+    "name": "Health"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 37,
+  "fields": {
+    "name": "Safety"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 38,
+  "fields": {
+    "name": "Nature"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 39,
+  "fields": {
+    "name": "CRE Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 40,
+  "fields": {
+    "name": "Art"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 41,
+  "fields": {
+    "name": "Music"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 42,
+  "fields": {
+    "name": "Basic Games"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 43,
+  "fields": {
+    "name": "Coordination"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 44,
+  "fields": {
+    "name": "Phonics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 45,
+  "fields": {
+    "name": "Short Stories"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 46,
+  "fields": {
+    "name": "Punctuation"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 47,
+  "fields": {
+    "name": "Maneno"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 48,
+  "fields": {
+    "name": "Sentensi"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 49,
+  "fields": {
+    "name": "Sarufi"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 50,
+  "fields": {
+    "name": "Place Value"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 51,
+  "fields": {
+    "name": "Time"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 52,
+  "fields": {
+    "name": "Money"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 53,
+  "fields": {
+    "name": "Morals"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 54,
+  "fields": {
+    "name": "Crafts"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 55,
+  "fields": {
+    "name": "Team Play"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 56,
+  "fields": {
+    "name": "Balance"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 57,
+  "fields": {
+    "name": "Comprehension"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 58,
+  "fields": {
+    "name": "Grammar"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 59,
+  "fields": {
+    "name": "Spelling"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 60,
+  "fields": {
+    "name": "Fasihi"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 61,
+  "fields": {
+    "name": "Measurement"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 62,
+  "fields": {
+    "name": "Fractions Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 63,
+  "fields": {
+    "name": "Graphs"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 64,
+  "fields": {
+    "name": "Water"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 65,
+  "fields": {
+    "name": "Soil"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 66,
+  "fields": {
+    "name": "Energy"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 67,
+  "fields": {
+    "name": "Faith Stories"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 68,
+  "fields": {
+    "name": "Design"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 69,
+  "fields": {
+    "name": "Music Practice"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 70,
+  "fields": {
+    "name": "Athletics Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 71,
+  "fields": {
+    "name": "Listening & Speaking"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 72,
+  "fields": {
+    "name": "Matumizi ya Lugha"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 73,
+  "fields": {
+    "name": "Insha"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 74,
+  "fields": {
+    "name": "Whole Numbers"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 75,
+  "fields": {
+    "name": "Fractions"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 76,
+  "fields": {
+    "name": "Geometry"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 77,
+  "fields": {
+    "name": "Matter"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 78,
+  "fields": {
+    "name": "Human Body"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 79,
+  "fields": {
+    "name": "People & Resources"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 80,
+  "fields": {
+    "name": "Maps"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 81,
+  "fields": {
+    "name": "Faith & Values"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 82,
+  "fields": {
+    "name": "Food"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 83,
+  "fields": {
+    "name": "Clothing Care"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 84,
+  "fields": {
+    "name": "Seeds"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 85,
+  "fields": {
+    "name": "Craft"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 86,
+  "fields": {
+    "name": "Notation"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 87,
+  "fields": {
+    "name": "Games"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 88,
+  "fields": {
+    "name": "Digital Devices"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 89,
+  "fields": {
+    "name": "Vocabulary"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 90,
+  "fields": {
+    "name": "Culture"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 91,
+  "fields": {
+    "name": "French Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 92,
+  "fields": {
+    "name": "German Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 93,
+  "fields": {
+    "name": "Arabic Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 94,
+  "fields": {
+    "name": "Composition"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 95,
+  "fields": {
+    "name": "Reading Comprehension"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 96,
+  "fields": {
+    "name": "Decimals"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 97,
+  "fields": {
+    "name": "Percentages"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 98,
+  "fields": {
+    "name": "Forces"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 99,
+  "fields": {
+    "name": "Kenya"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 100,
+  "fields": {
+    "name": "Governance"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 101,
+  "fields": {
+    "name": "Beliefs"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 102,
+  "fields": {
+    "name": "Nutrition"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 103,
+  "fields": {
+    "name": "Sewing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 104,
+  "fields": {
+    "name": "Crop Care"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 105,
+  "fields": {
+    "name": "Livestock Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 106,
+  "fields": {
+    "name": "Performance"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 107,
+  "fields": {
+    "name": "Fitness"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 108,
+  "fields": {
+    "name": "Typing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 109,
+  "fields": {
+    "name": "Internet Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 110,
+  "fields": {
+    "name": "Proverbs"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 111,
+  "fields": {
+    "name": "Folklore"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 112,
+  "fields": {
+    "name": "French I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 113,
+  "fields": {
+    "name": "German I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 114,
+  "fields": {
+    "name": "Arabic I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 115,
+  "fields": {
+    "name": "Advanced Reading"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 116,
+  "fields": {
+    "name": "Writing Skills"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 117,
+  "fields": {
+    "name": "Sarufi ya Juu"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 118,
+  "fields": {
+    "name": "Ratios"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 119,
+  "fields": {
+    "name": "Area & Volume"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 120,
+  "fields": {
+    "name": "Electricity"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 121,
+  "fields": {
+    "name": "East Africa"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 122,
+  "fields": {
+    "name": "Economy"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 123,
+  "fields": {
+    "name": "Ethics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 124,
+  "fields": {
+    "name": "Community"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 125,
+  "fields": {
+    "name": "Home Management"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 126,
+  "fields": {
+    "name": "Soil Fertility"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 127,
+  "fields": {
+    "name": "Pest Control"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 128,
+  "fields": {
+    "name": "Sculpture"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 129,
+  "fields": {
+    "name": "Textiles"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 130,
+  "fields": {
+    "name": "Harmony"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 131,
+  "fields": {
+    "name": "Choir"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 132,
+  "fields": {
+    "name": "Rules of Games"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 133,
+  "fields": {
+    "name": "First Aid"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 134,
+  "fields": {
+    "name": "Docs & Spreadsheets"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 135,
+  "fields": {
+    "name": "Narratives"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 136,
+  "fields": {
+    "name": "French II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 137,
+  "fields": {
+    "name": "German II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 138,
+  "fields": {
+    "name": "Arabic II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 139,
+  "fields": {
+    "name": "Listening"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 140,
+  "fields": {
+    "name": "Literature"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 141,
+  "fields": {
+    "name": "Usikilizaji"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 142,
+  "fields": {
+    "name": "Algebra Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 143,
+  "fields": {
+    "name": "Integers"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 144,
+  "fields": {
+    "name": "Biology Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 145,
+  "fields": {
+    "name": "Chemistry Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 146,
+  "fields": {
+    "name": "Physics Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 147,
+  "fields": {
+    "name": "Hand Tools"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 148,
+  "fields": {
+    "name": "Basic Drawing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 149,
+  "fields": {
+    "name": "Entrepreneurship Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 150,
+  "fields": {
+    "name": "Citizenship"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 151,
+  "fields": {
+    "name": "Map Work"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 152,
+  "fields": {
+    "name": "Values & Society"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 153,
+  "fields": {
+    "name": "Hygiene"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 154,
+  "fields": {
+    "name": "Athletics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 155,
+  "fields": {
+    "name": "Team Sports"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 156,
+  "fields": {
+    "name": "Color Theory"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 157,
+  "fields": {
+    "name": "Crop Production Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 158,
+  "fields": {
+    "name": "Problem Solving"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 159,
+  "fields": {
+    "name": "Computing Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 160,
+  "fields": {
+    "name": "Scratch/Python Intro"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 161,
+  "fields": {
+    "name": "Basic Phrases"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 162,
+  "fields": {
+    "name": "French I / German I / Arabic I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 163,
+  "fields": {
+    "name": "Advanced Composition"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 164,
+  "fields": {
+    "name": "Isimu"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 165,
+  "fields": {
+    "name": "Equations"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 166,
+  "fields": {
+    "name": "Cells"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 167,
+  "fields": {
+    "name": "Mixtures"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 168,
+  "fields": {
+    "name": "Motion"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 169,
+  "fields": {
+    "name": "Workshop Safety"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 170,
+  "fields": {
+    "name": "Materials"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 171,
+  "fields": {
+    "name": "Trade"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 172,
+  "fields": {
+    "name": "Bookkeeping Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 173,
+  "fields": {
+    "name": "Regions"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 174,
+  "fields": {
+    "name": "Development"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 175,
+  "fields": {
+    "name": "Faith & Community"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 176,
+  "fields": {
+    "name": "Adolescence"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 177,
+  "fields": {
+    "name": "Game Rules"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 178,
+  "fields": {
+    "name": "Photography Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 179,
+  "fields": {
+    "name": "Music Theory"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 180,
+  "fields": {
+    "name": "Livestock"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 181,
+  "fields": {
+    "name": "Farm Tools"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 182,
+  "fields": {
+    "name": "Decision Making"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 183,
+  "fields": {
+    "name": "Programming Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 184,
+  "fields": {
+    "name": "Data"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 185,
+  "fields": {
+    "name": "French II / German II / Arabic II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 186,
+  "fields": {
+    "name": "Summary Writing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 187,
+  "fields": {
+    "name": "Literature Analysis"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 188,
+  "fields": {
+    "name": "Isimu ya Kisasa"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 189,
+  "fields": {
+    "name": "Indices"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 190,
+  "fields": {
+    "name": "Similarity"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 191,
+  "fields": {
+    "name": "Trigonometry"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 192,
+  "fields": {
+    "name": "Genetics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 193,
+  "fields": {
+    "name": "Reactions"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 194,
+  "fields": {
+    "name": "Waves"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 195,
+  "fields": {
+    "name": "Technical Drawing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 196,
+  "fields": {
+    "name": "Basic Circuits"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 197,
+  "fields": {
+    "name": "Finance Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 198,
+  "fields": {
+    "name": "Banking"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 199,
+  "fields": {
+    "name": "Global Issues"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 200,
+  "fields": {
+    "name": "Ethics & Society"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 201,
+  "fields": {
+    "name": "Mental Health"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 202,
+  "fields": {
+    "name": "Disease Prevention"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 203,
+  "fields": {
+    "name": "Tactics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 204,
+  "fields": {
+    "name": "Refereeing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 205,
+  "fields": {
+    "name": "Mixed Media"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 206,
+  "fields": {
+    "name": "Drama Production"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 207,
+  "fields": {
+    "name": "Soil Management"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 208,
+  "fields": {
+    "name": "Irrigation"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 209,
+  "fields": {
+    "name": "Leadership"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 210,
+  "fields": {
+    "name": "Programming II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 211,
+  "fields": {
+    "name": "Networks Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 212,
+  "fields": {
+    "name": "Conversations"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 213,
+  "fields": {
+    "name": "French III / German III / Arabic III"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 214,
+  "fields": {
+    "name": "Linear Algebra Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 215,
+  "fields": {
+    "name": "Statistics I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 216,
+  "fields": {
+    "name": "Advanced Writing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 217,
+  "fields": {
+    "name": "Literature Study"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 218,
+  "fields": {
+    "name": "Fasihi ya Dhamira"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 219,
+  "fields": {
+    "name": "Kinematics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 220,
+  "fields": {
+    "name": "Stoichiometry"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 221,
+  "fields": {
+    "name": "Acids & Bases"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 222,
+  "fields": {
+    "name": "Ecology"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 223,
+  "fields": {
+    "name": "Physiology"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 224,
+  "fields": {
+    "name": "Kenya History"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 225,
+  "fields": {
+    "name": "World History"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 226,
+  "fields": {
+    "name": "Geomorphology"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 227,
+  "fields": {
+    "name": "Climate"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 228,
+  "fields": {
+    "name": "Marketing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 229,
+  "fields": {
+    "name": "Accounting Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 230,
+  "fields": {
+    "name": "Data Types"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 231,
+  "fields": {
+    "name": "Algorithms I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 232,
+  "fields": {
+    "name": "Horticulture"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 233,
+  "fields": {
+    "name": "Animal Production"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 234,
+  "fields": {
+    "name": "Nutrition & Dietetics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 235,
+  "fields": {
+    "name": "Architecture Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 236,
+  "fields": {
+    "name": "Ensemble"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 237,
+  "fields": {
+    "name": "Grammar I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 238,
+  "fields": {
+    "name": "Conversation I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 239,
+  "fields": {
+    "name": "Advanced Signs"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 240,
+  "fields": {
+    "name": "Fitness Training"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 241,
+  "fields": {
+    "name": "Career Skills"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 242,
+  "fields": {
+    "name": "Calculus I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 243,
+  "fields": {
+    "name": "Probability"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 244,
+  "fields": {
+    "name": "Rhetoric"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 245,
+  "fields": {
+    "name": "Research Writing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 246,
+  "fields": {
+    "name": "Isimu & Fasihi"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 247,
+  "fields": {
+    "name": "Modern Physics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 248,
+  "fields": {
+    "name": "Organic I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 249,
+  "fields": {
+    "name": "Electrochemistry"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 250,
+  "fields": {
+    "name": "Evolution"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 251,
+  "fields": {
+    "name": "African History"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 252,
+  "fields": {
+    "name": "Kenyan Politics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 253,
+  "fields": {
+    "name": "Biogeography"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 254,
+  "fields": {
+    "name": "Finance"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 255,
+  "fields": {
+    "name": "Entrepreneurship"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 256,
+  "fields": {
+    "name": "OOP"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 257,
+  "fields": {
+    "name": "Data Structures"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 258,
+  "fields": {
+    "name": "Agroforestry"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 259,
+  "fields": {
+    "name": "Postharvest"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 260,
+  "fields": {
+    "name": "Food Science"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 261,
+  "fields": {
+    "name": "Home Care"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 262,
+  "fields": {
+    "name": "Product Design"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 263,
+  "fields": {
+    "name": "Orchestration"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 264,
+  "fields": {
+    "name": "Grammar II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 265,
+  "fields": {
+    "name": "Conversation II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 266,
+  "fields": {
+    "name": "Faith & Society"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 267,
+  "fields": {
+    "name": "Sports Science"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 268,
+  "fields": {
+    "name": "Leadership & Teamwork"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 269,
+  "fields": {
+    "name": "Calculus II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 270,
+  "fields": {
+    "name": "Statistics II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 271,
+  "fields": {
+    "name": "Literary Criticism"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 272,
+  "fields": {
+    "name": "Project"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 273,
+  "fields": {
+    "name": "Fasihi & Isimu"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 274,
+  "fields": {
+    "name": "Fields"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 275,
+  "fields": {
+    "name": "Quantum Ideas"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 276,
+  "fields": {
+    "name": "Organic II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 277,
+  "fields": {
+    "name": "Industrial Chemistry"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 278,
+  "fields": {
+    "name": "Biotechnology"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 279,
+  "fields": {
+    "name": "Immunology"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 280,
+  "fields": {
+    "name": "Comparative Studies"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 281,
+  "fields": {
+    "name": "GIS Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 282,
+  "fields": {
+    "name": "Sustainable Dev"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 283,
+  "fields": {
+    "name": "Strategic Mgmt"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 284,
+  "fields": {
+    "name": "Accounting II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 285,
+  "fields": {
+    "name": "Algorithms II"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 286,
+  "fields": {
+    "name": "Databases"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 287,
+  "fields": {
+    "name": "Farm Management"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 288,
+  "fields": {
+    "name": "Value Chains"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 289,
+  "fields": {
+    "name": "Nutrition Project"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 290,
+  "fields": {
+    "name": "Portfolio"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 291,
+  "fields": {
+    "name": "Recital"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 292,
+  "fields": {
+    "name": "Music Technology"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 293,
+  "fields": {
+    "name": "Advanced Grammar"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 294,
+  "fields": {
+    "name": "Advanced Comms"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 295,
+  "fields": {
+    "name": "Ethics & Law"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 296,
+  "fields": {
+    "name": "Applied Coaching"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 297,
+  "fields": {
+    "name": "Capstone"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 298,
+  "fields": {
+    "name": "Numbers"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 299,
+  "fields": {
+    "name": "Geometry Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 300,
+  "fields": {
+    "name": "Cell"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 301,
+  "fields": {
+    "name": "Classification"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 302,
+  "fields": {
+    "name": "Lab Safety"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 303,
+  "fields": {
+    "name": "Elements"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 304,
+  "fields": {
+    "name": "Measurements"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 305,
+  "fields": {
+    "name": "Early Man"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 306,
+  "fields": {
+    "name": "Civilizations"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 307,
+  "fields": {
+    "name": "Weather & Climate"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 308,
+  "fields": {
+    "name": "Old Testament"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 309,
+  "fields": {
+    "name": "Christian Living"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 310,
+  "fields": {
+    "name": "Qur'an Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 311,
+  "fields": {
+    "name": "Hadith"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 312,
+  "fields": {
+    "name": "Hindu Teachings"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 313,
+  "fields": {
+    "name": "Practices"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 314,
+  "fields": {
+    "name": "Production"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 315,
+  "fields": {
+    "name": "Crops"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 316,
+  "fields": {
+    "name": "Food & Nutrition"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 317,
+  "fields": {
+    "name": "Intro to Computers"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 318,
+  "fields": {
+    "name": "Notation Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 319,
+  "fields": {
+    "name": "Design Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 320,
+  "fields": {
+    "name": "Basic Grammar"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 321,
+  "fields": {
+    "name": "Literature Intro"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 322,
+  "fields": {
+    "name": "Quadratic Equations"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 323,
+  "fields": {
+    "name": "Salts"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 324,
+  "fields": {
+    "name": "Pressure"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 325,
+  "fields": {
+    "name": "Work & Energy"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 326,
+  "fields": {
+    "name": "Kenya Pre-Colonial"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 327,
+  "fields": {
+    "name": "Rocks"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 328,
+  "fields": {
+    "name": "Mining"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 329,
+  "fields": {
+    "name": "New Testament"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 330,
+  "fields": {
+    "name": "Fiqh"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 331,
+  "fields": {
+    "name": "Seerah"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 332,
+  "fields": {
+    "name": "Scriptures"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 333,
+  "fields": {
+    "name": "Demand & Supply"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 334,
+  "fields": {
+    "name": "Crop Production"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 335,
+  "fields": {
+    "name": "Set Books"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 336,
+  "fields": {
+    "name": "Fasihi ya Kidato cha Tatu"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 337,
+  "fields": {
+    "name": "Sequences & Series"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 338,
+  "fields": {
+    "name": "Organic Chemistry I"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 339,
+  "fields": {
+    "name": "Colonialism"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 340,
+  "fields": {
+    "name": "Population"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 341,
+  "fields": {
+    "name": "Agriculture"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 342,
+  "fields": {
+    "name": "Church History"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 343,
+  "fields": {
+    "name": "Islamic History"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 344,
+  "fields": {
+    "name": "Hindu Philosophy"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 345,
+  "fields": {
+    "name": "Business Finance"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 346,
+  "fields": {
+    "name": "Revision"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 347,
+  "fields": {
+    "name": "Isimu ya Juu"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 348,
+  "fields": {
+    "name": "Vectors"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 349,
+  "fields": {
+    "name": "Calculus Basics"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 350,
+  "fields": {
+    "name": "Biotech"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 351,
+  "fields": {
+    "name": "Electromagnetism"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 352,
+  "fields": {
+    "name": "Independence"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 353,
+  "fields": {
+    "name": "GIS"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 354,
+  "fields": {
+    "name": "Contemporary Issues"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 355,
+  "fields": {
+    "name": "Agro-processing"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 356,
+  "fields": {
+    "name": "Networks"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 357,
+  "fields": {
+    "name": "Software Dev"
+  }
+},
+{
+  "model": "resources.topic",
+  "pk": 358,
+  "fields": {
+    "name": "Advanced Conversation"
+  }
+},
+{
+  "model": "resources.note",
+  "pk": "5fd5f70a-f86f-4738-8e1b-bbd00a1e3465",
+  "fields": {
+    "title": "Algebra exam",
+    "subject": 2,
+    "grade": 11,
+    "education_level": 1,
+    "topic": 142,
+    "content": "Soma",
+    "file": "notes_files/business_export_1772214896777.pdf",
+    "price": "1.00",
+    "created_at": "2026-03-24T15:41:51.941Z",
+    "updated_at": "2026-03-24T15:41:51.941Z"
+  }
+},
+{
+  "model": "resources.note",
+  "pk": "1c2264b9-6d8a-46f6-b6ad-cd2591ccec10",
+  "fields": {
+    "title": "Algebra Notes",
+    "subject": 36,
+    "grade": 39,
+    "education_level": 2,
+    "topic": 104,
+    "content": "Notes",
+    "file": "notes_files/business_export_1772215067662.pdf",
+    "price": "0.97",
+    "created_at": "2026-03-23T08:35:29.478Z",
+    "updated_at": "2026-03-23T08:35:29.478Z"
+  }
+},
+{
+  "model": "resources.pastpaper",
+  "pk": "0ba866af-4f48-4ed4-800c-cb0dead9a491",
+  "fields": {
+    "title": "Algebra Exam",
+    "subject": 36,
+    "grade": 17,
+    "education_level": 2,
+    "topic": 334,
+    "year": 2024,
+    "file": "pastpapers_files/ICS2101_COMP_ORG.doc",
+    "price": "1.00",
+    "created_at": "2026-03-23T11:44:18.878Z"
+  }
+},
+{
+  "model": "resources.exam",
+  "pk": "5ca39355-4af5-4916-9c84-fd599f3d5a13",
+  "fields": {
+    "title": "Capstone Project",
+    "subject": 49,
+    "grade": 19,
+    "education_level": 3,
+    "topic": 159,
+    "date": "2026-02-19",
+    "description": "End of Semester Exam",
+    "file": "exams_files/Course_Capstone_Project_u7CfNd6.pdf",
+    "price": "0.00",
+    "created_at": "2026-02-19T09:49:05.667Z"
+  }
+},
+{
+  "model": "resources.news",
+  "pk": "b88918c5-e5ca-4b28-a5a5-f53344f3de70",
+  "fields": {
+    "headline": "Algebra Exam out",
+    "body": "A lot of questions have been asked about this exam but its finally out",
+    "category": null,
+    "file": "news_files/og-image.svg",
+    "published_at": "2026-03-24T15:44:08.330Z"
+  }
+}
+]

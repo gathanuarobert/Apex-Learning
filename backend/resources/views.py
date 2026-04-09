@@ -140,7 +140,7 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
         # Wallet/M-Pesa payment check (use 'purchase' consistently)
         has_payment = Transaction.objects.filter(
             user=request.user,
-            resource_id=str(resource.id),
+            resource_id=(resource.id),
             resource_type=resource.__class__.__name__,
             transaction_type="purchase",
             status="completed"
@@ -159,18 +159,7 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
         if not resource.file:
             return Response({"detail": "File not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Record completed transaction if missing
-        Transaction.objects.get_or_create(
-            user=self.request.user,
-            resource_id=str(resource.id),
-            resource_type=resource.__class__.__name__,
-            transaction_type="download",
-            defaults={
-                "amount": getattr(resource, "price", Decimal("0.00")),
-                "status": "completed"
-            }
-        )
-
+       
         file_path = resource.file.path
         user = self.request.user
         username = getattr(user, "username", None) or getattr(user, "email", "User")
