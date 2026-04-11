@@ -59,7 +59,7 @@ export default function NewsPage() {
   const fileType = getFileType(fileUrl);
 
   return (
-    <div className="relative w-full min-h-screen text-white overflow-y-auto bg-slate-950">
+    <div className="relative min-h-screen text-white bg-slate-950">
       {/* Background Particles */}
       <Particles
         id="tsparticles"
@@ -80,7 +80,7 @@ export default function NewsPage() {
       />
 
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+      {/* <div className="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <button
@@ -108,7 +108,31 @@ export default function NewsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div>
+      <h1 className="text-3xl font-bold text-white">Latest News</h1>
+      <p className="text-slate-400 mt-1">Stay up to date with the latest updates</p>
+    </div>
+    {/* Search */}
+    <div className="flex items-center gap-3 bg-slate-800 rounded-xl px-4 py-2.5 border border-slate-700 focus-within:border-green-500/60 transition-colors md:w-72">
+      <Search size={16} className="text-slate-400 shrink-0" />
+      <input
+        type="text"
+        placeholder="Search news..."
+        className="w-full bg-transparent focus:outline-none text-white placeholder-slate-500 text-sm"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+      {searchQuery && (
+        <button onClick={() => setSearchQuery("")}>
+          <X size={12} className="text-slate-500 hover:text-white" />
+        </button>
+      )}
+    </div>
+  </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -304,6 +328,7 @@ export default function NewsPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
