@@ -265,6 +265,74 @@ class CurrentUserView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+    
+
+class UpdateUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        # Only allow name and email to be updated
+        allowed_fields = {'name', 'email'}
+        data = {k: v for k, v in request.data.items() if k in allowed_fields}
+
+        if 'email' in data and User.objects.exclude(pk=user.pk).filter(email=data['email']).exists():
+            return Response(
+                {'error': 'Email already in use by another account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        for field, value in data.items():
+            setattr(user, field, value)
+        user.save()
+
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+
+        if not current_password or not new_password or not confirm_password:
+            return Response(
+                {'error': 'All fields are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not user.check_password(current_password):
+            return Response(
+                {'error': 'Current password is incorrect.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if new_password != confirm_password:
+            return Response(
+                {'error': 'New passwords do not match.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {'error': 'Password must be at least 8 characters.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        # Re-issue tokens since password changed
+        refresh = RefreshToken.for_user(user)
+        response = Response(
+            {'message': 'Password changed successfully.'},
+            status=status.HTTP_200_OK
+        )
+        _set_auth_cookies(response, refresh.access_token, str(refresh))
+        return response
 
 
 class AddChildrenToParentView(APIView):
