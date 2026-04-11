@@ -124,9 +124,12 @@ function getCookie(name) {
 export const registerUser = (userData) => api.post("users/register/", userData);
 export const loginUser    = (credentials) => api.post("users/login/", credentials);
 export const logoutUser   = () => api.post("users/logout/");
-export const addChildren  = (childrenIds) =>
-  api.post("users/add-children/", { children: childrenIds });
+
+// ------------------- USERS -------------------
+export const addChildren  = (childrenIds) =>api.post("users/add-children/", { children: childrenIds });
 export const getCurrentUser = () => api.get("users/me/");
+export const updateUser = (data) => api.patch("users/me/update/", data);
+export const changePassword = (data) => api.post("users/me/change-password/", data);
 
 // ------------------- PAYMENTS -------------------
 export const initiateWalletDeposit   = (data) => api.post("payments/wallet/deposit/initiate/", data);
