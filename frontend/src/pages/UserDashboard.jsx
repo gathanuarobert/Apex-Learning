@@ -16,6 +16,22 @@ export default function UserDashboard() {
   const [dlSearch, setDlSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Profile editing state
+const [editingProfile, setEditingProfile] = useState(false);
+const [editName, setEditName] = useState("");
+const [editEmail, setEditEmail] = useState("");
+const [savingProfile, setSavingProfile] = useState(false);
+const [profileError, setProfileError] = useState("");
+const [profileSuccess, setProfileSuccess] = useState("");
+
+// Password change state
+const [currentPassword, setCurrentPassword] = useState("");
+const [newPassword, setNewPassword] = useState("");
+const [confirmPassword, setConfirmPassword] = useState("");
+const [changingPassword, setChangingPassword] = useState(false);
+const [passwordError, setPasswordError] = useState("");
+const [passwordSuccess, setPasswordSuccess] = useState("");
+
   const cards = [
     { title: "Notes", icon: <FileText size={36} />, color: "from-blue-500 to-blue-700", route: "/notes" },
     { title: "Exams", icon: <BookOpen size={36} />, color: "from-purple-500 to-purple-700", route: "/exams" },
@@ -65,6 +81,62 @@ export default function UserDashboard() {
       console.error("Failed to fetch user info:", err);
     }
   };
+
+  const handleSaveProfile = async () => {
+  setSavingProfile(true);
+  setProfileError("");
+  setProfileSuccess("");
+  try {
+    const res = await api.patch("users/me/update/", {
+      name: editName,
+      email: editEmail,
+    });
+    setCurrentUser(res.data);
+    setEditingProfile(false);
+    setProfileSuccess("Profile updated successfully!");
+    setTimeout(() => setProfileSuccess(""), 3000);
+  } catch (err) {
+    setProfileError(err.response?.data?.error || "Failed to update profile.");
+  } finally {
+    setSavingProfile(false);
+  }
+};
+
+const handleChangePassword = async () => {
+  setPasswordError("");
+  setPasswordSuccess("");
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    setPasswordError("All fields are required.");
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    setPasswordError("New passwords do not match.");
+    return;
+  }
+  if (newPassword.length < 8) {
+    setPasswordError("Password must be at least 8 characters.");
+    return;
+  }
+
+  setChangingPassword(true);
+  try {
+    await api.post("users/me/change-password/", {
+      current_password: currentPassword,
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+    });
+    setPasswordSuccess("Password changed successfully!");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setTimeout(() => setPasswordSuccess(""), 3000);
+  } catch (err) {
+    setPasswordError(err.response?.data?.error || "Failed to change password.");
+  } finally {
+    setChangingPassword(false);
+  }
+};
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -197,34 +269,131 @@ export default function UserDashboard() {
         )}
 
         {activeTab === "credentials" && (
-          <div className="max-w-xl mx-auto bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
-            <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
-              <User size={20} /> My Account
-            </h2>
-            {currentUser ? (
-              <div className="space-y-3">
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <p className="text-slate-400 text-sm">Email</p>
-                  <p className="text-white font-semibold break-all">{currentUser.email}</p>
-                </div>
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <p className="text-slate-400 text-sm">Role</p>
-                  <p className="text-white font-semibold capitalize">{currentUser.role || "User"}</p>
-                </div>
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <p className="text-slate-400 text-sm">Member Since</p>
-                  <p className="text-white font-semibold">
-                    {currentUser.date_joined
-                      ? new Date(currentUser.date_joined).toLocaleDateString()
-                      : "N/A"}
-                  </p>
-                </div>
-              </div>
+  <div className="max-w-xl mx-auto space-y-4">
+
+    {/* Profile Info */}
+    <div className="bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
+      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <User size={20} /> My Account
+      </h2>
+
+      {currentUser ? (
+        <div className="space-y-3">
+          {/* Editable name */}
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <p className="text-slate-400 text-xs mb-1">Full Name</p>
+            {editingProfile ? (
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full bg-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             ) : (
-              <p className="text-slate-400">Loading user info...</p>
+              <p className="text-white font-semibold">{currentUser.name || "Not set"}</p>
             )}
           </div>
-        )}
+
+          {/* Editable email */}
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <p className="text-slate-400 text-xs mb-1">Email</p>
+            {editingProfile ? (
+              <input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="w-full bg-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            ) : (
+              <p className="text-white font-semibold break-all">{currentUser.email}</p>
+            )}
+          </div>
+
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <p className="text-slate-400 text-xs mb-1">Role</p>
+            <p className="text-white font-semibold capitalize">{currentUser.role || "User"}</p>
+          </div>
+
+          <div className="bg-gray-700 p-4 rounded-lg">
+            <p className="text-slate-400 text-xs mb-1">Member Since</p>
+            <p className="text-white font-semibold">
+              {currentUser.date_joined ? new Date(currentUser.date_joined).toLocaleDateString() : "N/A"}
+            </p>
+          </div>
+
+          {/* Edit / Save buttons */}
+          {editingProfile ? (
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-semibold transition disabled:opacity-50"
+              >
+                {savingProfile ? "Saving…" : "Save Changes"}
+              </button>
+              <button
+                onClick={() => { setEditingProfile(false); setProfileError(""); }}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 py-2.5 rounded-lg text-sm font-semibold transition"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setEditingProfile(true); setEditName(currentUser.name || ""); setEditEmail(currentUser.email || ""); }}
+              className="w-full bg-gray-700 hover:bg-gray-600 py-2.5 rounded-lg text-sm font-semibold transition"
+            >
+              ✏️ Edit Profile
+            </button>
+          )}
+
+          {profileError && <p className="text-red-400 text-xs mt-1">{profileError}</p>}
+          {profileSuccess && <p className="text-green-400 text-xs mt-1">{profileSuccess}</p>}
+        </div>
+      ) : (
+        <p className="text-slate-400">Loading user info...</p>
+      )}
+    </div>
+
+    {/* Change Password */}
+    <div className="bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
+      <h2 className="text-xl font-bold mb-4">🔒 Change Password</h2>
+      <div className="space-y-3">
+        <input
+          type="password"
+          placeholder="Current password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          className="w-full bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+        />
+        <input
+          type="password"
+          placeholder="New password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="w-full bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+        />
+        <input
+          type="password"
+          placeholder="Confirm new password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="w-full bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+        />
+        {passwordError && <p className="text-red-400 text-xs">{passwordError}</p>}
+        {passwordSuccess && <p className="text-green-400 text-xs">{passwordSuccess}</p>}
+        <button
+          onClick={handleChangePassword}
+          disabled={changingPassword}
+          className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-semibold transition disabled:opacity-50"
+        >
+          {changingPassword ? "Changing…" : "Change Password"}
+        </button>
+      </div>
+    </div>
+
+  </div>
+)}
 
         {activeTab === "downloads" && (
           <div className="max-w-3xl mx-auto bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
