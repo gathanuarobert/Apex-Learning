@@ -1,6 +1,33 @@
 # resources/serializers.py
 from rest_framework import serializers
 from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory
+import os
+
+
+# ========== Reusable File Validator ==========
+ALLOWED_EXTENSIONS = [
+    # Documents
+    '.pdf', '.doc', '.docx', '.ppt', '.pptx',
+    # Images
+    '.jpg', '.jpeg', '.png',
+]
+
+MAX_FILE_SIZE_MB = 50  # 50MB max per file
+
+def validate_file(file):
+    if file:
+        ext = os.path.splitext(file.name)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise serializers.ValidationError(
+                f"Unsupported file type '{ext}'. "
+                f"Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+            )
+        if file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+            raise serializers.ValidationError(
+                f"File too large. Maximum size is {MAX_FILE_SIZE_MB}MB. "
+                f"Your file is {round(file.size / (1024*1024), 1)}MB."
+            )
+    return file
 
 
 class BaseFileSerializer(serializers.ModelSerializer):
@@ -11,6 +38,9 @@ class BaseFileSerializer(serializers.ModelSerializer):
         if obj.file and hasattr(obj.file, 'url'):
             return request.build_absolute_uri(obj.file.url)
         return None
+
+    def validate_file(self, value):
+        return validate_file(value)
 
 
 # ========== Lookup Model Serializers ==========
@@ -46,91 +76,52 @@ class NewsCategorySerializer(serializers.ModelSerializer):
 
 # ========== Resource Serializers ==========
 class NoteSerializer(BaseFileSerializer):
-    # READ fields - return string names to frontend
     subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
     grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
     curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
     topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
 
-    # WRITE fields - accept IDs when admin creates/updates
     subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), 
-        source='subject',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Subject.objects.all(), source='subject',
+        write_only=True, allow_null=True, required=False)
     grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), 
-        source='grade',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Grade.objects.all(), source='grade',
+        write_only=True, allow_null=True, required=False)
     education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), 
-        source='education_level',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=EducationLevel.objects.all(), source='education_level',
+        write_only=True, allow_null=True, required=False)
     topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), 
-        source='topic',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Topic.objects.all(), source='topic',
+        write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = Note
         fields = [
             'id', 'title',
-            # Read fields (strings)
             'subject', 'grade', 'curriculum', 'topic',
-            # Write fields (IDs)
             'subject_id', 'grade_id', 'education_level_id', 'topic_id',
-            # Other fields
             'content', 'price', 'file', 'file_url', 'created_at', 'updated_at'
         ]
 
 
 class PastPaperSerializer(BaseFileSerializer):
-    # READ fields
     subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
     grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
     curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
     topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
 
-    # WRITE fields
     subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), 
-        source='subject',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Subject.objects.all(), source='subject',
+        write_only=True, allow_null=True, required=False)
     grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), 
-        source='grade',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Grade.objects.all(), source='grade',
+        write_only=True, allow_null=True, required=False)
     education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), 
-        source='education_level',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=EducationLevel.objects.all(), source='education_level',
+        write_only=True, allow_null=True, required=False)
     topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), 
-        source='topic',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Topic.objects.all(), source='topic',
+        write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = PastPaper
@@ -143,41 +134,23 @@ class PastPaperSerializer(BaseFileSerializer):
 
 
 class ExamSerializer(BaseFileSerializer):
-    # READ fields
     subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
     grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
     curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
     topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
 
-    # WRITE fields
     subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), 
-        source='subject',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Subject.objects.all(), source='subject',
+        write_only=True, allow_null=True, required=False)
     grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), 
-        source='grade',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Grade.objects.all(), source='grade',
+        write_only=True, allow_null=True, required=False)
     education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), 
-        source='education_level',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=EducationLevel.objects.all(), source='education_level',
+        write_only=True, allow_null=True, required=False)
     topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), 
-        source='topic',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=Topic.objects.all(), source='topic',
+        write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = Exam
@@ -192,12 +165,8 @@ class ExamSerializer(BaseFileSerializer):
 class NewsSerializer(BaseFileSerializer):
     category    = serializers.CharField(source='category.name', read_only=True, allow_null=True)
     category_id = serializers.PrimaryKeyRelatedField(
-        queryset=NewsCategory.objects.all(), 
-        source='category',
-        write_only=True,
-        allow_null=True, 
-        required=False
-    )
+        queryset=NewsCategory.objects.all(), source='category',
+        write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = News
