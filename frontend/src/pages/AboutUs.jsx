@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { useNavigate } from "react-router-dom";
+import { ChevronLeft, Rocket, Target, Globe, Lightbulb } from "lucide-react";
 
 const AboutUs = () => {
   const navigate = useNavigate();
@@ -17,301 +18,206 @@ const AboutUs = () => {
   const [missionHeading, setMissionHeading] = useState("");
   const [serveHeading, setServeHeading] = useState("");
 
-  // Content visibility states
+  // Content visibility
   const [showIntroParagraph, setShowIntroParagraph] = useState(false);
   const [showOfferParagraph, setShowOfferParagraph] = useState(false);
   const [bulletIndex, setBulletIndex] = useState(-1);
   const [showMissionParagraph, setShowMissionParagraph] = useState(false);
   const [showServeParagraph, setShowServeParagraph] = useState(false);
 
-  // CTA Bounce State
-  const [bounce, setBounce] = useState(false);
-
-  // Refs for smooth auto-scroll
-  const introRef = useRef(null);
-  const offerRef = useRef(null);
-  const missionRef = useRef(null);
-  const serveRef = useRef(null);
-
-  // Parallax state
   const [parallaxOffset, setParallaxOffset] = useState(0);
 
   const scrollToRef = (ref) => {
-    if (ref.current)
+    if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   };
 
-  // ✅ FIXED typewriter function - properly handles emojis and prevents duplicates
-  const typeWriter = (text, setter, onComplete) => {
+  // Improved Typewriter: Handles emojis and ensures smooth character progression
+  const typeWriter = (text, setter, onComplete, speed = 50) => {
     let index = 0;
-    const chars = Array.from(text); // Split into proper characters (handles emojis correctly)
-    
-    setter(""); // Clear any existing text
+    const chars = Array.from(text);
+    setter(""); 
     
     const interval = setInterval(() => {
       if (index < chars.length) {
-        const currentText = chars.slice(0, index + 1).join(""); // Build string from scratch each time
-        setter(currentText);
+        setter((prev) => prev + chars[index]);
         index++;
       } else {
         clearInterval(interval);
         if (onComplete) onComplete();
       }
-    }, 80);
+    }, speed);
     
-    return () => clearInterval(interval); // Cleanup function
+    return () => clearInterval(interval);
   };
 
   useEffect(() => {
-    const cleanup1 = typeWriter("📚 About Us", setMainHeading, () => {
+    const cleanup1 = typeWriter("📚 About Apex Learning", setMainHeading, () => {
       setShowIntroParagraph(true);
       setTimeout(() => {
-        scrollToRef(introRef);
-        const cleanup2 = typeWriter(
-          "Empowering Students. Simplifying Learning.",
-          setIntroHeading,
-          () => {
-            setShowOfferParagraph(true);
-            setTimeout(() => {
-              scrollToRef(offerRef);
-              const cleanup3 = typeWriter("🎯 What We Offer", setOfferHeading, () => {
-                setBulletIndex(0);
-                setTimeout(() => {
-                  scrollToRef(missionRef);
-                  const cleanup4 = typeWriter("👩‍🏫 Our Mission", setMissionHeading, () => {
-                    setShowMissionParagraph(true);
-                    setTimeout(() => {
-                      scrollToRef(serveRef);
-                      const cleanup5 = typeWriter("🌍 Who We Serve", setServeHeading, () => {
-                        setShowServeParagraph(true);
-                      });
-                    }, 1200);
-                  });
-                }, 2500);
-              });
-            }, 1200);
-          }
-        );
-      }, 1200);
-    });
+        typeWriter("Empowering Students. Simplifying Learning.", setIntroHeading, () => {
+          setShowOfferParagraph(true);
+          setTimeout(() => {
+            typeWriter("🎯 What We Offer", setOfferHeading, () => {
+              setBulletIndex(0);
+              setTimeout(() => {
+                typeWriter("👩‍🏫 Our Mission", setMissionHeading, () => {
+                  setShowMissionParagraph(true);
+                  setTimeout(() => {
+                    typeWriter("🌍 Who We Serve", setServeHeading, () => {
+                      setShowServeParagraph(true);
+                    });
+                  }, 800);
+                });
+              }, 1500);
+            });
+          }, 800);
+        });
+      }, 800);
+    }, 600); // Start delay
     
-    // Cleanup on unmount
-    return () => {
-      if (cleanup1) cleanup1();
-    };
+    return () => cleanup1 && cleanup1();
   }, []);
 
   useEffect(() => {
     if (bulletIndex >= 0 && bulletIndex < 4) {
-      const timer = setTimeout(() => setBulletIndex((prev) => prev + 1), 400);
+      const timer = setTimeout(() => setBulletIndex((prev) => prev + 1), 500);
       return () => clearTimeout(timer);
     }
   }, [bulletIndex]);
 
   useEffect(() => {
-    const handleScroll = () => setParallaxOffset(window.scrollY * 0.3);
+    const handleScroll = () => setParallaxOffset(window.scrollY * 0.2);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setBounce(true), 8000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleLoginRedirect = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    setTimeout(() => navigate("/login"), 600);
-  };
-
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-x-hidden text-white">
-      {/* Particles Background */}
-      <div
-        style={{ transform: `translateY(${parallaxOffset * 0.5}px)` }}
-        className="absolute inset-0 z-0 transition-transform duration-100"
-      >
+    <div className="relative min-h-screen flex flex-col items-center bg-[#0b0f1a] overflow-x-hidden text-slate-200 selection:bg-blue-500/30">
+      
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 z-0">
         <Particles
           id="tsparticles"
           init={particlesInit}
           options={{
-            background: { color: { value: "#0d1117" } },
-            fpsLimit: 120,
-            interactivity: {
-              events: {
-                onHover: { enable: true, mode: "trail" },
-                onClick: { enable: true, mode: "push" },
-              },
-              modes: {
-                trail: {
-                  delay: 0.005,
-                  quantity: 5,
-                  particles: { color: { value: "#3b82f6" }, size: { value: 3 } },
-                },
-                push: { quantity: 4 },
-              },
-            },
+            fullScreen: { enable: false },
+            background: { color: { value: "transparent" } },
+            fpsLimit: 60,
             particles: {
-              color: { value: ["#3b82f6", "#60a5fa", "#93c5fd"] },
-              links: {
-                color: "#3b82f6",
-                distance: 120,
-                enable: true,
-                opacity: 0.4,
-                width: 1,
-              },
-              move: { enable: true, speed: 1, outModes: { default: "bounce" } },
-              number: { value: 50, density: { enable: true, area: 800 } },
-              opacity: { value: 0.5 },
-              shape: { type: "circle" },
-              size: { value: { min: 1, max: 4 } },
+              color: { value: "#3b82f6" },
+              links: { color: "#3b82f6", distance: 150, enable: true, opacity: 0.2, width: 1 },
+              move: { enable: true, speed: 0.8 },
+              number: { value: 40, density: { enable: true, area: 800 } },
+              size: { value: { min: 1, max: 3 } },
+              opacity: { value: 0.3 }
             },
           }}
+          className="h-full w-full"
         />
       </div>
 
-      {/* Aura Glow */}
-      <div
-        className="absolute w-72 sm:w-96 h-72 sm:h-96 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 blur-3xl opacity-30 animate-auraglow"
-        style={{
-          transform: `translate(-50%, calc(-50% + ${parallaxOffset * 0.4}px))`,
-        }}
-      ></div>
+      {/* Hero Glow */}
+      <div 
+        className="fixed top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-600/20 blur-[120px] rounded-full z-0 pointer-events-none"
+        style={{ transform: `translate(-50%, ${parallaxOffset}px)` }}
+      />
 
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-4xl text-center px-4 sm:px-6 py-10 sm:py-12 bg-gray-900/80 rounded-2xl shadow-2xl border border-gray-700 backdrop-blur-lg animate-slideUp">
-        {/* Main Heading */}
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-400 mb-4 glow-pulse">
-          {mainHeading}
-          {mainHeading && mainHeading.length < 13 && (
-            <span className="border-r-2 border-blue-400 animate-caret"></span>
-          )}
-        </h1>
-
-        {/* Intro */}
-        <div ref={introRef} className="mt-6 animate-slideUp">
-          <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-2 glow-pulse">
+      {/* Main Content Container */}
+      <div className="relative z-10 w-full max-w-3xl px-6 py-20 flex flex-col gap-16 sm:gap-24">
+        
+        {/* Header Section */}
+        <section className="text-center space-y-6 animate-fadeIn">
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tighter text-white">
+            {mainHeading}<span className="text-blue-500 animate-pulse">|</span>
+          </h1>
+          <h2 className="text-lg sm:text-2xl font-medium text-slate-400 max-w-xl mx-auto leading-relaxed">
             {introHeading}
-            {introHeading && introHeading.length < 40 && (
-              <span className="border-r-2 border-blue-300 animate-caret"></span>
-            )}
           </h2>
           {showIntroParagraph && (
-            <p className="text-gray-300 max-w-xl sm:max-w-2xl mx-auto animate-fadeIn text-sm sm:text-base">
-              Welcome to{" "}
-              <span className="font-bold text-blue-400">Apex Learning Hub</span>{" "}
-              — your trusted platform for high-quality academic resources. Access
-              notes, past papers, and study guides conveniently to enhance your
-              learning experience.
+            <p className="text-base sm:text-lg text-slate-400 leading-relaxed animate-slideUp">
+              Welcome to <span className="text-white font-bold">Apex Learning Hub</span>. 
+              We are dedicated to bridging the gap between students and the resources they need to excel.
             </p>
           )}
-        </div>
+        </section>
 
-        {/* What We Offer */}
-        <div ref={offerRef} className="mt-8 sm:mt-10 animate-slideUp">
-          <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-2 glow-pulse">
-            {offerHeading}
-            {offerHeading && offerHeading.length < 18 && (
-              <span className="border-r-2 border-blue-300 animate-caret"></span>
-            )}
-          </h2>
-          {showOfferParagraph && (
-            <ul className="text-gray-400 max-w-xl sm:max-w-2xl mx-auto text-left list-disc list-inside text-sm sm:text-base">
-              {[
-                "Past exam papers with marking schemes",
-                "Downloadable class notes from top-performing educators",
-                "Regular updates with the latest academic content",
-                "User-friendly platform for fast downloads and easy access",
-              ].map((bullet, i) => (
-                <li
-                  key={i}
-                  className={`opacity-0 translate-x-[-10px] transition-all duration-500 ${
-                    bulletIndex >= i ? "opacity-100 translate-x-0" : ""
-                  }`}
-                  style={{
-                    transitionDelay: `${i * 200}ms`,
-                    display: bulletIndex >= i ? "list-item" : "none",
-                  }}
-                >
-                  {bullet}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {/* Offerings Grid */}
+        <section className={`grid grid-cols-1 gap-4 transition-all duration-1000 ${showOfferParagraph ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <Lightbulb className="text-blue-400" size={28} />
+            <h3 className="text-2xl font-bold text-white">{offerHeading}</h3>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {[
+              "Past exam papers with schemes",
+              "Verified educator class notes",
+              "Latest academic updates",
+              "Instant resource downloads"
+            ].map((text, i) => (
+              <div 
+                key={i}
+                className={`p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm transition-all duration-700 ${bulletIndex >= i ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}
+              >
+                <div className="h-2 w-12 bg-blue-600 rounded-full mb-4" />
+                <p className="text-slate-300 font-medium">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-        {/* Mission */}
-        <div ref={missionRef} className="mt-8 sm:mt-10 animate-slideUp">
-          <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-2 glow-pulse">
-            {missionHeading}
-            {missionHeading && missionHeading.length < 15 && (
-              <span className="border-r-2 border-blue-300 animate-caret"></span>
-            )}
-          </h2>
-          {showMissionParagraph && (
-            <p className="text-gray-400 max-w-xl sm:max-w-2xl mx-auto animate-fadeIn text-sm sm:text-base">
-              Our mission is to make learning accessible, affordable, and
-              effective for students at all levels.
+        {/* Mission & Vision */}
+        <div className="grid sm:grid-cols-2 gap-12">
+          <section className={`space-y-4 transition-all duration-1000 ${showMissionParagraph ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
+            <div className="flex items-center gap-3">
+              <Target className="text-rose-400" size={24} />
+              <h3 className="text-xl font-bold text-white">Our Mission</h3>
+            </div>
+            <p className="text-slate-400 leading-relaxed">
+              Making learning <span className="text-slate-200 italic">accessible and affordable</span> for every student, 
+              ensuring quality education is never out of reach.
             </p>
-          )}
-        </div>
+          </section>
 
-        {/* Who We Serve */}
-        <div ref={serveRef} className="mt-8 sm:mt-10 animate-slideUp">
-          <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-2 glow-pulse">
-            {serveHeading}
-            {serveHeading && serveHeading.length < 16 && (
-              <span className="border-r-2 border-blue-300 animate-caret"></span>
-            )}
-          </h2>
-          {showServeParagraph && (
-            <p className="text-gray-400 max-w-xl sm:max-w-2xl mx-auto animate-fadeIn text-sm sm:text-base">
-              We serve learners from primary school to university, including
-              teachers and institutions seeking reliable study resources. Join
-              thousands of students who use{" "}
-              <span className="font-bold text-blue-400">
-                Apex Learning Hub
-              </span>{" "}
-              to excel in their studies.
+          <section className={`space-y-4 transition-all duration-1000 ${showServeParagraph ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
+            <div className="flex items-center gap-3">
+              <Globe className="text-emerald-400" size={24} />
+              <h3 className="text-xl font-bold text-white">Who We Serve</h3>
+            </div>
+            <p className="text-slate-400 leading-relaxed">
+              From primary learners to university scholars and educators across the region.
             </p>
-          )}
+          </section>
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-          <a
-            href="/"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/30 transition-transform transform hover:scale-105 w-full sm:w-auto text-sm sm:text-base"
+        {/* CTA Section */}
+        <footer className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-10 border-t border-white/5 animate-fadeIn">
+          <button 
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 px-8 py-4 text-slate-400 hover:text-white transition-colors font-bold group"
           >
-            ← Back to Home
-          </a>
-          <button
-            onClick={handleLoginRedirect}
-            className={`inline-block bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold shadow-lg hover:shadow-green-500/30 transition-transform transform hover:scale-110 glow-button w-full sm:w-auto text-sm sm:text-base ${
-              bounce ? "animate-bounce-once" : ""
-            }`}
-          >
-            🚀 Go to Login
+            <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+            Home
           </button>
-        </div>
+          <button 
+            onClick={() => navigate("/login")}
+            className="flex items-center gap-3 px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black shadow-xl shadow-blue-600/20 transition-all hover:scale-105 active:scale-95"
+          >
+            🚀 Start Learning
+          </button>
+        </footer>
       </div>
 
-      {/* Animations */}
       <style>{`
-        @keyframes slideUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
-        .animate-slideUp { animation: slideUp 0.8s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeIn { animation: fadeIn 1s ease-in-out forwards; }
-        @keyframes auraglow { 0% { transform: translate(-50%, -50%) rotate(0deg); } 50% { transform: translate(-48%, -52%) rotate(180deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
-        .animate-auraglow { top: 50%; left: 50%; position: absolute; animation: auraglow 12s linear infinite; z-index: 1; }
-        @keyframes caret { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
-        .animate-caret { display: inline-block; width: 2px; margin-left: 4px; animation: caret 1s steps(1) infinite; }
-        @keyframes glowPulse { 0%,100% { text-shadow:0 0 10px rgba(59,130,246,0.7),0 0 20px rgba(59,130,246,0.5);}50%{text-shadow:0 0 20px rgba(59,130,246,1),0 0 30px rgba(59,130,246,0.8);} }
-        .glow-pulse { animation: glowPulse 2.5s ease-in-out infinite; }
-        @keyframes buttonGlow { 0%,100%{box-shadow:0 0 10px rgba(34,197,94,0.6),0 0 20px rgba(34,197,94,0.4);}50%{box-shadow:0 0 20px rgba(34,197,94,0.8),0 0 30px rgba(34,197,94,0.6);} }
-        .glow-button { animation: buttonGlow 2s infinite ease-in-out; }
-        @keyframes bounceOnce { 0%,20%,50%,80%,100%{transform:translateY(0);}40%{transform:translateY(-8px);}60%{transform:translateY(-4px);} }
-        .animate-bounce-once { animation: bounceOnce 1.2s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 1.2s ease-out forwards; }
+        
+        @keyframes slideUp { 
+          from { opacity: 0; transform: translateY(20px); } 
+          to { opacity: 1; transform: translateY(0); } 
+        }
+        .animate-slideUp { animation: slideUp 0.8s ease-out forwards; }
       `}</style>
     </div>
   );

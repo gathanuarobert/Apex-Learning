@@ -4,61 +4,73 @@ import { useNavigate } from "react-router-dom";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import {
-  ArrowLeft,
-  Search,
-  X,
-  Download,
-  BookOpen,
-  ChevronRight,
-  Loader2,
+  ArrowLeft, Search, X, Download, BookOpen, ChevronRight,
+  Loader2, Sparkles, CreditCard, Smartphone,
 } from "lucide-react";
-import { getExams, walletPurchase } from "../Api";
-import api from "../Api";
+import { getExams, walletPurchase, initiateOneTimePurchase } from "../Api";
+import api from "../Api"; // still needed for the download blob request
 
 const GRADS = [
-  "from-green-500 to-green-700",
-  "from-blue-500 to-blue-700",
-  "from-purple-500 to-purple-700",
-  "from-pink-500 to-pink-700",
-  "from-teal-500 to-teal-700",
-  "from-cyan-500 to-cyan-700",
-  "from-orange-500 to-orange-700",
-  "from-rose-500 to-rose-700",
-  "from-indigo-500 to-indigo-700",
-  "from-yellow-500 to-yellow-600",
+  "from-blue-600/80 to-indigo-700/90",
+  "from-purple-600/80 to-fuchsia-700/90",
+  "from-emerald-600/80 to-teal-700/90",
+  "from-rose-600/80 to-pink-700/90",
+  "from-cyan-600/80 to-blue-700/90",
+  "from-amber-600/80 to-orange-700/90",
 ];
-const grad = (i) => GRADS[i % GRADS.length];
+
+const getExtensionFromContentType = (contentType, filename) => {
+  if (!contentType) {
+    const ext = filename?.split('.').pop();
+    return ext && ext.length <= 5 ? `.${ext}` : '.pdf';
+  }
+  if (contentType.includes('pdf')) return '.pdf';
+  if (contentType.includes('spreadsheetml') || contentType.includes('excel')) return '.xlsx';
+  if (contentType.includes('ms-excel')) return '.xls';
+  if (contentType.includes('csv')) return '.csv';
+  if (contentType.includes('wordprocessingml') || contentType.includes('msword')) return '.docx';
+  if (contentType.includes('presentationml') || contentType.includes('powerpoint')) return '.pptx';
+  if (contentType.includes('jpeg') || contentType.includes('jpg')) return '.jpg';
+  if (contentType.includes('png')) return '.png';
+  return '.pdf';
+};
 
 export default function ExamsPage() {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [curriculum, setCurriculum] = useState(null);
   const [grade, setGrade] = useState(null);
   const [subject, setSubject] = useState(null);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null);
-  const [paying, setPaying] = useState(false);
+  const [payingWallet, setPayingWallet] = useState(false);
+  const [payingPesapal, setPayingPesapal] = useState(false);
 
   const refs = useRef({});
   const getRef = (k) => {
     if (!refs.current[k]) refs.current[k] = React.createRef();
     return refs.current[k];
   };
-  const tilt = (e, r) => {
+
+  const handleMouseMove = (e, r) => {
     if (!r.current) return;
     const rect = r.current.getBoundingClientRect();
-    const rx = ((e.clientY - rect.top - rect.height / 2) / rect.height) * 10;
-    const ry = ((e.clientX - rect.left - rect.width / 2) / rect.width) * 10;
-    r.current.style.transform = `rotateX(${-rx}deg) rotateY(${ry}deg) scale(1.05)`;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rx = ((y - rect.height / 2) / rect.height) * 12;
+    const ry = ((x - rect.width / 2) / rect.width) * -12;
+    r.current.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.02,1.02,1.02)`;
+    r.current.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.1) 0%, transparent 80%)`;
   };
-  const untilt = (r) => {
-    if (r.current) r.current.style.transform = "rotateX(0) rotateY(0) scale(1)";
+  const handleMouseLeave = (r) => {
+    if (r.current) {
+      r.current.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)";
+      r.current.style.background = "";
+    }
   };
-  const particlesInit = async (e) => {
-    await loadSlim(e);
-  };
+
+  const particlesInit = async (e) => { await loadSlim(e); };
 
   useEffect(() => {
     (async () => {
@@ -66,44 +78,19 @@ export default function ExamsPage() {
         setLoading(true);
         const res = await getExams();
         setExams(res.data || []);
-      } catch (e) {
-        console.error(e);
-        setError("Failed to load exams.");
-      } finally {
-        setLoading(false);
-      }
+      } catch { /* silent */ }
+      finally { setLoading(false); }
     })();
   }, []);
 
   const { curricula, grades, subjects, items } = useMemo(() => {
     let filtered = exams;
-    if (curriculum)
-      filtered = filtered.filter((e) => e.curriculum === curriculum);
+    if (curriculum) filtered = filtered.filter((e) => e.curriculum === curriculum);
     if (grade) filtered = filtered.filter((e) => e.grade === grade);
     if (subject) filtered = filtered.filter((e) => e.subject === subject);
-    const curricula = [
-      ...new Set(exams.map((e) => e.curriculum).filter(Boolean)),
-    ].sort();
-    const grades = [
-      ...new Set(
-        exams
-          .filter((e) => !curriculum || e.curriculum === curriculum)
-          .map((e) => e.grade)
-          .filter(Boolean),
-      ),
-    ].sort();
-    const subjects = [
-      ...new Set(
-        exams
-          .filter(
-            (e) =>
-              (!curriculum || e.curriculum === curriculum) &&
-              (!grade || e.grade === grade),
-          )
-          .map((e) => e.subject)
-          .filter(Boolean),
-      ),
-    ].sort();
+    const curricula = [...new Set(exams.map((e) => e.curriculum).filter(Boolean))].sort();
+    const grades = [...new Set(exams.filter((e) => !curriculum || e.curriculum === curriculum).map((e) => e.grade).filter(Boolean))].sort();
+    const subjects = [...new Set(exams.filter((e) => (!curriculum || e.curriculum === curriculum) && (!grade || e.grade === grade)).map((e) => e.subject).filter(Boolean))].sort();
     return { curricula, grades, subjects, items: filtered };
   }, [exams, curriculum, grade, subject]);
 
@@ -122,322 +109,221 @@ export default function ExamsPage() {
     else if (step === 1) setGrade(val);
     else if (step === 2) setSubject(val);
   };
-  const goBack = () => {
-    setSearch("");
-    if (subject) {
-      setSubject(null);
-      return;
-    }
-    if (grade) {
-      setGrade(null);
-      return;
-    }
-    if (curriculum) {
-      setCurriculum(null);
-      return;
-    }
-    navigate("/user-dashboard");
-  };
+
   const breadcrumbs = [
-    curriculum && {
-      label: curriculum,
-      clear: () => {
-        setCurriculum(null);
-        setGrade(null);
-        setSubject(null);
-      },
-    },
-    grade && {
-      label: grade,
-      clear: () => {
-        setGrade(null);
-        setSubject(null);
-      },
-    },
+    curriculum && { label: curriculum, clear: () => { setCurriculum(null); setGrade(null); setSubject(null); } },
+    grade && { label: grade, clear: () => { setGrade(null); setSubject(null); } },
     subject && { label: subject, clear: () => setSubject(null) },
   ].filter(Boolean);
-  const stepLabel = [
-    "Select Curriculum",
-    "Select Grade / Level",
-    "Select Subject",
-    subject ? `Exams — ${subject}` : "",
-  ][step];
 
-  const showToast = (msg, color = "green") => {
-    document
-      .querySelectorAll(".fixed.top-20.right-4")
-      .forEach((el) => el.remove());
-    const toast = document.createElement("div");
-    toast.className = `fixed top-20 right-4 bg-${color}-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] animate-slide-in`;
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
-  };
+  const stepLabel = ["Choose Curriculum", "Choose Level", "Choose Subject", `Exams · ${subject}`][step];
 
-  const handleResourceClick = (item) => {
-    const price = parseFloat(item.price || 0);
-    if (price === 0) {
-      handleDirectDownload(item);
-    } else {
-      setModal({ item });
-    }
-  };
+  const handleDownload = async (item) => {
+  try {
+    const response = await api.get(`resources/exams/${item.id}/download/`, { 
+      responseType: "blob",
+      timeout: 120000,
+    });
+    const contentType = response.headers["content-type"];
+    const extension = getExtensionFromContentType(contentType, item.title);
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${item.title || "exam"}${extension}`); // ✅
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) { console.error(err); }
+};
 
-  const handleDirectDownload = async (item) => {
+  const payWithWallet = async () => {
+    setPayingWallet(true);
     try {
-      const toast = document.createElement("div");
-      toast.className =
-        "fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-[60] flex items-center gap-2 animate-slide-in";
-      toast.innerHTML =
-        '<svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Downloading free exam...';
-      document.body.appendChild(toast);
-      const response = await api.get(`resources/exams/${item.id}/download/`, {
-        responseType: "blob",
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `${item.title || "exam"}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.remove();
-      showToast("✓ Free download complete!");
-    } catch (err) {
-      console.error("Download failed:", err);
-      showToast(`✗ ${err.response?.data?.detail || "Download failed"}`, "red");
-    }
-  };
-
-  const payWallet = async () => {
-    setPaying(true);
-    try {
-      await walletPurchase({
-        resource_id: modal.item.id,
-        resource_type: "Exam",
-      });
-      const purchasedItem = modal.item;
+      await walletPurchase({ resource_id: modal.item.id, resource_type: "Exam" });
+      const item = modal.item;
       setModal(null);
-      showToast("✓ Purchase successful! Starting download…");
-      await handleDirectDownload(purchasedItem);
+      await handleDownload(item);
     } catch (e) {
-      alert(
-        e.response?.data?.error ||
-          e.response?.data?.message ||
-          "Wallet payment failed.",
-      );
+      alert(e.response?.data?.error || "Wallet payment failed.");
     } finally {
-      setPaying(false);
+      setPayingWallet(false);
     }
   };
 
-  const payPesapal = async () => {
-    setPaying(true);
+  const payWithPesapal = async () => {
+    setPayingPesapal(true);
     try {
-      const res = await api.post("payments/purchase/resource/initiate/", {
-        resource_id: modal.item.id,
-        resource_type: "Exam",
-      });
+      const res = await initiateOneTimePurchase({ resource_id: modal.item.id, resource_type: "Exam" });
       window.location.href = res.data.redirect_url;
     } catch (e) {
-      alert(e.response?.data?.error || "Payment failed.");
-    } finally {
-      setPaying(false);
+      alert(e.response?.data?.error || "Could not initiate payment.");
+      setPayingPesapal(false);
     }
   };
 
+  const isPaying = payingWallet || payingPesapal;
+
   return (
-    <div className="relative min-h-screen text-white bg-gray-900">
+    <div className="relative min-h-screen text-slate-100 bg-[#0f172a]">
       <Particles
-        id="exams-bg"
+        id="exams-particles"
         init={particlesInit}
         className="absolute inset-0 -z-10"
         options={{
-          background: { color: { value: "#0f172a" } },
+          background: { color: "transparent" },
           fpsLimit: 60,
           particles: {
-            number: { value: 90, density: { enable: true, area: 800 } },
-            color: { value: ["#38bdf8", "#a78bfa", "#f472b6", "#22c55e"] },
-            shape: { type: "circle" },
-            opacity: { value: 0.5 },
-            size: { value: { min: 3, max: 7 } },
-            move: { enable: true, speed: 1, outModes: "out", random: true },
+            number: { value: 50, density: { enable: true, area: 800 } },
+            color: { value: ["#60a5fa", "#a78bfa"] },
+            opacity: { value: 0.2 },
+            size: { value: { min: 1, max: 4 } },
+            move: { enable: true, speed: 1 },
           },
         }}
       />
-      {/* <div className="sticky top-0 z-30 bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 px-4 py-3 flex items-center gap-3">
-        <button onClick={goBack} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm font-semibold transition-all hover:scale-105 active:scale-95 shrink-0"><ArrowLeft size={15} /> Back</button>
-        <div className="flex-1 flex items-center gap-2 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700/60 focus-within:border-green-500/60 transition-colors">
-          <Search size={14} className="text-gray-500 shrink-0" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${stepLabel.toLowerCase()}…`} className="w-full bg-transparent outline-none text-sm placeholder-gray-600" />
-          {search && <button onClick={() => setSearch("")}><X size={12} className="text-gray-500 hover:text-white" /></button>}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div>
+            <div className="flex items-center gap-2 text-blue-400 font-bold tracking-widest text-xs uppercase mb-2">
+              <Sparkles size={14} /> Exam Repository
+            </div>
+            <h1 className="text-4xl font-extrabold text-white tracking-tight">{stepLabel}</h1>
+          </div>
+          <div className="relative group w-full md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18} />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="w-full pl-12 pr-10 py-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/50 focus:border-blue-500/50 text-white placeholder-slate-500 outline-none transition-all backdrop-blur-md"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 shrink-0"><BookOpen size={13} /> Exams</div>
-      </div> */}
-      {/* Search bar */}
-      <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-2 bg-gray-800 rounded-xl px-3 py-2.5 border border-gray-700/60 focus-within:border-blue-500/60 transition-colors">
-          <Search size={14} className="text-gray-500 shrink-0" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={`Search ${stepLabel.toLowerCase()}…`}
-            className="w-full bg-transparent outline-none text-sm placeholder-gray-600 text-white"
-          />
-          {search && (
-            <button onClick={() => setSearch("")}>
-              <X size={12} className="text-gray-500 hover:text-white" />
+
+        {/* Breadcrumbs */}
+        {breadcrumbs.length > 0 && (
+          <div className="flex items-center gap-2 mb-8 flex-wrap animate-in fade-in duration-500">
+            <button onClick={() => { setCurriculum(null); setGrade(null); setSubject(null); }} className="p-2.5 bg-slate-800/50 rounded-xl text-slate-400 hover:text-white transition-all">
+              <ArrowLeft size={16} />
             </button>
-          )}
-        </div>
-      </div>
-      {breadcrumbs.length > 0 && (
-        <div className="px-4 pt-3 flex items-center gap-2 flex-wrap">
-          {breadcrumbs.map((b, i) => (
-            <React.Fragment key={b.label}>
-              <button
-                onClick={b.clear}
-                className="text-xs px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition"
-              >
-                {b.label}
-              </button>
-              {i < breadcrumbs.length - 1 && (
-                <ChevronRight size={11} className="text-gray-700" />
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-      )}
-      <div className="flex-1 px-4 py-6 pb-4">
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-32 gap-3 text-green-500">
-            <Loader2 size={32} className="animate-spin" />
-            <p className="text-sm font-medium">Loading exams…</p>
+            {breadcrumbs.map((b, i) => (
+              <React.Fragment key={b.label}>
+                <button onClick={b.clear} className="text-sm px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all font-semibold">
+                  {b.label}
+                </button>
+                {i < breadcrumbs.length - 1 && <ChevronRight size={14} className="text-slate-600" />}
+              </React.Fragment>
+            ))}
           </div>
         )}
-        {!loading && error && (
-          <div className="text-center py-24 text-red-400 text-sm">{error}</div>
-        )}
-        {!loading && !error && exams.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-32 gap-3 text-gray-600">
-            <BookOpen size={48} className="opacity-40" />
-            <p className="text-sm font-medium">No exams uploaded yet.</p>
+
+        {/* Grid */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24">
+            <Loader2 className="animate-spin text-blue-500 mb-4" size={40} />
+            <p className="text-slate-400">Loading resources...</p>
           </div>
-        )}
-        {!loading && !error && exams.length > 0 && (
-          <>
-            <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-5">
-              {stepLabel}
-            </p>
-            <div className="grid gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {options.map((opt, i) => {
-                const isItem = step === 3;
-                const r = getRef(`${step}-${i}-${isItem ? opt.id : opt}`);
-                const displayText = isItem ? opt.title : opt;
-                const isFree = isItem && parseFloat(opt.price || 0) === 0;
-                return (
-                  <div
-                    key={isItem ? opt.id : opt}
-                    ref={r}
-                    className={`bg-gradient-to-br ${grad(i)} rounded-2xl shadow-2xl cursor-pointer transform transition duration-500 relative overflow-hidden animate-float ${isItem ? "p-5 flex flex-col gap-3" : "p-8"}`}
-                    onClick={isItem ? undefined : () => pick(opt)}
-                    onMouseMove={(e) => tilt(e, r)}
-                    onMouseLeave={() => untilt(r)}
-                  >
-                    <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-20 transition" />
-                    {isFree && (
-                      <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        FREE
-                      </div>
-                    )}
-                    <h3
-                      className={`font-semibold shimmer leading-snug ${isItem ? "text-sm flex-1" : "text-xl"}`}
-                    >
-                      {displayText}
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {options.map((opt, i) => {
+              const isItem = step === 3;
+              const r = getRef(`${step}-${i}`);
+              const isFree = isItem && parseFloat(opt.price || 0) === 0;
+              return (
+                <div
+                  key={isItem ? opt.id : opt}
+                  ref={r}
+                  className={`relative group bg-gradient-to-br ${GRADS[i % GRADS.length]} p-8 rounded-[2rem] shadow-xl transition-all duration-300 ease-out cursor-pointer overflow-hidden border border-white/10 flex flex-col min-h-[160px] active:scale-95`}
+                  onClick={isItem ? undefined : () => pick(opt)}
+                  onMouseMove={(e) => handleMouseMove(e, r)}
+                  onMouseLeave={() => handleMouseLeave(r)}
+                >
+                  <div className="absolute top-4 right-4 text-white/20 group-hover:text-white/40 transition-all duration-500">
+                    <BookOpen size={isItem ? 32 : 48} />
+                  </div>
+                  {isFree && (
+                    <span className="absolute top-6 left-6 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-bold text-white uppercase tracking-widest border border-white/20">
+                      Free Access
+                    </span>
+                  )}
+                  <div className="mt-auto">
+                    <h3 className={`font-extrabold text-white leading-tight ${isItem ? "text-lg mb-4" : "text-2xl"}`}>
+                      {isItem ? opt.title : opt}
                     </h3>
                     {isItem && (
                       <button
-                        onClick={() => handleResourceClick(opt)}
-                        className="relative z-10 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold bg-black/25 hover:bg-black/50 border border-white/25 hover:border-white/60 backdrop-blur-sm transition-all hover:scale-105 active:scale-95"
+                        onClick={() => isFree ? handleDownload(opt) : setModal({ item: opt })}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl text-xs font-bold text-white transition-all backdrop-blur-md"
                       >
-                        <Download size={11} />{" "}
-                        {isFree ? "Download Free" : "Buy & Download"}
+                        <Download size={14} /> {isFree ? "Download Now" : `Buy · KSh ${opt.price}`}
                       </button>
                     )}
                   </div>
-                );
-              })}
-              {options.length === 0 && (
-                <p className="col-span-full text-gray-600 text-sm py-12 text-center">
-                  {search ? `No results for "${search}".` : "Nothing here."}
-                </p>
-              )}
-            </div>
-          </>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
+
+      {/* ── Purchase Modal ── */}
       {modal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModal(null);
-          }}
-        >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => !isPaying && setModal(null)}>
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" />
           <div
-            className="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden"
-            style={{ animation: "scaleUp .25s ease" }}
+            className="relative bg-[#1e293b] border border-slate-700 rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-gradient-to-r from-green-600/30 to-teal-600/20 px-5 py-4 border-b border-gray-800 flex items-start justify-between">
-              <div>
-                <p className="text-xs text-gray-400 mb-0.5">Purchase Exam</p>
-                <h3 className="font-bold text-white text-sm">
-                  {modal.item.title}
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {modal.item.subject} · {modal.item.grade}
-                </p>
+            <div className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 px-8 py-8 border-b border-slate-700/50">
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-3 bg-blue-500/20 rounded-2xl text-blue-400"><CreditCard /></div>
+                <button onClick={() => !isPaying && setModal(null)} className="text-slate-500 hover:text-white">
+                  <X size={20} />
+                </button>
               </div>
-              <button
-                onClick={() => setModal(null)}
-                className="text-gray-500 hover:text-white transition"
-              >
-                <X size={18} />
-              </button>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Confirm Purchase</p>
+              <h3 className="text-2xl font-bold text-white leading-tight">{modal.item.title}</h3>
             </div>
-            <div className="px-5 py-5 flex flex-col gap-3">
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-2xl font-bold text-green-400">
-                  KSh {parseFloat(modal.item.price).toFixed(2)}
-                </span>
+
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6 p-4 bg-slate-900/50 rounded-2xl border border-slate-700/50">
+                <span className="text-slate-400 font-medium">Total Amount</span>
+                <span className="text-3xl font-black text-white">KSh {parseFloat(modal.item.price).toFixed(2)}</span>
               </div>
-              <button
-                onClick={payWallet}
-                disabled={paying}
-                className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-bold text-sm transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-              >
-                {paying ? "Processing…" : "💳 Pay with Wallet"}
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-gray-800" />
-                <span className="text-xs text-gray-600">
-                  or pay via Pesapal
-                </span>
-                <div className="flex-1 h-px bg-gray-800" />
+
+              <div className="space-y-3">
+                <button
+                  onClick={payWithWallet}
+                  disabled={isPaying}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-2xl font-bold transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3"
+                >
+                  {payingWallet
+                    ? <><Loader2 className="animate-spin" size={18} /> Processing...</>
+                    : <><CreditCard size={18} /> Pay with Wallet</>}
+                </button>
+
+                <button
+                  onClick={payWithPesapal}
+                  disabled={isPaying}
+                  className="w-full py-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 border border-slate-600 hover:border-blue-500/40 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 text-slate-200"
+                >
+                  {payingPesapal
+                    ? <><Loader2 className="animate-spin" size={18} /> Redirecting...</>
+                    : <><Smartphone size={18} /> Pay with M-Pesa / Card</>}
+                </button>
               </div>
-              <button
-                onClick={payPesapal}
-                disabled={paying}
-                className="w-full py-3 rounded-xl bg-green-700 hover:bg-green-600 font-bold text-sm transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-              >
-                {paying ? "Redirecting…" : "📱 Pay via Pesapal (M-Pesa/Card)"}
-              </button>
+
+              <p className="text-center text-slate-500 text-[10px] mt-5 px-4 leading-relaxed">
+                Wallet deducts instantly. M-Pesa/Card redirects to Pesapal checkout — resource unlocks on confirmation.
+              </p>
             </div>
           </div>
         </div>
       )}
-      <style>{`@keyframes scaleUp{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.animate-float{animation:float 3s ease-in-out infinite}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}.shimmer{background:linear-gradient(90deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,.6) 50%,rgba(255,255,255,.2) 100%);background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 2.5s infinite}@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}.animate-slide-in{animation:slideIn 0.3s ease-out forwards}`}</style>
     </div>
   );
 }

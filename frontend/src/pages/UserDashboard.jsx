@@ -1,71 +1,149 @@
 // src/pages/UserDashboard.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FileText, BookOpen, FileArchive, Video, User, Download } from "lucide-react";
+import {
+  FileText,
+  BookOpen,
+  FileArchive,
+  Video,
+  User,
+  Download,
+  Search,
+  Lock,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import api, { getCurrentUser, getLibrary } from "../Api";
+
+const getExtensionFromContentType = (contentType, filename) => {
+  if (!contentType) {
+    const ext = filename?.split('.').pop();
+    return ext && ext.length <= 5 ? `.${ext}` : '.pdf';
+  }
+  if (contentType.includes('pdf')) return '.pdf';
+  if (contentType.includes('spreadsheetml') || contentType.includes('excel')) return '.xlsx';
+  if (contentType.includes('ms-excel')) return '.xls';
+  if (contentType.includes('csv')) return '.csv';
+  if (contentType.includes('wordprocessingml') || contentType.includes('msword')) return '.docx';
+  if (contentType.includes('presentationml') || contentType.includes('powerpoint')) return '.pptx';
+  if (contentType.includes('jpeg') || contentType.includes('jpg')) return '.jpg';
+  if (contentType.includes('png')) return '.png';
+  return '.pdf';
+};
 
 export default function UserDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
 
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [downloads, setDownloads] = useState([]);
   const [dlSearch, setDlSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  
 
-  // Profile editing state
-const [editingProfile, setEditingProfile] = useState(false);
-const [editName, setEditName] = useState("");
-const [editEmail, setEditEmail] = useState("");
-const [savingProfile, setSavingProfile] = useState(false);
-const [profileError, setProfileError] = useState("");
-const [profileSuccess, setProfileSuccess] = useState("");
+  // ─── Active tab driven by ?tab= URL param ────────────────────────────────
+  const currentTab = new URLSearchParams(location.search).get("tab");
+  const activeTab = currentTab || "dashboard";
 
-// Password change state
-const [currentPassword, setCurrentPassword] = useState("");
-const [newPassword, setNewPassword] = useState("");
-const [confirmPassword, setConfirmPassword] = useState("");
-const [changingPassword, setChangingPassword] = useState(false);
-const [passwordError, setPasswordError] = useState("");
-const [passwordSuccess, setPasswordSuccess] = useState("");
+  // ─── Profile editing ──────────────────────────────────────────────────────
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileSuccess, setProfileSuccess] = useState("");
+
+  // ─── Password change + visibility toggles ────────────────────────────────
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   const cards = [
-    { title: "Notes", icon: <FileText size={36} />, color: "from-blue-500 to-blue-700", route: "/notes" },
-    { title: "Exams", icon: <BookOpen size={36} />, color: "from-purple-500 to-purple-700", route: "/exams" },
-    { title: "Past Papers", icon: <FileArchive size={36} />, color: "from-pink-500 to-pink-700", route: "/past-papers" },
-    { title: "News", icon: <Video size={36} />, color: "from-green-500 to-green-700", route: "/news" },
+    {
+      title: "Notes",
+      icon: <FileText />,
+      color: "from-blue-600/80 to-blue-800/90",
+      route: "/notes",
+    },
+    {
+      title: "Exams",
+      icon: <BookOpen />,
+      color: "from-purple-600/80 to-purple-800/90",
+      route: "/exams",
+    },
+    {
+      title: "Past Papers",
+      icon: <FileArchive />,
+      color: "from-pink-600/80 to-pink-800/90",
+      route: "/past-papers",
+    },
+    {
+      title: "News",
+      icon: <Video />,
+      color: "from-emerald-600/80 to-emerald-800/90",
+      route: "/news",
+    },
   ];
 
   const cardRefs = useRef(cards.map(() => React.createRef()));
-  const particlesInit = async (engine) => { await loadSlim(engine); };
+  const particlesInit = async (engine) => {
+    await loadSlim(engine);
+  };
 
   const handleMouseMove = (e, cardRef) => {
     const card = cardRef.current;
+    if (!card) return;
     const rect = card.getBoundingClientRect();
-    const rotateX = ((e.clientY - rect.top - rect.height / 2) / rect.height) * 10;
-    const rotateY = ((e.clientX - rect.left - rect.width / 2) / rect.width) * 10;
-    card.style.transform = `rotateX(${-rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rotateX = ((y - rect.height / 2) / rect.height) * 12;
+    const rotateY = ((x - rect.width / 2) / rect.width) * -12;
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+    card.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.15) 0%, transparent 80%)`;
   };
 
   const handleMouseLeave = (cardRef) => {
-    cardRef.current.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+    card.style.background = "";
   };
 
+  // ─── Library fetch — filter out deleted resources ─────────────────────────
+  // A resource is considered deleted when its title is null/undefined/"Resource deleted"
+  // or when resource_id is null (backend sets these when the resource no longer exists).
   const fetchLibrary = async () => {
     try {
       const res = await getLibrary();
-      const mapped = (res.data || []).map(item => ({
-        id: item.transaction_id,
-        date: new Date(item.purchased_on).toLocaleDateString(),
-        item: item.title || "Unknown Resource",
-        type: item.resource_type || "Resource",
-        download_url: item.download_url,
-        resource_id: item.resource_id,
-        resource_type: item.resource_type,
-      }));
+      const mapped = (res.data || [])
+        .filter((item) => {
+          const title = item.title || "";
+          const isDeleted =
+            !item.resource_id ||
+            title === "" ||
+            title.toLowerCase() === "resource deleted" ||
+            title.toLowerCase() === "deleted" ||
+            title.toLowerCase() === "unknown resource";
+          return !isDeleted;
+        })
+        .map((item) => ({
+          id: item.transaction_id,
+          date: new Date(item.purchased_on).toLocaleDateString(),
+          item: item.title,
+          type: item.resource_type || "Resource",
+          download_url: item.download_url,
+          resource_id: item.resource_id,
+          resource_type: item.resource_type,
+        }));
       setDownloads(mapped);
     } catch (err) {
       console.error("Failed to fetch library:", err);
@@ -83,60 +161,64 @@ const [passwordSuccess, setPasswordSuccess] = useState("");
   };
 
   const handleSaveProfile = async () => {
-  setSavingProfile(true);
-  setProfileError("");
-  setProfileSuccess("");
-  try {
-    const res = await api.patch("users/me/update/", {
-      name: editName,
-      email: editEmail,
-    });
-    setCurrentUser(res.data);
-    setEditingProfile(false);
-    setProfileSuccess("Profile updated successfully!");
-    setTimeout(() => setProfileSuccess(""), 3000);
-  } catch (err) {
-    setProfileError(err.response?.data?.error || "Failed to update profile.");
-  } finally {
-    setSavingProfile(false);
-  }
-};
+    setSavingProfile(true);
+    setProfileError("");
+    setProfileSuccess("");
+    try {
+      const res = await api.patch("users/me/update/", {
+        name: editName,
+        email: editEmail,
+      });
+      setCurrentUser(res.data);
+      setEditingProfile(false);
+      setProfileSuccess("Profile updated successfully!");
+      setTimeout(() => setProfileSuccess(""), 3000);
+    } catch (err) {
+      setProfileError(err.response?.data?.error || "Failed to update profile.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
-const handleChangePassword = async () => {
-  setPasswordError("");
-  setPasswordSuccess("");
-
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    setPasswordError("All fields are required.");
-    return;
-  }
-  if (newPassword !== confirmPassword) {
-    setPasswordError("New passwords do not match.");
-    return;
-  }
-  if (newPassword.length < 8) {
-    setPasswordError("Password must be at least 8 characters.");
-    return;
-  }
-
-  setChangingPassword(true);
-  try {
-    await api.post("users/me/change-password/", {
-      current_password: currentPassword,
-      new_password: newPassword,
-      confirm_password: confirmPassword,
-    });
-    setPasswordSuccess("Password changed successfully!");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setTimeout(() => setPasswordSuccess(""), 3000);
-  } catch (err) {
-    setPasswordError(err.response?.data?.error || "Failed to change password.");
-  } finally {
-    setChangingPassword(false);
-  }
-};
+  const handleChangePassword = async () => {
+    setPasswordError("");
+    setPasswordSuccess("");
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All fields are required.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await api.post("users/me/change-password/", {
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      setPasswordSuccess("Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      // Reset visibility toggles after success
+      setShowCurrentPw(false);
+      setShowNewPw(false);
+      setShowConfirmPw(false);
+      setTimeout(() => setPasswordSuccess(""), 3000);
+    } catch (err) {
+      setPasswordError(
+        err.response?.data?.error || "Failed to change password.",
+      );
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -147,299 +229,464 @@ const handleChangePassword = async () => {
     fetchAllData();
   }, []);
 
-  // Handle navigation state from AppLayout
   useEffect(() => {
-    if (location.state?.activeTab) {
-      setActiveTab(location.state.activeTab);
-      navigate(location.pathname, { replace: true, state: {} });
-    }
     if (location.state?.refreshLibrary) {
       fetchLibrary();
-      setActiveTab("downloads");
-      navigate(location.pathname, { replace: true, state: {} });
+      navigate(location.pathname + "?tab=downloads", {
+        replace: true,
+        state: {},
+      });
     }
   }, [location.state]);
 
   const handleDownload = async (item) => {
     try {
-      const typeMap = { "Note": "notes", "Exam": "exams", "PastPaper": "past-papers" };
+      const typeMap = {
+        Note: "notes",
+        Exam: "exams",
+        PastPaper: "past-papers",
+      };
       const endpoint = typeMap[item.resource_type] || "notes";
 
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-slide-in';
-      toast.innerHTML = '<svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Downloading...';
+      const toast = document.createElement("div");
+      toast.className =
+        "fixed top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-slide-in";
+      toast.innerHTML = "...Downloading...";
       document.body.appendChild(toast);
 
-      const response = await api.get(`resources/${endpoint}/${item.resource_id}/download/`, {
-        responseType: 'blob',
-        timeout: 120000,
-      });
+      const response = await api.get(
+        `resources/${endpoint}/${item.resource_id}/download/`,
+        {
+          responseType: "blob",
+          timeout: 120000,
+        },
+      );
+
+      const contentType = response.headers["content-type"];
+      const extension = getExtensionFromContentType(contentType, item.item);
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      const contentType = response.headers['content-type'];
-      let extension = 'pdf';
-      if (contentType?.includes('word')) extension = 'docx';
-      else if (contentType?.includes('doc')) extension = 'doc';
-      link.setAttribute('download', `${item.item}.${extension}`);
+      link.setAttribute("download", `${item.item}${extension}`); // ✅ correct extension
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       toast.remove();
 
-      const successToast = document.createElement('div');
-      successToast.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in';
-      successToast.textContent = '✓ Download complete!';
+      const successToast = document.createElement("div");
+      successToast.className =
+        "fixed top-20 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in";
+      successToast.textContent = "✓ Download complete!";
       document.body.appendChild(successToast);
       setTimeout(() => successToast.remove(), 3000);
-
     } catch (err) {
       console.error("Download failed:", err);
-      document.querySelectorAll('.fixed.top-20.right-4').forEach(el => el.remove());
-      const errorMsg = err.response?.status === 402
-        ? "Payment required. This resource is not free."
-        : err.response?.data?.detail || "Download failed. Please try again.";
-      const errorToast = document.createElement('div');
-      errorToast.className = 'fixed top-20 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in';
+      document
+        .querySelectorAll(".fixed.top-20.right-4")
+        .forEach((el) => el.remove());
+      const errorMsg =
+        err.response?.status === 402
+          ? "Payment required for this resource."
+          : err.response?.data?.detail || "Something went wrong.";
+      const errorToast = document.createElement("div");
+      errorToast.className =
+        "fixed top-20 right-4 bg-rose-600/90 backdrop-blur-md text-white px-5 py-3 rounded-xl shadow-2xl z-50 animate-slide-in border border-rose-400/30";
       errorToast.textContent = `✗ ${errorMsg}`;
       document.body.appendChild(errorToast);
       setTimeout(() => errorToast.remove(), 5000);
     }
   };
 
-  const filteredDownloads = downloads.filter(dl =>
-    dl.date?.includes(dlSearch) ||
-    dl.item?.toLowerCase().includes(dlSearch.toLowerCase()) ||
-    dl.type?.toLowerCase().includes(dlSearch.toLowerCase())
+  const filteredDownloads = downloads.filter(
+    (dl) =>
+      dl.date?.includes(dlSearch) ||
+      dl.item?.toLowerCase().includes(dlSearch.toLowerCase()) ||
+      dl.type?.toLowerCase().includes(dlSearch.toLowerCase()),
+  );
+
+  // ─── Reusable password field component ───────────────────────────────────
+  const PasswordField = ({
+    placeholder,
+    value,
+    onChange,
+    show,
+    onToggle,
+    focusColor = "focus:border-blue-500",
+  }) => (
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        className={`w-full bg-slate-900/50 border border-slate-700 ${focusColor} text-white rounded-xl px-4 py-3.5 pr-12 text-sm transition-all outline-none placeholder:text-slate-500`}
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1"
+        tabIndex={-1}
+      >
+        {show ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
   );
 
   return (
-    <div className="relative min-h-screen text-white bg-gray-900">
+    <div className="relative min-h-screen text-slate-100 bg-[#0f172a] font-sans selection:bg-blue-500/30">
       <Particles
         id="tsparticles"
         init={particlesInit}
         options={{
-          background: { color: { value: "#0f172a" } },
+          background: { color: { value: "transparent" } },
           fpsLimit: 60,
           particles: {
-            number: { value: 90, density: { enable: true, area: 800 } },
-            color: { value: ["#38bdf8", "#a78bfa", "#f472b6", "#22c55e"] },
+            number: { value: 60, density: { enable: true, area: 800 } },
+            color: { value: ["#38bdf8", "#818cf8", "#34d399"] },
             shape: { type: "circle" },
-            opacity: { value: 0.5 },
-            size: { value: { min: 3, max: 7 } },
-            move: { enable: true, speed: 1, outModes: "out", random: true },
+            opacity: { value: 0.3, random: true },
+            size: { value: { min: 1, max: 4 } },
+            move: {
+              enable: true,
+              speed: 0.8,
+              direction: "none",
+              outModes: "out",
+            },
           },
         }}
-        className="absolute inset-0 -z-10"
+        className="absolute inset-0 -z-10 pointer-events-none"
       />
 
-      <div className="px-4 md:px-6 py-6">
-
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        {/* ── Dashboard tab ── */}
         {activeTab === "dashboard" && (
-          <div>
-            <div className="mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold">
-                Welcome back{currentUser ? `, ${currentUser.email?.split("@")[0]}` : ""}! 👋
-              </h2>
-              <p className="text-slate-400 mt-1 text-sm md:text-base">
-                What would you like to study today?
-              </p>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+                  Welcome back
+                  {currentUser ? `, ${currentUser.email?.split("@")[0]}` : ""}!
+                  👋
+                </h2>
+                <p className="text-slate-400 mt-2 text-base md:text-lg">
+                  Access your study resources and track your progress.
+                </p>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 md:gap-6">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {cards.map((card, idx) => (
                 <div
                   key={idx}
                   ref={cardRefs.current[idx]}
-                  className={`bg-gradient-to-br ${card.color} p-6 md:p-10 rounded-2xl shadow-2xl cursor-pointer transform transition duration-300 relative overflow-hidden active:scale-95`}
+                  className={`relative group bg-gradient-to-br ${card.color} p-8 rounded-3xl shadow-xl transition-all duration-300 ease-out cursor-pointer overflow-hidden border border-white/10 flex flex-col items-start justify-end min-h-[180px] active:scale-95`}
                   onClick={() => navigate(card.route)}
                   onMouseMove={(e) => handleMouseMove(e, cardRefs.current[idx])}
                   onMouseLeave={() => handleMouseLeave(cardRefs.current[idx])}
                 >
-                  <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-20 transition" />
-                  <div className="mb-3 md:mb-4 [&>svg]:w-7 [&>svg]:h-7 md:[&>svg]:w-9 md:[&>svg]:h-9">
+                  <div className="absolute top-6 right-6 opacity-20 group-hover:opacity-40 group-hover:scale-110 transition-all duration-500 [&>svg]:w-12 [&>svg]:h-12">
                     {card.icon}
                   </div>
-                  <h3 className="text-lg md:text-2xl font-semibold">{card.title}</h3>
+                  <div className="relative z-10">
+                    <div className="p-3 bg-white/20 rounded-2xl mb-4 backdrop-blur-md inline-block [&>svg]:w-6 [&>svg]:h-6">
+                      {card.icon}
+                    </div>
+                    <h3 className="text-xl font-bold text-white tracking-wide">
+                      {card.title}
+                    </h3>
+                    <p className="text-white/70 text-sm mt-1">
+                      Explore resources →
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* ── Account / credentials tab ── */}
         {activeTab === "credentials" && (
-  <div className="max-w-xl mx-auto space-y-4">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in zoom-in-95 duration-500">
+            {/* Profile card */}
+            <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-8 rounded-3xl shadow-2xl">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-400">
+                  <User size={24} />
+                </div>
+                <h2 className="text-2xl font-bold">Profile Details</h2>
+              </div>
 
-    {/* Profile Info */}
-    <div className="bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
-      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-        <User size={20} /> My Account
-      </h2>
+              {currentUser ? (
+                <div className="space-y-5">
+                  <div>
+                    <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider ml-1 mb-1.5 block">
+                      Full Name
+                    </label>
+                    {editingProfile ? (
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full bg-slate-900/50 border border-slate-600 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm transition-all outline-none"
+                      />
+                    ) : (
+                      <div className="bg-slate-900/30 border border-transparent px-4 py-3 rounded-xl text-white font-medium">
+                        {currentUser.name || "Not specified"}
+                      </div>
+                    )}
+                  </div>
 
-      {currentUser ? (
-        <div className="space-y-3">
-          {/* Editable name */}
-          <div className="bg-gray-700 p-4 rounded-lg">
-            <p className="text-slate-400 text-xs mb-1">Full Name</p>
-            {editingProfile ? (
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="w-full bg-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            ) : (
-              <p className="text-white font-semibold">{currentUser.name || "Not set"}</p>
-            )}
-          </div>
+                  <div>
+                    <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider ml-1 mb-1.5 block">
+                      Email Address
+                    </label>
+                    {editingProfile ? (
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="w-full bg-slate-900/50 border border-slate-600 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm transition-all outline-none"
+                      />
+                    ) : (
+                      <div className="bg-slate-900/30 px-4 py-3 rounded-xl text-white font-medium break-all">
+                        {currentUser.email}
+                      </div>
+                    )}
+                  </div>
 
-          {/* Editable email */}
-          <div className="bg-gray-700 p-4 rounded-lg">
-            <p className="text-slate-400 text-xs mb-1">Email</p>
-            {editingProfile ? (
-              <input
-                type="email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                className="w-full bg-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            ) : (
-              <p className="text-white font-semibold break-all">{currentUser.email}</p>
-            )}
-          </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider ml-1 mb-1.5 block">
+                        User Role
+                      </label>
+                      <div className="bg-slate-900/30 px-4 py-3 rounded-xl text-blue-400 font-bold capitalize text-sm inline-flex items-center gap-2">
+                        <ShieldCheck size={14} />{" "}
+                        {currentUser.role || "Student"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider ml-1 mb-1.5 block">
+                        Joined
+                      </label>
+                      <div className="bg-slate-900/30 px-4 py-3 rounded-xl text-slate-300 font-medium text-sm">
+                        {currentUser.date_joined
+                          ? new Date(
+                              currentUser.date_joined,
+                            ).toLocaleDateString()
+                          : "---"}
+                      </div>
+                    </div>
+                  </div>
 
-          <div className="bg-gray-700 p-4 rounded-lg">
-            <p className="text-slate-400 text-xs mb-1">Role</p>
-            <p className="text-white font-semibold capitalize">{currentUser.role || "User"}</p>
-          </div>
+                  <div className="pt-4">
+                    {editingProfile ? (
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleSaveProfile}
+                          disabled={savingProfile}
+                          className="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-sm font-bold transition shadow-lg shadow-blue-900/20 disabled:opacity-50"
+                        >
+                          {savingProfile ? "Saving..." : "Update Profile"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingProfile(false);
+                            setProfileError("");
+                          }}
+                          className="px-6 bg-slate-700 hover:bg-slate-600 py-3 rounded-xl text-sm font-bold transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setEditingProfile(true);
+                          setEditName(currentUser.name || "");
+                          setEditEmail(currentUser.email || "");
+                        }}
+                        className="w-full border border-slate-600 hover:border-blue-500/50 hover:bg-blue-500/5 py-3 rounded-xl text-sm font-bold transition-all text-slate-300 hover:text-white"
+                      >
+                        Edit Profile Information
+                      </button>
+                    )}
+                    {profileError && (
+                      <p className="text-rose-400 text-xs mt-3 ml-1">
+                        ⚠ {profileError}
+                      </p>
+                    )}
+                    {profileSuccess && (
+                      <p className="text-emerald-400 text-xs mt-3 ml-1">
+                        ✓ {profileSuccess}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-pulse space-y-4">
+                  <div className="h-12 bg-slate-700/50 rounded-xl w-full" />
+                  <div className="h-12 bg-slate-700/50 rounded-xl w-full" />
+                </div>
+              )}
+            </div>
 
-          <div className="bg-gray-700 p-4 rounded-lg">
-            <p className="text-slate-400 text-xs mb-1">Member Since</p>
-            <p className="text-white font-semibold">
-              {currentUser.date_joined ? new Date(currentUser.date_joined).toLocaleDateString() : "N/A"}
-            </p>
-          </div>
+            {/* Security card */}
+            <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-8 rounded-3xl shadow-2xl flex flex-col">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-400">
+                  <Lock size={24} />
+                </div>
+                <h2 className="text-2xl font-bold">Security</h2>
+              </div>
 
-          {/* Edit / Save buttons */}
-          {editingProfile ? (
-            <div className="flex gap-2 pt-1">
+              <div className="space-y-4 flex-1">
+                <PasswordField
+                  placeholder="Current Password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  show={showCurrentPw}
+                  onToggle={() => setShowCurrentPw((v) => !v)}
+                  focusColor="focus:border-amber-500/50"
+                />
+                <PasswordField
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  show={showNewPw}
+                  onToggle={() => setShowNewPw((v) => !v)}
+                />
+                <PasswordField
+                  placeholder="Confirm New Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  show={showConfirmPw}
+                  onToggle={() => setShowConfirmPw((v) => !v)}
+                />
+                {passwordError && (
+                  <p className="text-rose-400 text-xs mt-2 ml-1">
+                    ⚠ {passwordError}
+                  </p>
+                )}
+                {passwordSuccess && (
+                  <p className="text-emerald-400 text-xs mt-2 ml-1">
+                    ✓ {passwordSuccess}
+                  </p>
+                )}
+              </div>
+
               <button
-                onClick={handleSaveProfile}
-                disabled={savingProfile}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-semibold transition disabled:opacity-50"
+                onClick={handleChangePassword}
+                disabled={changingPassword}
+                className="mt-6 w-full bg-white text-slate-900 hover:bg-slate-200 py-3.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-xl"
               >
-                {savingProfile ? "Saving…" : "Save Changes"}
-              </button>
-              <button
-                onClick={() => { setEditingProfile(false); setProfileError(""); }}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 py-2.5 rounded-lg text-sm font-semibold transition"
-              >
-                Cancel
+                {changingPassword ? "Updating Security..." : "Change Password"}
               </button>
             </div>
-          ) : (
-            <button
-              onClick={() => { setEditingProfile(true); setEditName(currentUser.name || ""); setEditEmail(currentUser.email || ""); }}
-              className="w-full bg-gray-700 hover:bg-gray-600 py-2.5 rounded-lg text-sm font-semibold transition"
-            >
-              ✏️ Edit Profile
-            </button>
-          )}
-
-          {profileError && <p className="text-red-400 text-xs mt-1">{profileError}</p>}
-          {profileSuccess && <p className="text-green-400 text-xs mt-1">{profileSuccess}</p>}
-        </div>
-      ) : (
-        <p className="text-slate-400">Loading user info...</p>
-      )}
-    </div>
-
-    {/* Change Password */}
-    <div className="bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
-      <h2 className="text-xl font-bold mb-4">🔒 Change Password</h2>
-      <div className="space-y-3">
-        <input
-          type="password"
-          placeholder="Current password"
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
-          className="w-full bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
-        />
-        <input
-          type="password"
-          placeholder="New password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          className="w-full bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
-        />
-        <input
-          type="password"
-          placeholder="Confirm new password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full bg-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
-        />
-        {passwordError && <p className="text-red-400 text-xs">{passwordError}</p>}
-        {passwordSuccess && <p className="text-green-400 text-xs">{passwordSuccess}</p>}
-        <button
-          onClick={handleChangePassword}
-          disabled={changingPassword}
-          className="w-full bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-semibold transition disabled:opacity-50"
-        >
-          {changingPassword ? "Changing…" : "Change Password"}
-        </button>
-      </div>
-    </div>
-
-  </div>
-)}
-
-        {activeTab === "downloads" && (
-          <div className="max-w-3xl mx-auto bg-gray-800 p-5 md:p-6 rounded-xl shadow-lg">
-            <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
-              <Download size={20} /> My Library
-            </h2>
-            <input
-              type="text"
-              placeholder="Search downloads..."
-              value={dlSearch}
-              onChange={(e) => setDlSearch(e.target.value)}
-              className="mb-4 w-full p-2.5 rounded bg-gray-700 text-white placeholder-gray-400 text-sm"
-            />
-            {filteredDownloads.length === 0 ? (
-              <p className="text-slate-400 text-center py-8 text-sm">
-                No downloads yet. Purchase resources to access them here.
-              </p>
-            ) : (
-              <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
-                {filteredDownloads.map((dl, idx) => (
-                  <li key={idx} className="bg-gray-700 p-3 rounded flex justify-between items-center hover:bg-gray-600 transition">
-                    <div className="min-w-0 mr-3">
-                      <p className="font-semibold text-sm truncate">{dl.item}</p>
-                      <p className="text-xs text-slate-400">{dl.date} • {dl.type}</p>
-                    </div>
-                    <button
-                      onClick={() => handleDownload(dl)}
-                      className="flex-shrink-0 flex items-center gap-1 bg-cyan-600 hover:bg-cyan-700 px-3 py-1.5 rounded text-sm transition active:scale-95"
-                    >
-                      <Download size={13} /> Download
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         )}
 
+        {/* ── Library / downloads tab ── */}
+        {activeTab === "downloads" && (
+          <div className="max-w-4xl mx-auto bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-10 rounded-3xl shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-cyan-500/20 rounded-2xl text-cyan-400">
+                  <Download size={28} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">My Library</h2>
+                  <p className="text-slate-400 text-sm">
+                    Offline access to your materials
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative group w-full md:w-72">
+                <Search
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  placeholder="Filter resources..."
+                  value={dlSearch}
+                  onChange={(e) => setDlSearch(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700 focus:border-cyan-500/50 text-white placeholder-slate-500 text-sm outline-none transition-all shadow-inner"
+                />
+              </div>
+            </div>
+
+            {filteredDownloads.length === 0 ? (
+              <div className="text-center py-16 bg-slate-900/20 rounded-2xl border border-dashed border-slate-700">
+                <div className="bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-600">
+                  <Download size={32} />
+                </div>
+                <p className="text-slate-400 font-medium">
+                  No resources found in your library.
+                </p>
+                <button
+                  onClick={() => navigate("/notes")}
+                  className="text-cyan-400 text-sm mt-2 hover:underline"
+                >
+                  Browse the shop
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
+                {filteredDownloads.map((dl, idx) => (
+                  <div
+                    key={idx}
+                    className="group bg-slate-900/40 border border-slate-700/50 p-4 rounded-2xl flex justify-between items-center hover:bg-slate-700/40 hover:border-slate-600 transition-all duration-300"
+                  >
+                    <div className="min-w-0 flex items-center gap-4">
+                      <div className="p-2.5 bg-slate-800 rounded-lg text-slate-400 group-hover:text-cyan-400 transition-colors">
+                        {dl.type === "Note" ? (
+                          <FileText size={20} />
+                        ) : (
+                          <FileArchive size={20} />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-200 truncate group-hover:text-white transition-colors">
+                          {dl.item}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] uppercase tracking-wider font-bold text-cyan-500/80 bg-cyan-500/10 px-1.5 py-0.5 rounded">
+                            {dl.type}
+                          </span>
+                          <span className="text-xs text-slate-500 font-medium">
+                            {dl.date}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownload(dl)}
+                      className="ml-4 flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-cyan-900/20 active:scale-95 whitespace-nowrap"
+                    >
+                      <Download size={16} />
+                      <span className="hidden sm:inline">Download</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <style>{`
         @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
+          from { transform: translateX(30px); opacity: 0; }
           to   { transform: translateX(0); opacity: 1; }
         }
-        .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
+        .animate-slide-in { animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
       `}</style>
     </div>
   );

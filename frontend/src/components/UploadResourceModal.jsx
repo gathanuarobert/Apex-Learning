@@ -1,6 +1,19 @@
 // src/components/UploadResourceModal.jsx
-import React, { useState, useEffect } from "react";
-import { X, Upload, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  X,
+  Upload,
+  Loader2,
+  Plus,
+  Trash2,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Layers,
+  Globe,
+  GraduationCap,
+  DollarSign,
+} from "lucide-react";
 import api from "../Api";
 
 export default function UploadResourceModal({
@@ -9,41 +22,49 @@ export default function UploadResourceModal({
   onSuccess,
   editResource,
 }) {
+  const [uploadMode, setUploadMode] = useState("single");
+
+  // Single upload state
   const [resourceType, setResourceType] = useState("Note");
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
+  const [year, setYear] = useState("");
+  const [date, setDate] = useState("");
+  const [headline, setHeadline] = useState("");
+  const [body, setBody] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Dropdowns data
+  // Bulk upload state
+  const [bulkResourceType, setBulkResourceType] = useState("Note");
+  const [bulkCurriculum, setBulkCurriculum] = useState("");
+  const [bulkGrade, setBulkGrade] = useState("");
+  const [bulkSubject, setBulkSubject] = useState("");
+  const [bulkTopic, setBulkTopic] = useState("");
+  const [bulkPrice, setBulkPrice] = useState("0");
+  const [bulkYear, setBulkYear] = useState("");
+  const [bulkDate, setBulkDate] = useState("");
+  const [bulkFiles, setBulkFiles] = useState([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkError, setBulkError] = useState("");
+  const bulkFileRef = useRef(null);
+
+  // Shared dropdown state
   const [curricula, setCurricula] = useState([]);
   const [grades, setGrades] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
   const [categories, setCategories] = useState([]);
-
-  // Selected values
   const [curriculum, setCurriculum] = useState("");
   const [grade, setGrade] = useState("");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [category, setCategory] = useState("");
 
-  // PastPaper specific
-  const [year, setYear] = useState("");
-
-  // Exam specific
-  const [date, setDate] = useState("");
-
-  // News specific
-  const [headline, setHeadline] = useState("");
-  const [body, setBody] = useState("");
-
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-
-  // Fetch dropdown options on mount
   useEffect(() => {
+    if (!isOpen) return;
     const fetchOptions = async () => {
       try {
         const [currRes, gradeRes, subjRes, topicRes, catRes] =
@@ -54,58 +75,39 @@ export default function UploadResourceModal({
             api.get("resources/topics/"),
             api.get("resources/news-categories/"),
           ]);
-
         setCurricula(currRes.data || []);
         setGrades(gradeRes.data || []);
         setSubjects(subjRes.data || []);
         setTopics(topicRes.data || []);
         setCategories(catRes.data || []);
       } catch (err) {
-        console.error("Failed to fetch dropdown options:", err);
+        console.error(err);
       }
     };
-
-    if (isOpen) fetchOptions();
+    fetchOptions();
   }, [isOpen]);
 
-  // Populate form when editing
   useEffect(() => {
     if (editResource && isOpen) {
-      console.log("Editing resource:", editResource);
-
-      // Set resource type
+      setUploadMode("single");
       setResourceType(editResource.type);
-
-      // Common fields
       setTitle(editResource.title || editResource.headline || "");
       setPrice(editResource.price || "");
-
-      // Description/content
-      if (editResource.type === "Note") {
+      if (editResource.type === "Note")
         setDescription(editResource.content || "");
-      } else if (editResource.type === "Exam") {
+      else if (editResource.type === "Exam") {
         setDescription(editResource.description || "");
         setDate(editResource.date || "");
       } else if (editResource.type === "News") {
         setHeadline(editResource.headline || "");
         setBody(editResource.body || "");
       }
-
-      // Dropdown selections - need to find IDs from dropdown options
-      // For now, just set empty - user will need to re-select
-      // In a production app, you'd store the IDs in the resource object
-      setCurriculum("");
-      setGrade("");
-      setSubject("");
-      setTopic("");
-      setCategory("");
-
-      // Past paper year
-      if (editResource.type === "Past Paper") {
+      if (
+        editResource.type === "Past Paper" ||
+        editResource.type === "PastPaper"
+      )
         setYear(editResource.year || "");
-      }
     } else if (!editResource && isOpen) {
-      // Reset form for new upload
       resetForm();
     }
   }, [editResource, isOpen]);
@@ -126,59 +128,55 @@ export default function UploadResourceModal({
     setHeadline("");
     setBody("");
     setError("");
+    setBulkFiles([]);
+    setBulkResourceType("Note");
+    setBulkError("");
+  };
+
+  const titleFromFilename = (filename) =>
+    filename
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[-_]/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const handleBulkFileSelect = (e) => {
+    const selected = Array.from(e.target.files);
+    const newFiles = selected.map((f) => ({
+      file: f,
+      title: titleFromFilename(f.name),
+      status: "pending",
+      error: "",
+    }));
+    setBulkFiles((prev) => [...prev, ...newFiles]);
+    e.target.value = "";
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    // Validation
-    if (resourceType === "News") {
-      if (!headline || !body) {
-        setError("Headline and body are required for news.");
-        return;
-      }
-    } else {
-      // When editing, file is optional (user can keep existing file)
-      if (!title || (!file && !editResource)) {
-        setError("Title and file are required.");
-        return;
-      }
-    }
-
     setUploading(true);
-
     try {
       const formData = new FormData();
-
       if (resourceType === "News") {
         formData.append("headline", headline);
         formData.append("body", body);
         if (category) formData.append("category_id", category);
-        if (file) formData.append("file", file); // Optional when editing
+        if (file) formData.append("file", file);
       } else {
         formData.append("title", title);
-        if (file) formData.append("file", file); // Optional when editing
+        if (file) formData.append("file", file);
         if (price) formData.append("price", price);
         if (curriculum) formData.append("education_level_id", curriculum);
         if (grade) formData.append("grade_id", grade);
         if (subject) formData.append("subject_id", subject);
         if (topic) formData.append("topic_id", topic);
-
-        if (resourceType === "Note" && description) {
-          formData.append("content", description);
-        }
-
+        if (resourceType === "Note") formData.append("content", description);
         if (resourceType === "Exam") {
-          if (date) formData.append("date", date);
-          if (description) formData.append("description", description);
+          formData.append("date", date);
+          formData.append("description", description);
         }
-
-        if (resourceType === "PastPaper" && year) {
-          formData.append("year", year);
-        }
+        if (resourceType === "PastPaper") formData.append("year", year);
       }
-
       const endpoints = {
         Note: "resources/notes/",
         Exam: "resources/exams/",
@@ -186,198 +184,268 @@ export default function UploadResourceModal({
         "Past Paper": "resources/past-papers/",
         News: "resources/news/",
       };
-
-      if (editResource) {
-        // PATCH request for editing
+      if (editResource)
         await api.patch(
           `${endpoints[resourceType]}${editResource.id}/`,
           formData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          },
         );
-        alert("Resource updated successfully!");
-      } else {
-        // POST request for new upload
-        await api.post(endpoints[resourceType], formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        alert("Resource uploaded successfully!");
-      }
-
-      resetForm();
+      else await api.post(endpoints[resourceType], formData);
       onSuccess();
       onClose();
     } catch (err) {
-      console.error("Upload/Edit failed:", err);
-      console.error("Response data:", JSON.stringify(err.response?.data)); // ADD THIS
-      setError(
-        err.response?.data?.error ||
-          JSON.stringify(err.response?.data) ||
-          "Operation failed.",
-      );
+      setError("Upload failed. Please check your inputs.");
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleBulkSubmit = async () => {
+    setBulkUploading(true);
+    const endpoints = {
+      Note: "resources/notes/",
+      Exam: "resources/exams/",
+      PastPaper: "resources/past-papers/",
+    };
+    for (let i = 0; i < bulkFiles.length; i++) {
+      if (bulkFiles[i].status === "success") continue;
+      setBulkFiles((prev) =>
+        prev.map((f, idx) => (idx === i ? { ...f, status: "uploading" } : f)),
+      );
+      try {
+        const formData = new FormData();
+        formData.append("title", bulkFiles[i].title);
+        formData.append("file", bulkFiles[i].file);
+        if (bulkPrice) formData.append("price", bulkPrice);
+        if (bulkCurriculum)
+          formData.append("education_level_id", bulkCurriculum);
+        if (bulkGrade) formData.append("grade_id", bulkGrade);
+        if (bulkSubject) formData.append("subject_id", bulkSubject);
+        if (bulkTopic) formData.append("topic_id", bulkTopic);
+        if (bulkResourceType === "Exam") formData.append("date", bulkDate);
+        if (bulkResourceType === "PastPaper") formData.append("year", bulkYear);
+        await api.post(endpoints[bulkResourceType], formData);
+        setBulkFiles((prev) =>
+          prev.map((f, idx) => (idx === i ? { ...f, status: "success" } : f)),
+        );
+      } catch {
+        setBulkFiles((prev) =>
+          prev.map((f, idx) =>
+            idx === i ? { ...f, status: "error", error: "Failed" } : f,
+          ),
+        );
+      }
+    }
+    setBulkUploading(false);
+    onSuccess();
   };
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
       onClick={onClose}
     >
+      <div className="absolute inset-0 bg-[#0f172a]/90 backdrop-blur-md" />
+
       <div
-        className="bg-[#0b1220] border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden"
+        className="relative bg-[#1e293b] w-full max-w-3xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-cyan-600/20 to-blue-600/20 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">
-            {editResource ? "Edit Resource" : "Upload New Resource"}
-          </h2>
+        <div className="p-8 pb-4 flex justify-between items-center border-b border-white/5">
+          <div>
+            <p className="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
+              Administrative Action
+            </p>
+            <h2 className="text-2xl font-black text-white">
+              {editResource ? "Update Resource" : "Add Content"}
+            </h2>
+          </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition"
+            className="p-3 bg-white/5 text-slate-400 rounded-full hover:bg-white/10 transition-colors"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="p-6 space-y-4 max-h-[70vh] overflow-y-auto"
-        >
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Resource Type - Disabled when editing */}
-          <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">
-              Resource Type
-            </label>
-            <select
-              value={resourceType}
-              onChange={(e) => setResourceType(e.target.value)}
-              disabled={!!editResource}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="Note">Note</option>
-              <option value="Exam">Exam</option>
-              <option value="PastPaper">Past Paper</option>
-              <option value="Past Paper">Past Paper</option>
-              <option value="News">News</option>
-            </select>
+        {/* Tab Switcher */}
+        {!editResource && (
+          <div className="flex px-8 mt-4 gap-2">
+            {["single", "bulk"].map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setUploadMode(mode)}
+                className={`px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${uploadMode === mode ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-slate-500 hover:text-slate-300"}`}
+              >
+                {mode} Mode
+              </button>
+            ))}
           </div>
+        )}
 
-          {/* News-specific fields */}
-          {resourceType === "News" ? (
-            <>
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Headline *
-                </label>
-                <input
-                  type="text"
-                  value={headline}
-                  onChange={(e) => setHeadline(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                  placeholder="Breaking: New policy announced..."
-                  required
-                />
+        <div className="p-8 pt-6 overflow-y-auto custom-scrollbar">
+          {uploadMode === "single" ? (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Resource Type Selection - Horizontal Pill Style */}
+              <div className="grid grid-cols-4 gap-2 bg-[#0f172a] p-1.5 rounded-2xl border border-white/5">
+                {["Note", "Exam", "PastPaper", "News"].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setResourceType(type)}
+                    disabled={!!editResource}
+                    className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all ${resourceType === type ? "bg-[#1e293b] text-blue-400 shadow-sm" : "text-slate-500 hover:text-slate-400"}`}
+                  >
+                    {type}
+                  </button>
+                ))}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Body *
-                </label>
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={6}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition resize-none"
-                  placeholder="Write the full news article here..."
-                  required
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">
+                      General Title
+                    </label>
+                    <input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full bg-[#0f172a] border border-white/5 p-4 rounded-2xl focus:border-blue-500 outline-none text-white text-sm font-bold"
+                      placeholder="e.g. Calculus Introduction"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-2">
+                        Curriculum
+                      </label>
+                      <select
+                        value={curriculum}
+                        onChange={(e) => setCurriculum(e.target.value)}
+                        className="w-full bg-[#0f172a] border border-white/5 p-3 rounded-xl text-xs font-bold text-slate-300 outline-none"
+                      >
+                        <option value="">Select...</option>
+                        {curricula.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase ml-2">
+                        Grade
+                      </label>
+                      <select
+                        value={grade}
+                        onChange={(e) => setGrade(e.target.value)}
+                        className="w-full bg-[#0f172a] border border-white/5 p-3 rounded-xl text-xs font-bold text-slate-300 outline-none"
+                      >
+                        <option value="">Select...</option>
+                        {grades.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-2">
+                      Pricing (KSh)
+                    </label>
+                    <div className="relative">
+                      <DollarSign
+                        size={14}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                      />
+                      <input
+                        type="number"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        className="w-full bg-[#0f172a] border border-white/5 pl-10 pr-4 py-4 rounded-2xl focus:border-emerald-500 outline-none text-white text-sm font-bold"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={4}
+                      className="w-full bg-[#0f172a] border border-white/5 p-4 rounded-2xl focus:border-blue-500 outline-none text-white text-xs leading-relaxed"
+                      placeholder="Write context about this resource..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-2">
+                      File Upload
+                    </label>
+                    <div className="relative group">
+                      <input
+                        type="file"
+                        onChange={(e) => setFile(e.target.files[0])}
+                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                      />
+                      <div className="w-full bg-blue-600/5 border-2 border-dashed border-blue-600/20 group-hover:border-blue-500/50 p-6 rounded-2xl flex flex-col items-center justify-center transition-all">
+                        <Upload size={20} className="text-blue-500 mb-2" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter truncate max-w-full">
+                          {file ? file.name : "Choose or drag file"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                >
-                  <option value="">Select category (optional)</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Featured Image {editResource && "(upload new to replace)"}
-                </label>
-                <input
-                  type="file"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  accept="image/*"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-400 focus:outline-none focus:border-cyan-500 transition"
-                />
-              </div>
-            </>
+
+              <button
+                type="submit"
+                disabled={uploading}
+                className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-3xl font-black text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-900/20"
+              >
+                {uploading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <CheckCircle size={18} />
+                )}
+                {editResource ? "Confirm Update" : "Finalize Upload"}
+              </button>
+            </form>
           ) : (
-            <>
-              {/* Common fields for Note/Exam/PastPaper */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                  placeholder="e.g., Algebra Notes"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
-                    Curriculum
+            <div className="space-y-8">
+              {/* Bulk Controls */}
+              <div className="bg-[#0f172a] p-6 rounded-3xl border border-white/5 grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="space-y-2 col-span-2 md:col-span-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">
+                    Bulk Type
                   </label>
                   <select
-                    value={curriculum}
-                    onChange={(e) => setCurriculum(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
+                    value={bulkResourceType}
+                    onChange={(e) => setBulkResourceType(e.target.value)}
+                    className="w-full bg-[#1e293b] border border-white/5 p-3 rounded-xl text-xs font-bold text-white outline-none"
                   >
-                    <option value="">Select...</option>
-                    {curricula.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
+                    <option value="Note">Notes</option>
+                    <option value="Exam">Exams</option>
+                    <option value="PastPaper">Past Papers</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
-                    Grade
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">
+                    Shared Grade
                   </label>
-                  <select
-                    value={grade}
-                    onChange={(e) => setGrade(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                  >
-                    <option value="">Select...</option>
+                  <select className="w-full bg-[#1e293b] border border-white/5 p-3 rounded-xl text-xs font-bold text-slate-400 outline-none">
+                    <option>Select Grade...</option>
                     {grades.map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.name}
@@ -385,149 +453,92 @@ export default function UploadResourceModal({
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
-                    Subject
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">
+                    Base Price
                   </label>
-                  <select
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                  >
-                    <option value="">Select...</option>
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
-                    Topic
-                  </label>
-                  <select
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                  >
-                    <option value="">Select...</option>
-                    {topics.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
+                  <input value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} type="number" className="w-full bg-[#1e293b] border border-white/5 p-3 rounded-xl text-xs font-bold text-white outline-none" placeholder="0.00" />
                 </div>
               </div>
 
-              {(resourceType === "PastPaper" ||
-                resourceType === "Past Paper") && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
-                    Year
-                  </label>
+              {/* File Queue */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <Layers size={14} /> File Queue ({bulkFiles.length})
+                  </h4>
+                  <button
+                    onClick={() => bulkFileRef.current.click()}
+                    className="text-[10px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300"
+                  >
+                    + Add Files
+                  </button>
                   <input
-                    type="number"
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                    placeholder="e.g., 2023"
+                    ref={bulkFileRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleBulkFileSelect}
                   />
                 </div>
-              )}
 
-              {resourceType === "Exam" && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
-                    Exam Date
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                  />
+                <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                  {bulkFiles.length > 0 ? (
+                    bulkFiles.map((f, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-4 p-3 bg-[#0f172a] rounded-2xl border border-white/5 group"
+                      >
+                        <FileText size={20} className="text-slate-600" />
+                        <input
+                          value={f.title}
+                          onChange={(e) => {
+                            const newFiles = [...bulkFiles];
+                            newFiles[i].title = e.target.value;
+                            setBulkFiles(newFiles);
+                          }}
+                          className="flex-1 bg-transparent border-none outline-none text-xs font-bold text-white"
+                        />
+                        {f.status === "uploading" && (
+                          <Loader2
+                            size={14}
+                            className="animate-spin text-blue-500"
+                          />
+                        )}
+                        {f.status === "success" && (
+                          <CheckCircle size={14} className="text-emerald-500" />
+                        )}
+                        <button
+                          onClick={() =>
+                            setBulkFiles((prev) =>
+                              prev.filter((_, idx) => idx !== i),
+                            )
+                          }
+                          className="p-2 opacity-0 group-hover:opacity-100 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-12 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center text-slate-600">
+                      <Upload size={32} className="mb-2 opacity-20" />
+                      <p className="text-xs font-bold">Queue is empty</p>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Price (KSh)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition"
-                  placeholder="0.00 for free"
-                />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500 transition resize-none"
-                  placeholder="Optional description..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  File {editResource ? "(upload new to replace)" : "*"}
-                </label>
-                <input
-                  type="file"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  accept=".pdf,.doc,.docx"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-400 focus:outline-none focus:border-cyan-500 transition"
-                  required={!editResource}
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  {editResource ? "Leave empty to keep existing file. " : ""}
-                  Accepted: PDF, DOC, DOCX
-                </p>
-              </div>
-            </>
+              <button
+                onClick={handleBulkSubmit}
+                disabled={bulkUploading || bulkFiles.length === 0}
+                className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-3xl font-black text-xs tracking-widest uppercase transition-all shadow-xl shadow-emerald-900/20"
+              >
+                Process {bulkFiles.length} Uploads
+              </button>
+            </div>
           )}
-
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={uploading}
-              className="flex-1 px-4 py-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  {editResource ? "Updating..." : "Uploading..."}
-                </>
-              ) : (
-                <>
-                  <Upload size={18} />
-                  {editResource ? "Update Resource" : "Upload Resource"}
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
