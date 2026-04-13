@@ -1,4 +1,9 @@
 # resources/views.py
+import io                                    
+import datetime
+import mimetypes
+import os
+import platform
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -18,16 +23,12 @@ from payments.serializers import PaymentSerializer
 from payments.models import Transaction, Payment
 
 # File handling libraries
-import io                                    
-import datetime
 from PyPDF2 import PdfReader, PdfWriter
 # from PyPDF2.constants import Permissions
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.colors import Color
-from django.http import FileResponse
-from decimal import Decimal
 
 
 class IsAdminOnly(permissions.BasePermission):
@@ -209,8 +210,6 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
 
             # Font size based on image width
             font_size = max(20, img.size[0] // 30)
-            import os
-            import platform
             try:
                 if platform.system() == "Windows":
                     font_path = "arial.ttf"  # Windows default
@@ -235,7 +234,16 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
             return FileResponse(output, as_attachment=True, filename=resource.file.name)
 
         # Default: serve file normally
-        return FileResponse(resource.file, as_attachment=True)
+        content_type, _ = mimetypes.guess_type(file_path)
+        if not content_type:
+            content_type = 'application/octet-stream'
+
+        return FileResponse(
+            open(file_path, 'rb'),
+            as_attachment=True,
+            filename=os.path.basename(file_path),
+            content_type=content_type,
+)
 
 
 class UserLibraryViewSet(viewsets.ViewSet):

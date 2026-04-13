@@ -10,6 +10,7 @@ ALLOWED_EXTENSIONS = [
     '.pdf', '.doc', '.docx', '.ppt', '.pptx',
     # Images
     '.jpg', '.jpeg', '.png',
+    '.xlsx', '.xls', '.csv',
 ]
 
 MAX_FILE_SIZE_MB = 50  # 50MB max per file
