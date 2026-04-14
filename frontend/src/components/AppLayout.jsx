@@ -7,6 +7,7 @@ import {
   MoreHorizontal, ChevronRight,
 } from "lucide-react";
 import api from "../Api";
+import NewsModal from "./NewsModal";
 
 export default function AppLayout({ children }) {
   const navigate = useNavigate();
@@ -413,7 +414,7 @@ export default function AppLayout({ children }) {
           </div>
         </div>
       )}
-
+      <NewsModal />
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
