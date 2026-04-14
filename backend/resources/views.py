@@ -4,17 +4,20 @@ import datetime
 import mimetypes
 import os
 import platform
-from rest_framework import viewsets, permissions, filters, status
+from rest_framework import viewsets, permissions, filters, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import FileResponse
 from decimal import Decimal
+from rest_framework.views import APIView
 
-from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory
+
+from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory, NewsView, NewsPost
 from .serializers import (
     NoteSerializer, PastPaperSerializer, ExamSerializer, NewsSerializer,
-    SubjectSerializer, GradeSerializer, EducationLevelSerializer, TopicSerializer, NewsCategorySerializer
+    SubjectSerializer, GradeSerializer, EducationLevelSerializer, TopicSerializer, NewsCategorySerializer,
+    NewsPostSerializer, NewsViewSerializer
 )
 
 # Payments integration
@@ -335,3 +338,65 @@ class ExamViewSet(BaseResourceViewSet):
 class NewsViewSet(BaseResourceViewSet):
     queryset = News.objects.all()
     serializer_class = NewsSerializer
+
+
+class UnreadNewsListView(generics.ListAPIView):
+    """
+    Returns published news posts the current user hasn't 
+    permanently dismissed.
+    """
+    serializer_class = NewsPostSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        dismissed_ids = NewsView.objects.filter(
+            user=user,
+            dismissed_permanently=True
+        ).values_list('post_id', flat=True)
+        return NewsPost.objects.filter(
+            is_published=True
+        ).exclude(id__in=dismissed_ids)
+
+
+class MarkNewsViewedView(APIView):
+    """
+    POST { post_id, dismissed_permanently: true/false }
+    Creates or updates a NewsView record for the current user.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        post_id = request.data.get('post_id')
+        dismissed_permanently = request.data.get('dismissed_permanently', False)
+
+        try:
+            post = NewsPost.objects.get(id=post_id, is_published=True)
+        except NewsPost.DoesNotExist:
+            return Response(
+                {'error': 'Post not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        news_view, created = NewsView.objects.get_or_create(
+            user=request.user,
+            post=post,
+            defaults={'dismissed_permanently': dismissed_permanently}
+        )
+        if not created and dismissed_permanently:
+            news_view.dismissed_permanently = True
+            news_view.save()
+
+        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+
+
+class NewsPostAdminListCreateView(generics.ListCreateAPIView):
+    serializer_class = NewsPostSerializer
+    permission_classes = [permissions.IsAdminUser]
+    queryset = NewsPost.objects.all()
+
+
+class NewsPostAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = NewsPostSerializer
+    permission_classes = [permissions.IsAdminUser]
+    queryset = NewsPost.objects.all()
