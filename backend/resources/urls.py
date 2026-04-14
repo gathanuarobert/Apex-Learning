@@ -5,7 +5,11 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from .views import (
     NoteViewSet, PastPaperViewSet, ExamViewSet, NewsViewSet, UserLibraryViewSet,
-    SubjectViewSet, GradeViewSet, EducationLevelViewSet, TopicViewSet, NewsCategoryViewSet
+    SubjectViewSet, GradeViewSet, EducationLevelViewSet, TopicViewSet, NewsCategoryViewSet,
+    UnreadNewsListView,
+    MarkNewsViewedView,
+    NewsPostAdminListCreateView,
+    NewsPostAdminDetailView,
 )
 
 router = DefaultRouter()
@@ -24,6 +28,14 @@ router.register(r'news-categories', NewsCategoryViewSet, basename='newscategory'
 
 urlpatterns = [
     path('', include(router.urls)),
+
+    # News notification endpoints
+    path('news/unread/', UnreadNewsListView.as_view(), name='news-unread'),
+    path('news/mark-viewed/', MarkNewsViewedView.as_view(), name='news-mark-viewed'),
+
+    # Admin news management
+    path('admin/news/', NewsPostAdminListCreateView.as_view(), name='admin-news-list'),
+    path('admin/news/<int:pk>/', NewsPostAdminDetailView.as_view(), name='admin-news-detail'),
 ]
 
 if settings.DEBUG:
