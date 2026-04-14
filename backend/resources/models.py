@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+from django.conf import settings
 
 class Subject(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -96,3 +97,39 @@ class News(models.Model):
 
     def __str__(self):
         return self.headline
+    
+class NewsPost(models.Model):
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    cover_image = models.ImageField(upload_to='news/covers/', blank=True, null=True)
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class NewsView(models.Model):
+    """Tracks which users have viewed/dismissed which news posts."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='news_views'
+    )
+    post = models.ForeignKey(
+        NewsPost,
+        on_delete=models.CASCADE,
+        related_name='views'
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+    dismissed_permanently = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('user', 'post')
+
+    def __str__(self):
+        return f"{self.user} - {self.post.title}"    
