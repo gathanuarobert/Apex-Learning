@@ -1,6 +1,6 @@
 # resources/serializers.py
 from rest_framework import serializers
-from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory
+from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory, NewsPost, NewsView
 import os
 
 
@@ -176,3 +176,27 @@ class NewsSerializer(BaseFileSerializer):
             'category', 'category_id',
             'file', 'file_url', 'published_at'
         ]
+
+
+class NewsPostSerializer(serializers.ModelSerializer):
+    cover_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = NewsPost
+        fields = [
+            'id', 'title', 'body', 'cover_image_url',
+            'is_published', 'created_at',
+        ]
+
+    def get_cover_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.cover_image and request:
+            return request.build_absolute_uri(obj.cover_image.url)
+        return None
+
+
+class NewsViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NewsView
+        fields = ['id', 'post', 'viewed_at', 'dismissed_permanently']
+        read_only_fields = ['viewed_at']
