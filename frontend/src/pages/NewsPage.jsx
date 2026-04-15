@@ -16,7 +16,7 @@ export default function NewsPage() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const res = await api.get("resources/news/");
+        const res = await api.get("resources/news/published/");
         setNews(res.data || []);
       } catch (error) {
         console.error("Error fetching news:", error);
@@ -28,7 +28,7 @@ export default function NewsPage() {
   }, []);
 
   const filteredNews = news.filter(item =>
-    item.headline?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.body?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -51,7 +51,7 @@ export default function NewsPage() {
     document.body.removeChild(a);
   };
 
-  const fileUrl = selectedNews?.file_url || selectedNews?.file;
+  const fileUrl = selectedNews?.cover_image_url;
   const fileType = getFileType(fileUrl);
 
   return (
@@ -124,19 +124,19 @@ export default function NewsPage() {
                 <div className="h-2 w-full bg-gradient-to-r from-emerald-500 to-green-600 opacity-80 group-hover:opacity-100 transition-opacity" />
                 <div className="p-8 flex flex-col flex-1">
                   <div className="flex items-center justify-between mb-4">
-                    {item.category && (
+                    {/* {item.category && (
                       <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-emerald-500/20">
                         {item.category}
                       </span>
-                    )}
+                    )} */}
                     <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium">
                       <Calendar size={12} />
-                      {item.published_at ? new Date(item.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recent"}
+                      {item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recent"}
                     </div>
                   </div>
                   
                   <h2 className="text-xl font-bold text-white mb-4 group-hover:text-emerald-400 transition-colors leading-tight">
-                    {item.headline}
+                    {item.title}
                   </h2>
                   <p className="text-slate-400 text-sm leading-relaxed line-clamp-3 mb-6">
                     {item.body}
@@ -163,7 +163,7 @@ export default function NewsPage() {
             <div className="sticky top-0 z-10 bg-[#1e293b]/90 backdrop-blur-md px-8 py-6 border-b border-slate-700/50 flex items-center justify-between">
               <div>
                  <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest block mb-1">{selectedNews.category || 'Announcement'}</span>
-                 <h2 className="text-2xl font-bold text-white leading-tight">{selectedNews.headline}</h2>
+                 <h2 className="text-2xl font-bold text-white leading-tight">{selectedNews.title}</h2>
               </div>
               <button onClick={() => setSelectedNews(null)} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 hover:text-white transition-all">
                 <X size={20} />
@@ -172,7 +172,7 @@ export default function NewsPage() {
 
             <div className="p-8">
               <div className="flex items-center gap-4 text-slate-400 text-sm mb-8 bg-slate-900/40 p-3 rounded-2xl w-fit">
-                <div className="flex items-center gap-2"><Calendar size={14} /> {new Date(selectedNews.published_at).toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                <div className="flex items-center gap-2"><Calendar size={14} /> {new Date(selectedNews.created_at).toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
               </div>
 
               <div className="text-slate-200 leading-relaxed text-lg whitespace-pre-wrap font-light italic">
