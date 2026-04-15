@@ -10,6 +10,7 @@ from .views import (
     MarkNewsViewedView,
     NewsPostAdminListCreateView,
     NewsPostAdminDetailView,
+    PublishedNewsListView
 )
 
 router = DefaultRouter()
@@ -32,6 +33,7 @@ urlpatterns = [
     # News notification endpoints
     path('news/unread/', UnreadNewsListView.as_view(), name='news-unread'),
     path('news/mark-viewed/', MarkNewsViewedView.as_view(), name='news-mark-viewed'),
+    path('news/published/', PublishedNewsListView.as_view(), name='news-published'),
 
     # Admin news management
     path('admin/news/', NewsPostAdminListCreateView.as_view(), name='admin-news-list'),
