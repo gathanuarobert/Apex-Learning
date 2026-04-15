@@ -27,7 +27,7 @@ router.register(r'topics', TopicViewSet, basename='topic')
 router.register(r'news-categories', NewsCategoryViewSet, basename='newscategory')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    
 
     # News notification endpoints
     path('news/unread/', UnreadNewsListView.as_view(), name='news-unread'),
@@ -36,6 +36,7 @@ urlpatterns = [
     # Admin news management
     path('admin/news/', NewsPostAdminListCreateView.as_view(), name='admin-news-list'),
     path('admin/news/<int:pk>/', NewsPostAdminDetailView.as_view(), name='admin-news-detail'),
+    path('', include(router.urls)),
 ]
 
 if settings.DEBUG:
