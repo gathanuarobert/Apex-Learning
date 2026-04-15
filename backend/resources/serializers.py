@@ -184,9 +184,14 @@ class NewsPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = NewsPost
         fields = [
-            'id', 'title', 'body', 'cover_image_url',
+            'id', 'title', 'body',
+            'cover_image',        # write field — accepts uploaded file
+            'cover_image_url',    # read field — returns full URL
             'is_published', 'created_at',
         ]
+        extra_kwargs = {
+            'cover_image': {'required': False, 'write_only': True},
+        }
 
     def get_cover_image_url(self, obj):
         request = self.context.get('request')

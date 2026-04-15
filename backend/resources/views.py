@@ -394,12 +394,14 @@ class NewsPostAdminListCreateView(generics.ListCreateAPIView):
     serializer_class = NewsPostSerializer
     permission_classes = [permissions.IsAdminUser]
     queryset = NewsPost.objects.all()
+    parser_classes = [MultiPartParser, FormParser]
 
 
 class NewsPostAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NewsPostSerializer
     permission_classes = [permissions.IsAdminUser]
     queryset = NewsPost.objects.all()
+    parser_classes = [MultiPartParser, FormParser]
 
 class PublishedNewsListView(generics.ListAPIView):
     """Returns all published posts — for the News page feed."""
