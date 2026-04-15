@@ -152,11 +152,11 @@ export default function AdminDashboard() {
     setPostingNews(true);
     try {
       const formData = new FormData();
-      formData.append("headline", newsHeadline);
+      formData.append("title", newsHeadline);
       formData.append("body", newsBody);
       if (newsCategory) formData.append("category_id", newsCategory);
       if (newsImage) formData.append("file", newsImage);
-      await api.post("resources/news/", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      await api.post("resources/admin/news/", formData, { headers: { "Content-Type": "multipart/form-data" } });
       alert("News posted successfully!");
       setNewsHeadline(""); setNewsBody(""); setNewsImage(null); setNewsCategory("");
       fetchDashboardData();
