@@ -400,3 +400,11 @@ class NewsPostAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NewsPostSerializer
     permission_classes = [permissions.IsAdminUser]
     queryset = NewsPost.objects.all()
+
+class PublishedNewsListView(generics.ListAPIView):
+    """Returns all published posts — for the News page feed."""
+    serializer_class = NewsPostSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return NewsPost.objects.filter(is_published=True)    
