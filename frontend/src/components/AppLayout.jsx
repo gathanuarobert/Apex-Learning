@@ -9,6 +9,7 @@ import {
 import api from "../Api";
 import NewsModal from "./NewsModal";
 
+
 export default function AppLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();

@@ -7,21 +7,26 @@ import ReCAPTCHA from "react-google-recaptcha";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { loginUser } from "../Api";
-import api from "../Api"
+import api from "../Api";
 
 const Login = () => {
   const navigate = useNavigate();
   const recaptchaRef = useRef(null);
 
-  const [showPassword, setShowPassword]   = useState(false);
-  const [formData, setFormData]           = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [recaptchaToken, setRecaptchaToken] = useState("");
-  const [loading, setLoading]             = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const validateEmail = (email) => {
-    const allowedDomains = ["gmail.com", "yahoo.com", "outlook.com", "student.ku.ac.ke"];
+    const allowedDomains = [
+      "gmail.com",
+      "yahoo.com",
+      "outlook.com",
+      "student.ku.ac.ke",
+    ];
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const domain = email.split("@")[1];
     return emailRegex.test(email) && allowedDomains.includes(domain);
@@ -65,7 +70,9 @@ const Login = () => {
       }
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.detail || "Login failed. Check your credentials.");
+      alert(
+        err.response?.data?.detail || "Login failed. Check your credentials.",
+      );
 
       // Reset reCAPTCHA after failed attempt
       if (recaptchaRef.current) recaptchaRef.current.reset();
@@ -77,20 +84,20 @@ const Login = () => {
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     try {
-        const response = await api.post("users/google-login/", {
-            credential: credentialResponse.credential,
-        });
-        const user = response.data.user;
-        if (user.is_superuser || user.role === "admin") {
-            navigate("/dashboard");
-        } else {
-            navigate("/user-dashboard");
-        }
+      const response = await api.post("users/google-login/", {
+        credential: credentialResponse.credential,
+      });
+      const user = response.data.user;
+      if (user.is_superuser || user.role === "admin") {
+        navigate("/dashboard");
+      } else {
+        navigate("/user-dashboard");
+      }
     } catch (err) {
-        console.error(err);
-        alert("Google login failed. Please try again.");
+      console.error(err);
+      alert("Google login failed. Please try again.");
     }
-};
+  };
   const particlesInit = async (engine) => {
     await loadSlim(engine);
   };
@@ -121,7 +128,13 @@ const Login = () => {
           },
           particles: {
             color: { value: ["#3b82f6", "#60a5fa", "#93c5fd"] },
-            links: { color: "#3b82f6", distance: 120, enable: true, opacity: 0.4, width: 1 },
+            links: {
+              color: "#3b82f6",
+              distance: 120,
+              enable: true,
+              opacity: 0.4,
+              width: 1,
+            },
             move: { enable: true, speed: 1, outModes: { default: "bounce" } },
             number: { value: 50, density: { enable: true, area: 800 } },
             opacity: { value: 0.5 },
@@ -139,25 +152,40 @@ const Login = () => {
         onClick={() => navigate("/")}
         className="absolute top-4 left-4 z-20 flex items-center gap-2 text-gray-400 hover:text-white transition-colors group"
       >
-        <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        <svg
+          className="w-5 h-5 group-hover:-translate-x-1 transition-transform"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
         </svg>
         <span className="hidden sm:inline">Back to Home</span>
       </button>
 
       {/* Login Card */}
       <div className="relative z-10 w-full max-w-md bg-gray-900/80 shadow-2xl border border-gray-700 rounded-2xl p-6 sm:p-8 space-y-6 text-white backdrop-blur-lg animate-slideUp">
-
         {/* Header */}
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-blue-400">Welcome Back!</h2>
-          <p className="text-gray-400 text-sm mt-2">Sign in to continue your learning journey</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-blue-400">
+            Welcome Back!
+          </h2>
+          <p className="text-gray-400 text-sm mt-2">
+            Sign in to continue your learning journey
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Email */}
           <div>
-            <label className="block text-gray-300 mb-1 text-sm font-medium">Email</label>
+            <label className="block text-gray-300 mb-1 text-sm font-medium">
+              Email
+            </label>
             <input
               type="email"
               name="email"
@@ -171,7 +199,9 @@ const Login = () => {
 
           {/* Password */}
           <div className="relative">
-            <label className="block text-gray-300 mb-1 text-sm font-medium">Password</label>
+            <label className="block text-gray-300 mb-1 text-sm font-medium">
+              Password
+            </label>
             <input
               type={showPassword ? "text" : "password"}
               name="password"
@@ -220,8 +250,20 @@ const Login = () => {
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 Signing in...
               </span>
@@ -236,7 +278,9 @@ const Login = () => {
               <div className="w-full border-t border-gray-700"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-900/80 text-gray-500">Or continue with</span>
+              <span className="px-2 bg-gray-900/80 text-gray-500">
+                Or continue with
+              </span>
             </div>
           </div>
 
@@ -262,6 +306,15 @@ const Login = () => {
               Sign up here
             </button>
           </p>
+          {/* <p className="text-gray-500 text-sm">
+            Just browsing?{" "}
+            <button
+              onClick={() => navigate("/user-dashboard")}
+              className="text-gray-400 hover:text-white transition-colors hover:underline"
+            >
+              Continue as guest
+            </button>
+          </p> */}
           <p className="text-gray-500 text-xs">
             Join thousands of students learning with Apex Learning Hub
           </p>

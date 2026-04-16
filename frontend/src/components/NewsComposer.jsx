@@ -34,7 +34,7 @@ const NewsComposer = () => {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("body", body);
-      formData.append("is_published", isPublished);
+      formData.append("is_published", isPublished ? "true" : "false");
       if (coverImage) formData.append("cover_image", coverImage);
       await api.post("resources/admin/news/", formData);
       setTitle("");
@@ -63,7 +63,7 @@ const NewsComposer = () => {
   const handleTogglePublish = async (post) => {
     try {
       const formData = new FormData();
-      formData.append("is_published", !post.is_published);
+      formData.append("is_published", !post.is_published ? "true" : "false");
       await api.patch(`resources/admin/news/${post.id}/`, formData);
       fetchNews();
     } catch {
