@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import User, ParentProfile, StudentProfile
 from .serializers import UserSerializer, LoginSerializer, ParentProfileSerializer
+from .permissions import IsAuthenticatedOrReadOnly, IsAuthenticatedForDownload
 from django.conf import settings
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -368,3 +369,34 @@ class AddChildrenToParentView(APIView):
             "message": "Children and parent linked successfully",
             "parent_profile": ParentProfileSerializer(parent_profile).data,
         }, status=status.HTTP_200_OK)
+    
+
+class GuestStatusView(APIView):
+    """
+    Lightweight endpoint the frontend polls on boot to resolve auth state.
+    Returns the current user or an explicit guest flag — no DB write needed.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        if request.user and request.user.is_authenticated:
+            return Response({
+                "is_guest": False,
+                "user": UserSerializer(request.user).data,
+            })
+        return Response({"is_guest": True, "user": None})
+
+
+class DownloadResourceView(APIView):
+    """
+    Example protected download endpoint.
+    Swap out the stub body for your real file-serving / S3 redirect logic.
+    """
+    permission_classes = [IsAuthenticatedForDownload]
+
+    def get(self, request, resource_id):
+        # TODO: fetch resource, generate signed URL or stream file
+        return Response(
+            {"detail": f"Download link for resource {resource_id}"},
+            status=status.HTTP_200_OK,
+        )    
