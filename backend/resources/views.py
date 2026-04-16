@@ -15,15 +15,20 @@ from rest_framework.views import APIView
 
 from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory, NewsView, NewsPost
 from .serializers import (
-    NoteSerializer, PastPaperSerializer, ExamSerializer, NewsSerializer,
-    SubjectSerializer, GradeSerializer, EducationLevelSerializer, TopicSerializer, NewsCategorySerializer,
-    NewsPostSerializer, NewsViewSerializer
+    NoteSerializer, NoteDetailSerializer,
+    PastPaperSerializer, PastPaperDetailSerializer,
+    ExamSerializer, ExamDetailSerializer,
+    NewsSerializer, NewsDetailSerializer,
+    SubjectSerializer, GradeSerializer, EducationLevelSerializer,
+    TopicSerializer, NewsCategorySerializer,
+    NewsPostSerializer, NewsViewSerializer,
 )
 
 # Payments integration
 from payments.services import process_wallet_purchase, initiate_one_time_purchase
 from payments.serializers import PaymentSerializer
 from payments.models import Transaction, Payment
+from users.permissions import IsAuthenticatedOrReadOnly, IsAuthenticatedForDownload
 
 # File handling libraries
 from PyPDF2 import PdfReader, PdfWriter
@@ -79,11 +84,12 @@ class NewsCategoryViewSet(viewsets.ReadOnlyModelViewSet):
 class BaseResourceViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = [IsAuthenticatedOrReadOnly]  
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAdminOnly()]
+        if self.action in ['download', 'pay_and_download']:
+            return [IsAuthenticatedForDownload()]       # ← new
         return super().get_permissions()
 
     @action(detail=True, methods=['post'], url_path='pay-and-download')
@@ -308,20 +314,19 @@ class UserLibraryViewSet(viewsets.ViewSet):
 class NoteViewSet(BaseResourceViewSet):
     queryset = Note.objects.all()
     serializer_class = NoteSerializer
-    
+
+    def get_serializer_class(self):
+        if self.action in ['retrieve', 'download', 'pay_and_download']:
+            return NoteDetailSerializer
+        return NoteSerializer
+
     @action(detail=False, methods=['get'], url_path='admin/all', permission_classes=[IsAdminOnly])
     def admin_all_resources(self, request):
-        """Admin endpoint to get all resources across all types"""
-        notes = Note.objects.all()
-        exams = Exam.objects.all()
-        pastpapers = PastPaper.objects.all()
-        news = News.objects.all()
-
         return Response({
-            'notes': NoteSerializer(notes, many=True, context={'request': request}).data,
-            'exams': ExamSerializer(exams, many=True, context={'request': request}).data,
-            'pastpapers': PastPaperSerializer(pastpapers, many=True, context={'request': request}).data,
-            'news': NewsSerializer(news, many=True, context={'request': request}).data,
+            'notes':      NoteDetailSerializer(Note.objects.all(),           many=True, context={'request': request}).data,
+            'exams':      ExamDetailSerializer(Exam.objects.all(),           many=True, context={'request': request}).data,
+            'pastpapers': PastPaperDetailSerializer(PastPaper.objects.all(), many=True, context={'request': request}).data,
+            'news':       NewsDetailSerializer(News.objects.all(),           many=True, context={'request': request}).data,
         })
 
 
@@ -329,15 +334,30 @@ class PastPaperViewSet(BaseResourceViewSet):
     queryset = PastPaper.objects.all()
     serializer_class = PastPaperSerializer
 
+    def get_serializer_class(self):
+        if self.action in ['retrieve', 'download', 'pay_and_download']:
+            return PastPaperDetailSerializer
+        return PastPaperSerializer
+
 
 class ExamViewSet(BaseResourceViewSet):
     queryset = Exam.objects.all()
     serializer_class = ExamSerializer
 
+    def get_serializer_class(self):
+        if self.action in ['retrieve', 'download', 'pay_and_download']:
+            return ExamDetailSerializer
+        return ExamSerializer
+
 
 class NewsViewSet(BaseResourceViewSet):
     queryset = News.objects.all()
     serializer_class = NewsSerializer
+
+    def get_serializer_class(self):
+        if self.action in ['retrieve', 'download', 'pay_and_download']:
+            return NewsDetailSerializer
+        return NewsSerializer
 
 
 class UnreadNewsListView(generics.ListAPIView):
@@ -396,6 +416,9 @@ class NewsPostAdminListCreateView(generics.ListCreateAPIView):
     queryset = NewsPost.objects.all()
     parser_classes = [MultiPartParser, FormParser]
 
+    def perform_create(self, serializer):
+        is_published = self.request.data.get('is_published', 'false')
+        serializer.save(is_published=str(is_published).lower() == 'true')
 
 class NewsPostAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NewsPostSerializer
@@ -403,10 +426,17 @@ class NewsPostAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = NewsPost.objects.all()
     parser_classes = [MultiPartParser, FormParser]
 
+    def perform_update(self, serializer):
+        is_published = self.request.data.get('is_published')
+        if is_published is not None:
+            serializer.save(is_published=str(is_published).lower() == 'true')
+        else:
+            serializer.save()
+
 class PublishedNewsListView(generics.ListAPIView):
     """Returns all published posts — for the News page feed."""
     serializer_class = NewsPostSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
         return NewsPost.objects.filter(is_published=True)    
