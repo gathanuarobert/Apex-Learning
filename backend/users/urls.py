@@ -2,7 +2,7 @@
 from django.urls import path
 from .views import (RegistrationUserView, LoginView, AddChildrenToParentView, 
                     UserListView, UserDeleteView, CurrentUserView,GoogleLoginView,
-                    UpdateUserView, ChangePasswordView, GuestStatusView, DownloadResourceView
+                    UpdateUserView, ChangePasswordView, GuestStatusView,
                     )
 
 urlpatterns = [
@@ -16,5 +16,4 @@ urlpatterns = [
     path('me/update/', UpdateUserView.as_view(), name='update-user'),
     path('me/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('guest-status/', GuestStatusView.as_view(), name='guest-status'),
-    path('resources/<int:resource_id>/download/', DownloadResourceView.as_view(), name='resource-download'),
 ]
