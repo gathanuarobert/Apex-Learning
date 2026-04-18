@@ -45,6 +45,7 @@ class Note(models.Model):
     education_level = models.ForeignKey(EducationLevel, on_delete=models.CASCADE, null=True, blank=True)
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, null=True, blank=True)
     content = models.TextField()
+    description = models.TextField(blank=True, default="")
     file = models.FileField(upload_to='notes_files/', blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # merged from resources-crud
     created_at = models.DateTimeField(auto_now_add=True)
@@ -61,6 +62,7 @@ class PastPaper(models.Model):
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE, null=True, blank=True)
     education_level = models.ForeignKey(EducationLevel, on_delete=models.CASCADE, null=True, blank=True)
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, null=True, blank=True)
+    description = models.TextField(blank=True, default="")
     year = models.PositiveIntegerField()
     file = models.FileField(upload_to='pastpapers_files/', blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # merged from resources-crud
