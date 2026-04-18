@@ -21,8 +21,8 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') + [
     'thunderous-accordable-marivel.ngrok-free.dev',
-    'apexlearning.co.ke',     
-    'www.apexlearning.co.ke', 
+    'apexlearning.co.ke',
+    'www.apexlearning.co.ke',
 ]
 
 CSRF_TRUSTED_ORIGINS = os.getenv(
@@ -132,7 +132,7 @@ CSRF_COOKIE_HTTPONLY = False  # Must be False so JS can read csrftoken cookie
 # -------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:5174',
+    'http://localhost:5173,http://localhost:5174'
 ).split(',')
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
