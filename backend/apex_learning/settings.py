@@ -4,6 +4,8 @@ Django settings for apex_learning project.
 
 from pathlib import Path
 import os
+import os
+import dj_database_url
 from dotenv import load_dotenv
 from datetime import timedelta
 
@@ -12,6 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env
 load_dotenv(BASE_DIR / ".env")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # -------------------------------------------------------------------
 # SECURITY
@@ -87,14 +90,10 @@ WSGI_APPLICATION = 'apex_learning.wsgi.application'
 # DATABASE
 # -------------------------------------------------------------------
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME':     os.getenv("DB_NAME"),
-        'USER':     os.getenv("DB_USER"),
-        'PASSWORD': os.getenv("DB_PASSWORD"),
-        'HOST':     os.getenv("DB_HOST"),
-        'PORT':     os.getenv("DB_PORT"),
-    }
+    'default': dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600
+    )
 }
 
 # -------------------------------------------------------------------
@@ -132,8 +131,16 @@ CSRF_COOKIE_HTTPONLY = False  # Must be False so JS can read csrftoken cookie
 # -------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:5174'
+     'http://localhost:5173,http://127.0.0.1:5173',
 ).split(',')
+if DEBUG:
+    CORS_ALLOWED_ORIGINS += [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5173',
+    ]
+    # Deduplicate
+    CORS_ALLOWED_ORIGINS = list(set(CORS_ALLOWED_ORIGINS))
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -216,3 +223,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # -------------------------------------------------------------------
 EMAIL_BACKEND     = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'no-reply@apexlearning.local'
+
+print("DATABASE_URL:", os.getenv("DATABASE_URL"))
+print("CORS_ALLOWED_ORIGINS RAW:", os.getenv('CORS_ALLOWED_ORIGINS'))
+print("DEBUG:", os.getenv('DEBUG'))
