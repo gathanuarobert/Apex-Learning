@@ -11,6 +11,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import FileResponse
 from decimal import Decimal
 from rest_framework.views import APIView
+from django.db.models import Exists, OuterRef
 
 
 from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory, NewsView, NewsPost
@@ -254,6 +255,20 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
             content_type=content_type,
 )
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.is_authenticated:
+            resource_type = self.queryset.model.__name__  # "Note", "Exam", "PastPaper"
+            purchased = Transaction.objects.filter(
+                user=user,
+                resource_id=OuterRef('pk'),
+                resource_type=resource_type,
+                transaction_type="purchase",
+                status="completed"
+            )
+            qs = qs.annotate(is_purchased=Exists(purchased))
+        return qs
 
 class UserLibraryViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]

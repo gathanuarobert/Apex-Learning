@@ -6,14 +6,11 @@ import os
 
 # ========== Reusable File Validator ==========
 ALLOWED_EXTENSIONS = [
-    # Documents
     '.pdf', '.doc', '.docx', '.ppt', '.pptx',
-    # Images
     '.jpg', '.jpeg', '.png',
     '.xlsx', '.xls', '.csv',
 ]
-
-MAX_FILE_SIZE_MB = 50  # 50MB max per file
+MAX_FILE_SIZE_MB = 50
 
 def validate_file(file):
     if file:
@@ -33,7 +30,6 @@ def validate_file(file):
 
 class BaseFileSerializer(serializers.ModelSerializer):
     """Used for list views — no file_url exposed."""
-
     def validate_file(self, value):
         return validate_file(value)
 
@@ -47,6 +43,7 @@ class BaseFileDetailSerializer(BaseFileSerializer):
         if obj.file and hasattr(obj.file, 'url'):
             return request.build_absolute_uri(obj.file.url)
         return None
+
 
 # ========== Lookup Model Serializers ==========
 class SubjectSerializer(serializers.ModelSerializer):
@@ -79,25 +76,18 @@ class NewsCategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 
-# ========== Resource Serializers ==========
+# ========== Note Serializers ==========
 class NoteSerializer(BaseFileSerializer):
-    subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
-    grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
-    curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
-    topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    subject      = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
+    grade        = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
+    curriculum   = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
+    topic        = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    is_purchased = serializers.BooleanField(read_only=True, default=False)
 
-    subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), source='subject',
-        write_only=True, allow_null=True, required=False)
-    grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), source='grade',
-        write_only=True, allow_null=True, required=False)
-    education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), source='education_level',
-        write_only=True, allow_null=True, required=False)
-    topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), source='topic',
-        write_only=True, allow_null=True, required=False)
+    subject_id         = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all(),        source='subject',         write_only=True, allow_null=True, required=False)
+    grade_id           = serializers.PrimaryKeyRelatedField(queryset=Grade.objects.all(),           source='grade',           write_only=True, allow_null=True, required=False)
+    education_level_id = serializers.PrimaryKeyRelatedField(queryset=EducationLevel.objects.all(), source='education_level', write_only=True, allow_null=True, required=False)
+    topic_id           = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(),           source='topic',           write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = Note
@@ -105,28 +95,22 @@ class NoteSerializer(BaseFileSerializer):
             'id', 'title',
             'subject', 'grade', 'curriculum', 'topic',
             'subject_id', 'grade_id', 'education_level_id', 'topic_id',
-            'content', 'price', 'file', 'created_at', 'updated_at'
+            'content', 'description', 'price', 'file', 'created_at', 'updated_at',
+            'is_purchased',
         ]
 
 
 class NoteDetailSerializer(BaseFileDetailSerializer):
-    subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
-    grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
-    curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
-    topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    subject      = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
+    grade        = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
+    curriculum   = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
+    topic        = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    is_purchased = serializers.BooleanField(read_only=True, default=False)
 
-    subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), source='subject',
-        write_only=True, allow_null=True, required=False)
-    grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), source='grade',
-        write_only=True, allow_null=True, required=False)
-    education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), source='education_level',
-        write_only=True, allow_null=True, required=False)
-    topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), source='topic',
-        write_only=True, allow_null=True, required=False)
+    subject_id         = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all(),        source='subject',         write_only=True, allow_null=True, required=False)
+    grade_id           = serializers.PrimaryKeyRelatedField(queryset=Grade.objects.all(),           source='grade',           write_only=True, allow_null=True, required=False)
+    education_level_id = serializers.PrimaryKeyRelatedField(queryset=EducationLevel.objects.all(), source='education_level', write_only=True, allow_null=True, required=False)
+    topic_id           = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(),           source='topic',           write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = Note
@@ -134,28 +118,23 @@ class NoteDetailSerializer(BaseFileDetailSerializer):
             'id', 'title',
             'subject', 'grade', 'curriculum', 'topic',
             'subject_id', 'grade_id', 'education_level_id', 'topic_id',
-            'content', 'price', 'file', 'file_url', 'created_at', 'updated_at'
+            'content', 'description', 'price', 'file', 'file_url', 'created_at', 'updated_at',
+            'is_purchased',
         ]
 
 
+# ========== PastPaper Serializers ==========
 class PastPaperSerializer(BaseFileSerializer):
-    subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
-    grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
-    curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
-    topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    subject      = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
+    grade        = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
+    curriculum   = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
+    topic        = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    is_purchased = serializers.BooleanField(read_only=True, default=False)
 
-    subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), source='subject',
-        write_only=True, allow_null=True, required=False)
-    grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), source='grade',
-        write_only=True, allow_null=True, required=False)
-    education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), source='education_level',
-        write_only=True, allow_null=True, required=False)
-    topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), source='topic',
-        write_only=True, allow_null=True, required=False)
+    subject_id         = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all(),        source='subject',         write_only=True, allow_null=True, required=False)
+    grade_id           = serializers.PrimaryKeyRelatedField(queryset=Grade.objects.all(),           source='grade',           write_only=True, allow_null=True, required=False)
+    education_level_id = serializers.PrimaryKeyRelatedField(queryset=EducationLevel.objects.all(), source='education_level', write_only=True, allow_null=True, required=False)
+    topic_id           = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(),           source='topic',           write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = PastPaper
@@ -163,28 +142,22 @@ class PastPaperSerializer(BaseFileSerializer):
             'id', 'title',
             'subject', 'grade', 'curriculum', 'topic',
             'subject_id', 'grade_id', 'education_level_id', 'topic_id',
-            'year', 'price', 'file', 'created_at'
+            'year', 'description', 'price', 'file', 'created_at',
+            'is_purchased',
         ]
 
 
 class PastPaperDetailSerializer(BaseFileDetailSerializer):
-    subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
-    grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
-    curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
-    topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    subject      = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
+    grade        = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
+    curriculum   = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
+    topic        = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    is_purchased = serializers.BooleanField(read_only=True, default=False)
 
-    subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), source='subject',
-        write_only=True, allow_null=True, required=False)
-    grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), source='grade',
-        write_only=True, allow_null=True, required=False)
-    education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), source='education_level',
-        write_only=True, allow_null=True, required=False)
-    topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), source='topic',
-        write_only=True, allow_null=True, required=False)
+    subject_id         = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all(),        source='subject',         write_only=True, allow_null=True, required=False)
+    grade_id           = serializers.PrimaryKeyRelatedField(queryset=Grade.objects.all(),           source='grade',           write_only=True, allow_null=True, required=False)
+    education_level_id = serializers.PrimaryKeyRelatedField(queryset=EducationLevel.objects.all(), source='education_level', write_only=True, allow_null=True, required=False)
+    topic_id           = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(),           source='topic',           write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = PastPaper
@@ -192,28 +165,23 @@ class PastPaperDetailSerializer(BaseFileDetailSerializer):
             'id', 'title',
             'subject', 'grade', 'curriculum', 'topic',
             'subject_id', 'grade_id', 'education_level_id', 'topic_id',
-            'year', 'price', 'file', 'file_url', 'created_at'
-        ]        
+            'year', 'description', 'price', 'file', 'file_url', 'created_at',
+            'is_purchased',
+        ]
 
 
+# ========== Exam Serializers ==========
 class ExamSerializer(BaseFileSerializer):
-    subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
-    grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
-    curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
-    topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    subject      = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
+    grade        = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
+    curriculum   = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
+    topic        = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    is_purchased = serializers.BooleanField(read_only=True, default=False)
 
-    subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), source='subject',
-        write_only=True, allow_null=True, required=False)
-    grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), source='grade',
-        write_only=True, allow_null=True, required=False)
-    education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), source='education_level',
-        write_only=True, allow_null=True, required=False)
-    topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), source='topic',
-        write_only=True, allow_null=True, required=False)
+    subject_id         = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all(),        source='subject',         write_only=True, allow_null=True, required=False)
+    grade_id           = serializers.PrimaryKeyRelatedField(queryset=Grade.objects.all(),           source='grade',           write_only=True, allow_null=True, required=False)
+    education_level_id = serializers.PrimaryKeyRelatedField(queryset=EducationLevel.objects.all(), source='education_level', write_only=True, allow_null=True, required=False)
+    topic_id           = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(),           source='topic',           write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = Exam
@@ -221,28 +189,22 @@ class ExamSerializer(BaseFileSerializer):
             'id', 'title',
             'subject', 'grade', 'curriculum', 'topic',
             'subject_id', 'grade_id', 'education_level_id', 'topic_id',
-            'date', 'description', 'price', 'file', 'created_at'
+            'date', 'description', 'price', 'file', 'created_at',
+            'is_purchased',
         ]
 
 
 class ExamDetailSerializer(BaseFileDetailSerializer):
-    subject    = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
-    grade      = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
-    curriculum = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
-    topic      = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    subject      = serializers.CharField(source='subject.name',         read_only=True, allow_null=True)
+    grade        = serializers.CharField(source='grade.name',           read_only=True, allow_null=True)
+    curriculum   = serializers.CharField(source='education_level.name', read_only=True, allow_null=True)
+    topic        = serializers.CharField(source='topic.name',           read_only=True, allow_null=True)
+    is_purchased = serializers.BooleanField(read_only=True, default=False)
 
-    subject_id         = serializers.PrimaryKeyRelatedField(
-        queryset=Subject.objects.all(), source='subject',
-        write_only=True, allow_null=True, required=False)
-    grade_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Grade.objects.all(), source='grade',
-        write_only=True, allow_null=True, required=False)
-    education_level_id = serializers.PrimaryKeyRelatedField(
-        queryset=EducationLevel.objects.all(), source='education_level',
-        write_only=True, allow_null=True, required=False)
-    topic_id           = serializers.PrimaryKeyRelatedField(
-        queryset=Topic.objects.all(), source='topic',
-        write_only=True, allow_null=True, required=False)
+    subject_id         = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all(),        source='subject',         write_only=True, allow_null=True, required=False)
+    grade_id           = serializers.PrimaryKeyRelatedField(queryset=Grade.objects.all(),           source='grade',           write_only=True, allow_null=True, required=False)
+    education_level_id = serializers.PrimaryKeyRelatedField(queryset=EducationLevel.objects.all(), source='education_level', write_only=True, allow_null=True, required=False)
+    topic_id           = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(),           source='topic',           write_only=True, allow_null=True, required=False)
 
     class Meta:
         model = Exam
@@ -250,10 +212,12 @@ class ExamDetailSerializer(BaseFileDetailSerializer):
             'id', 'title',
             'subject', 'grade', 'curriculum', 'topic',
             'subject_id', 'grade_id', 'education_level_id', 'topic_id',
-            'date', 'description', 'price', 'file', 'file_url', 'created_at'
+            'date', 'description', 'price', 'file', 'file_url', 'created_at',
+            'is_purchased',
         ]
 
 
+# ========== News Serializers ==========
 class NewsSerializer(BaseFileSerializer):
     category    = serializers.CharField(source='category.name', read_only=True, allow_null=True)
     category_id = serializers.PrimaryKeyRelatedField(
@@ -262,11 +226,7 @@ class NewsSerializer(BaseFileSerializer):
 
     class Meta:
         model = News
-        fields = [
-            'id', 'headline', 'body',
-            'category', 'category_id',
-            'file', 'published_at'
-        ]
+        fields = ['id', 'headline', 'body', 'category', 'category_id', 'file', 'published_at']
 
 
 class NewsDetailSerializer(BaseFileDetailSerializer):
@@ -277,11 +237,7 @@ class NewsDetailSerializer(BaseFileDetailSerializer):
 
     class Meta:
         model = News
-        fields = [
-            'id', 'headline', 'body',
-            'category', 'category_id',
-            'file', 'file_url', 'published_at'
-        ]        
+        fields = ['id', 'headline', 'body', 'category', 'category_id', 'file', 'file_url', 'published_at']
 
 
 class NewsPostSerializer(serializers.ModelSerializer):
@@ -291,8 +247,8 @@ class NewsPostSerializer(serializers.ModelSerializer):
         model = NewsPost
         fields = [
             'id', 'title', 'body',
-            'cover_image',        # write field — accepts uploaded file
-            'cover_image_url',    # read field — returns full URL
+            'cover_image',
+            'cover_image_url',
             'is_published', 'created_at',
         ]
         extra_kwargs = {
