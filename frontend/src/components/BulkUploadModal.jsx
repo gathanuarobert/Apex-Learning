@@ -1,16 +1,24 @@
 // BulkUploadModal.jsx
-// Drop-in replacement for the bulk mode section inside UploadResourceModal.jsx
-// Usage: <BulkUploadModal isOpen={...} onClose={...} onSuccess={...} />
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-  X, Upload, Loader2, Plus, Trash2, FileText,
-  CheckCircle, AlertCircle, Layers, ChevronDown,
-  Info, Clock, HardDrive, Package, AlertTriangle,
+  X,
+  Upload,
+  Loader2,
+  Plus,
+  Trash2,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Layers,
+  Info,
+  Clock,
+  HardDrive,
+  Package,
+  AlertTriangle,
 } from "lucide-react";
 import api from "../Api";
 
-// ─── Constants (configurable by sysadmin in a real app) ────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 const LIMITS = {
   maxTotalSizeGB: 2,
   maxFileSizeMB: 200,
@@ -35,81 +43,130 @@ function formatDuration(seconds) {
   return m > 0 ? `${m} min ${s} sec` : `${s} sec`;
 }
 
-// Estimate upload time: ~5 MB/s assumed
 function estimateUploadTime(totalBytes) {
   return Math.ceil(totalBytes / (5 * 1024 * 1024));
 }
 
-// ─── Sub-components ─────────────────────────────────────────────────────────
+// ─── Shared style tokens ─────────────────────────────────────────────────────
+const SELECT_CLS =
+  "w-full bg-[#0a1628] border border-white/8 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer";
+const INPUT_CLS =
+  "w-full bg-[#0a1628] border border-white/8 px-3 py-2.5 rounded-xl text-xs font-semibold text-white outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20 transition-all placeholder:text-slate-600";
+const LABEL_CLS =
+  "block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5";
 
+// ─── LimitBar ────────────────────────────────────────────────────────────────
 function LimitBar({ label, used, max, unit = "", warn = 0.8 }) {
   const pct = Math.min((used / max) * 100, 100);
   const isWarn = pct >= warn * 100;
   const isOver = used > max;
   return (
     <div className="flex items-center gap-3 min-w-0">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">{label}</span>
-      <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden min-w-[60px]">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 whitespace-nowrap w-20 shrink-0">
+        {label}
+      </span>
+      <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${isOver ? "bg-rose-500" : isWarn ? "bg-amber-400" : "bg-emerald-500"}`}
+          className={`h-full rounded-full transition-all duration-500 ${
+            isOver ? "bg-rose-500" : isWarn ? "bg-amber-400" : "bg-emerald-500"
+          }`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className={`text-[10px] font-black whitespace-nowrap ${isOver ? "text-rose-400" : isWarn ? "text-amber-400" : "text-slate-400"}`}>
-        {used}{unit} / {max}{unit}
+      <span
+        className={`text-[10px] font-bold whitespace-nowrap tabular-nums ${
+          isOver
+            ? "text-rose-400"
+            : isWarn
+              ? "text-amber-400"
+              : "text-slate-500"
+        }`}
+      >
+        {used}
+        {unit} / {max}
+        {unit}
       </span>
     </div>
   );
 }
 
+// ─── FileRow ─────────────────────────────────────────────────────────────────
 function FileRow({ f, idx, onTitleChange, onRemove }) {
   const statusIcon = {
-    pending:   null,
-    uploading: <Loader2 size={13} className="animate-spin text-blue-400" />,
-    success:   <CheckCircle size={13} className="text-emerald-400" />,
-    error:     <AlertCircle size={13} className="text-rose-400" title={f.error} />,
+    pending: null,
+    uploading: (
+      <Loader2 size={13} className="animate-spin text-blue-400 shrink-0" />
+    ),
+    success: <CheckCircle size={13} className="text-emerald-400 shrink-0" />,
+    error: (
+      <AlertCircle
+        size={13}
+        className="text-rose-400 shrink-0"
+        title={f.error}
+      />
+    ),
   }[f.status];
 
   return (
-    <div className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors group
-      ${f.status === "success" ? "bg-emerald-500/5 border-emerald-500/10" :
-        f.status === "error"   ? "bg-rose-500/5 border-rose-500/10" :
-        "bg-[#0f172a] border-white/5 hover:border-white/10"}`}>
-      <FileText size={14} className="text-slate-600 shrink-0" />
+    <div
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all group ${
+        f.status === "success"
+          ? "bg-emerald-500/5 border-emerald-500/15"
+          : f.status === "error"
+            ? "bg-rose-500/5 border-rose-500/15"
+            : "bg-[#0a1628] border-white/5 hover:border-white/12"
+      }`}
+    >
+      <FileText size={13} className="text-slate-600 shrink-0" />
       <input
         value={f.title}
         onChange={(e) => onTitleChange(idx, e.target.value)}
         disabled={f.status === "uploading" || f.status === "success"}
-        className="flex-1 bg-transparent border-none outline-none text-xs font-semibold text-white min-w-0 disabled:opacity-60"
+        className="flex-1 bg-transparent border-none outline-none text-xs font-medium text-white min-w-0 disabled:opacity-50 placeholder:text-slate-600"
+        placeholder="File title…"
       />
-      <span className="text-[10px] text-slate-600 shrink-0">{formatBytes(f.file.size)}</span>
+      <span className="text-[10px] text-slate-600 shrink-0 tabular-nums">
+        {formatBytes(f.file.size)}
+      </span>
       {statusIcon}
       {f.status !== "success" && f.status !== "uploading" && (
         <button
           onClick={() => onRemove(idx)}
           className="p-1 opacity-0 group-hover:opacity-100 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all shrink-0"
         >
-          <Trash2 size={12} />
+          <Trash2 size={11} />
         </button>
       )}
     </div>
   );
 }
 
+// ─── BatchCard ───────────────────────────────────────────────────────────────
 function BatchCard({
-  batch, batchIdx, curricula, grades, subjects, topics,
-  onUpdate, onRemove, onAddFiles, onRemoveFile, onTitleChange,
+  batch,
+  batchIdx,
+  curricula,
+  grades,
+  subjects,
+  topics,
+  onUpdate,
+  onRemove,
+  onAddFiles,
+  onRemoveFile,
+  onTitleChange,
   totalBatches,
 }) {
   const fileInputRef = useRef(null);
   const totalSize = batch.files.reduce((sum, f) => sum + f.file.size, 0);
   const isOverFileLimit = batch.files.length > LIMITS.maxFilesPerBatch;
 
-  const handleFileDrop = useCallback((e) => {
-    e.preventDefault();
-    const dropped = Array.from(e.dataTransfer.files);
-    onAddFiles(batchIdx, dropped);
-  }, [batchIdx, onAddFiles]);
+  const handleFileDrop = useCallback(
+    (e) => {
+      e.preventDefault();
+      onAddFiles(batchIdx, Array.from(e.dataTransfer.files));
+    },
+    [batchIdx, onAddFiles],
+  );
 
   const handleFileSelect = (e) => {
     onAddFiles(batchIdx, Array.from(e.target.files));
@@ -117,151 +174,165 @@ function BatchCard({
   };
 
   return (
-    <div className="bg-[#1a2744] border border-white/8 rounded-2xl overflow-hidden">
-      {/* Batch header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-white/2">
+    <div className="bg-[#162035] border border-white/8 rounded-2xl overflow-hidden">
+      {/* ── Batch header ─────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5 bg-white/[0.02]">
         <div className="flex items-center gap-3">
-          <span className="w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 text-xs font-black">
+          <span className="w-6 h-6 rounded-full bg-blue-600/20 border border-blue-500/25 flex items-center justify-center text-blue-400 text-[11px] font-black shrink-0">
             {batchIdx + 1}
           </span>
           <div>
-            <p className="text-xs font-black text-white">
+            <p className="text-xs font-bold text-white leading-tight">
               {batch.subject
-                ? (subjects.find(s => String(s.id) === String(batch.subject))?.name || "Subject")
+                ? subjects.find((s) => String(s.id) === String(batch.subject))
+                    ?.name || "Subject"
                 : "New Batch"}
             </p>
-            <p className="text-[10px] text-slate-500">
-              {batch.files.length} file{batch.files.length !== 1 ? "s" : ""} · {formatBytes(totalSize)}
+            <p className="text-[10px] text-slate-600 mt-0.5 tabular-nums">
+              {batch.files.length} file{batch.files.length !== 1 ? "s" : ""} ·{" "}
+              {formatBytes(totalSize)}
             </p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
           {isOverFileLimit && (
-            <span className="text-[10px] font-black text-amber-400 bg-amber-400/10 px-2 py-1 rounded-full border border-amber-400/20">
+            <span className="text-[10px] font-bold text-amber-400 bg-amber-400/8 px-2 py-1 rounded-full border border-amber-400/15">
               Over limit
             </span>
           )}
-          <span className="text-[10px] font-black text-slate-600 bg-white/5 px-2 py-1 rounded-full">
-            {formatBytes(totalSize)}
-          </span>
           {totalBatches > 1 && (
             <button
               onClick={() => onRemove(batchIdx)}
-              className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+              className="p-1.5 text-slate-600 hover:text-rose-400 hover:bg-rose-500/8 rounded-lg transition-all"
+              title="Remove batch"
             >
-              <Trash2 size={14} />
+              <Trash2 size={13} />
             </button>
           )}
         </div>
       </div>
 
-      <div className="p-5 space-y-5">
-        {/* Metadata row */}
+      {/* ── Batch body ───────────────────────────────────────────────── */}
+      <div className="p-5 space-y-4">
+        {/* Row 1: Type · Curriculum · Grade · Subject */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Resource type */}
-          <div className="space-y-1.5 col-span-2 md:col-span-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Type</label>
+          <div className="col-span-2 md:col-span-1">
+            <label className={LABEL_CLS}>Type</label>
             <select
               value={batch.resourceType}
-              onChange={(e) => onUpdate(batchIdx, "resourceType", e.target.value)}
-              className="w-full bg-[#0f172a] border border-white/5 px-3 py-2 rounded-xl text-xs font-bold text-white outline-none focus:border-blue-500 transition-colors"
+              onChange={(e) =>
+                onUpdate(batchIdx, "resourceType", e.target.value)
+              }
+              className={SELECT_CLS}
             >
-              {RESOURCE_TYPES.map(t => (
-                <option key={t} value={t}>{t === "PastPaper" ? "Past Paper" : t}</option>
+              {RESOURCE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t === "PastPaper" ? "Past Paper" : t}
+                </option>
               ))}
             </select>
           </div>
 
-          {/* Curriculum — fully independent per batch */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Curriculum</label>
+          <div>
+            <label className={LABEL_CLS}>Curriculum</label>
             <select
               value={batch.curriculum}
               onChange={(e) => onUpdate(batchIdx, "curriculum", e.target.value)}
-              className="w-full bg-[#0f172a] border border-white/5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 outline-none focus:border-blue-500 transition-colors"
+              className={SELECT_CLS}
             >
               <option value="">Any</option>
-              {curricula.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {curricula.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Grade */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Grade</label>
+          <div>
+            <label className={LABEL_CLS}>Grade</label>
             <select
               value={batch.grade}
               onChange={(e) => onUpdate(batchIdx, "grade", e.target.value)}
-              className="w-full bg-[#0f172a] border border-white/5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 outline-none focus:border-blue-500 transition-colors"
+              className={SELECT_CLS}
             >
               <option value="">Any</option>
-              {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              {grades.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Subject */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Subject</label>
+          <div>
+            <label className={LABEL_CLS}>Subject</label>
             <select
               value={batch.subject}
               onChange={(e) => onUpdate(batchIdx, "subject", e.target.value)}
-              className="w-full bg-[#0f172a] border border-white/5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 outline-none focus:border-blue-500 transition-colors"
+              className={SELECT_CLS}
             >
               <option value="">Any</option>
-              {topics.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
-        {/* Second metadata row */}
+        {/* Row 2: Topic · Price · Exam date / Year */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Topic */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Topic</label>
+          <div>
+            <label className={LABEL_CLS}>Topic</label>
             <select
               value={batch.topic}
               onChange={(e) => onUpdate(batchIdx, "topic", e.target.value)}
-              className="w-full bg-[#0f172a] border border-white/5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 outline-none focus:border-blue-500 transition-colors"
+              className={SELECT_CLS}
             >
               <option value="">Any</option>
-              {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {topics.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Base price */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Price (KSh)</label>
+          <div>
+            <label className={LABEL_CLS}>Price (KSh)</label>
             <input
               type="number"
               value={batch.price}
               onChange={(e) => onUpdate(batchIdx, "price", e.target.value)}
-              className="w-full bg-[#0f172a] border border-white/5 px-3 py-2 rounded-xl text-xs font-bold text-white outline-none focus:border-blue-500 transition-colors"
+              className={INPUT_CLS}
               placeholder="0"
               min="0"
             />
           </div>
 
-          {/* Exam date */}
           {batch.resourceType === "Exam" && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Exam Date</label>
+            <div>
+              <label className={LABEL_CLS}>Exam Date</label>
               <input
                 type="date"
                 value={batch.date}
                 onChange={(e) => onUpdate(batchIdx, "date", e.target.value)}
-                className="w-full bg-[#0f172a] border border-white/5 px-3 py-2 rounded-xl text-xs font-bold text-white outline-none focus:border-blue-500 transition-colors [color-scheme:dark]"
+                className={INPUT_CLS + " [color-scheme:dark]"}
               />
             </div>
           )}
 
-          {/* Past paper year */}
           {batch.resourceType === "PastPaper" && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Year</label>
+            <div>
+              <label className={LABEL_CLS}>Year</label>
               <input
                 type="number"
                 value={batch.year}
                 onChange={(e) => onUpdate(batchIdx, "year", e.target.value)}
-                className="w-full bg-[#0f172a] border border-white/5 px-3 py-2 rounded-xl text-xs font-bold text-white outline-none focus:border-blue-500 transition-colors"
+                className={INPUT_CLS}
                 placeholder="2024"
                 min="1990"
                 max={new Date().getFullYear()}
@@ -270,21 +341,29 @@ function BatchCard({
           )}
         </div>
 
-        {/* File list */}
-        <div className="space-y-2">
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleFileDrop}
-            className="space-y-1.5"
-          >
+        {/* File area */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className={LABEL_CLS + " mb-0"}>Files</label>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest transition-colors"
+            >
+              <Plus size={11} /> Add Files
+            </button>
+          </div>
+
+          <div onDragOver={(e) => e.preventDefault()} onDrop={handleFileDrop}>
             {batch.files.length > 0 ? (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 custom-scroll">
+              <div className="space-y-1 max-h-44 overflow-y-auto pr-0.5 custom-scroll">
                 {batch.files.map((f, i) => (
                   <FileRow
                     key={i}
                     f={f}
                     idx={i}
-                    onTitleChange={(idx, val) => onTitleChange(batchIdx, idx, val)}
+                    onTitleChange={(idx, val) =>
+                      onTitleChange(batchIdx, idx, val)
+                    }
                     onRemove={(idx) => onRemoveFile(batchIdx, idx)}
                   />
                 ))}
@@ -292,96 +371,177 @@ function BatchCard({
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-white/8 hover:border-blue-500/40 rounded-xl py-8 flex flex-col items-center gap-2 text-slate-600 cursor-pointer transition-colors"
+                className="border border-dashed border-white/10 hover:border-blue-500/30 bg-white/[0.01] hover:bg-blue-500/3 rounded-xl py-7 flex flex-col items-center gap-2 text-slate-600 cursor-pointer transition-all"
               >
-                <Upload size={24} className="opacity-40" />
-                <p className="text-xs font-bold">Drop files here or click to browse</p>
+                <Upload size={20} className="opacity-30" />
+                <p className="text-xs font-semibold">
+                  Drop files here or click to browse
+                </p>
               </div>
             )}
           </div>
-
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 text-[10px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300 transition-colors mt-1"
-          >
-            <Plus size={12} /> Add More Files
-          </button>
-          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+          />
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Summary panel ───────────────────────────────────────────────────────────
-
-function SummaryPanel({ batches, totalFiles, totalBytes, estimatedSec, withinLimits }) {
+// ─── SummaryPanel ────────────────────────────────────────────────────────────
+function SummaryPanel({
+  batches,
+  totalFiles,
+  totalBytes,
+  estimatedSec,
+  withinLimits,
+}) {
   const isWarn = estimatedSec > LIMITS.estimatedUploadMinutes * 60 * 0.8;
   return (
-    <div className={`rounded-2xl border p-4 space-y-3 ${withinLimits ? "bg-emerald-500/5 border-emerald-500/15" : "bg-rose-500/5 border-rose-500/15"}`}>
-      {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div
+      className={`rounded-xl border p-4 space-y-3.5 transition-colors ${
+        withinLimits
+          ? "bg-emerald-500/[0.04] border-emerald-500/12"
+          : "bg-rose-500/[0.04] border-rose-500/12"
+      }`}
+    >
+      {/* Stat tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
-          { icon: Package, label: "Total Batches", value: `${batches.length} / ${LIMITS.maxBatches}`, over: batches.length > LIMITS.maxBatches },
-          { icon: FileText, label: "Total Files", value: `${totalFiles} / ${LIMITS.maxFilesPerBatch * batches.length}`, over: false },
-          { icon: HardDrive, label: "Total Size", value: `${formatBytes(totalBytes)} / 2 GB`, over: totalBytes > LIMITS.maxTotalSizeGB * 1024 ** 3 },
-          { icon: Clock, label: "Est. Upload Time", value: formatDuration(estimatedSec), over: isWarn },
+          {
+            icon: Package,
+            label: "Total Batches",
+            value: `${batches.length} / ${LIMITS.maxBatches}`,
+            over: batches.length > LIMITS.maxBatches,
+          },
+          {
+            icon: FileText,
+            label: "Total Files",
+            value: `${totalFiles} / ${LIMITS.maxFilesPerBatch * batches.length}`,
+            over: false,
+          },
+          {
+            icon: HardDrive,
+            label: "Total Size",
+            value: `${formatBytes(totalBytes)} / 2 GB`,
+            over: totalBytes > LIMITS.maxTotalSizeGB * 1024 ** 3,
+          },
+          {
+            icon: Clock,
+            label: "Upload Time",
+            value: formatDuration(estimatedSec),
+            over: isWarn,
+          },
         ].map(({ icon: Icon, label, value, over }) => (
-          <div key={label} className={`bg-white/3 rounded-xl p-3 border ${over ? "border-rose-500/20" : "border-white/5"}`}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Icon size={11} className={over ? "text-rose-400" : "text-slate-500"} />
-              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+          <div
+            key={label}
+            className={`rounded-xl p-3 border bg-white/[0.02] ${over ? "border-rose-500/15" : "border-white/5"}`}
+          >
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Icon
+                size={11}
+                className={over ? "text-rose-400" : "text-slate-600"}
+              />
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">
+                {label}
+              </span>
             </div>
-            <p className={`text-sm font-black ${over ? "text-rose-400" : "text-white"}`}>{value}</p>
+            <p
+              className={`text-sm font-black tabular-nums ${over ? "text-rose-400" : "text-white"}`}
+            >
+              {value}
+            </p>
           </div>
         ))}
       </div>
 
-      {/* Limit bars */}
-      <div className="space-y-2 pt-1">
-        <LimitBar label="Total Size" used={Math.round(totalBytes / (1024 ** 3) * 10) / 10} max={LIMITS.maxTotalSizeGB} unit=" GB" />
-        <LimitBar label="Batches" used={batches.length} max={LIMITS.maxBatches} />
+      {/* Progress bars */}
+      <div className="space-y-2">
+        <LimitBar
+          label="Total Size"
+          used={Math.round((totalBytes / 1024 ** 3) * 10) / 10}
+          max={LIMITS.maxTotalSizeGB}
+          unit=" GB"
+        />
+        <LimitBar
+          label="Batches"
+          used={batches.length}
+          max={LIMITS.maxBatches}
+        />
       </div>
 
-      {/* Status badge */}
-      <div className={`flex items-center gap-2 pt-1 ${withinLimits ? "text-emerald-400" : "text-rose-400"}`}>
-        {withinLimits ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
+      {/* Status line */}
+      <div
+        className={`flex items-center gap-1.5 ${withinLimits ? "text-emerald-400" : "text-rose-400"}`}
+      >
+        {withinLimits ? (
+          <CheckCircle size={13} className="shrink-0" />
+        ) : (
+          <AlertTriangle size={13} className="shrink-0" />
+        )}
         <span className="text-[10px] font-black uppercase tracking-widest">
-          {withinLimits ? "Within limits — ready to upload" : "Exceeds limits — please reduce before uploading"}
+          {withinLimits
+            ? "Within limits — ready to upload"
+            : "Exceeds limits — reduce before uploading"}
         </span>
       </div>
     </div>
   );
 }
 
-// ─── Limits info tooltip ────────────────────────────────────────────────────
-
+// ─── LimitsInfo popover ───────────────────────────────────────────────────────
 function LimitsInfo() {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${
+          open ? "text-slate-300" : "text-slate-600 hover:text-slate-400"
+        }`}
       >
         <Info size={12} /> Upload Limits
       </button>
+
       {open && (
-        <div className="absolute top-6 left-0 z-50 bg-[#0f172a] border border-white/10 rounded-2xl p-4 w-64 shadow-2xl space-y-1.5">
-          {[
-            ["Max total size", `${LIMITS.maxTotalSizeGB} GB`],
-            ["Max file size", `${LIMITS.maxFileSizeMB} MB`],
-            ["Max files per batch", `${LIMITS.maxFilesPerBatch}`],
-            ["Max batches", `${LIMITS.maxBatches}`],
-            ["Est. timeout", `${LIMITS.estimatedUploadMinutes} min`],
-          ].map(([k, v]) => (
-            <div key={k} className="flex justify-between text-xs">
-              <span className="text-slate-500">{k}</span>
-              <span className="font-black text-white">{v}</span>
-            </div>
-          ))}
-          <p className="text-[10px] text-slate-600 pt-1 border-t border-white/5 mt-2">
-            Note: These limits are configurable by the system administrator.
+        <div className="absolute top-7 right-0 z-50 bg-[#0f172a] border border-white/10 rounded-2xl p-4 w-56 shadow-2xl">
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-3">
+            System Limits
+          </p>
+          <div className="space-y-2">
+            {[
+              ["Max total size", `${LIMITS.maxTotalSizeGB} GB`],
+              ["Max file size", `${LIMITS.maxFileSizeMB} MB`],
+              ["Max files / batch", `${LIMITS.maxFilesPerBatch}`],
+              ["Max batches", `${LIMITS.maxBatches}`],
+              ["Est. timeout", `${LIMITS.estimatedUploadMinutes} min`],
+            ].map(([k, v]) => (
+              <div key={k} className="flex justify-between items-center">
+                <span className="text-[11px] text-slate-500">{k}</span>
+                <span className="text-[11px] font-black text-white tabular-nums">
+                  {v}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-slate-700 pt-2.5 mt-2.5 border-t border-white/5">
+            Configurable by system administrator.
           </p>
         </div>
       )}
@@ -389,8 +549,7 @@ function LimitsInfo() {
   );
 }
 
-// ─── Main component ──────────────────────────────────────────────────────────
-
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function newBatch() {
   return {
     id: Date.now() + Math.random(),
@@ -410,9 +569,10 @@ function titleFromFilename(filename) {
   return filename
     .replace(/\.[^/.]+$/, "")
     .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, c => c.toUpperCase());
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// ─── Main export ─────────────────────────────────────────────────────────────
 export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
   const [batches, setBatches] = useState([newBatch()]);
   const [curricula, setCurricula] = useState([]);
@@ -442,12 +602,19 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
     })();
   }, [isOpen]);
 
-  // ── Derived stats ────────────────────────────────────────────────────────
+  // ── Derived stats ──────────────────────────────────────────────────────
   const totalFiles = batches.reduce((sum, b) => sum + b.files.length, 0);
-  const totalBytes = batches.reduce((sum, b) => sum + b.files.reduce((s, f) => s + f.file.size, 0), 0);
+  const totalBytes = batches.reduce(
+    (sum, b) => sum + b.files.reduce((s, f) => s + f.file.size, 0),
+    0,
+  );
   const estimatedSec = estimateUploadTime(totalBytes);
-  const anyOverFileLimit = batches.some(b => b.files.length > LIMITS.maxFilesPerBatch);
-  const anyOverSingleFile = batches.some(b => b.files.some(f => f.file.size > LIMITS.maxFileSizeMB * 1024 * 1024));
+  const anyOverFileLimit = batches.some(
+    (b) => b.files.length > LIMITS.maxFilesPerBatch,
+  );
+  const anyOverSingleFile = batches.some((b) =>
+    b.files.some((f) => f.file.size > LIMITS.maxFileSizeMB * 1024 * 1024),
+  );
   const withinLimits =
     batches.length <= LIMITS.maxBatches &&
     totalBytes <= LIMITS.maxTotalSizeGB * 1024 ** 3 &&
@@ -455,57 +622,66 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
     !anyOverSingleFile &&
     totalFiles > 0;
 
-  // ── Batch mutations ──────────────────────────────────────────────────────
+  // ── Batch mutations ────────────────────────────────────────────────────
   const addBatch = () => {
-    if (batches.length >= LIMITS.maxBatches) return;
-    setBatches(prev => [...prev, newBatch()]);
+    if (batches.length < LIMITS.maxBatches)
+      setBatches((p) => [...p, newBatch()]);
   };
-
-  const removeBatch = (idx) => {
-    setBatches(prev => prev.filter((_, i) => i !== idx));
-  };
-
-  const updateBatch = (idx, key, val) => {
-    setBatches(prev => prev.map((b, i) => i === idx ? { ...b, [key]: val } : b));
-  };
+  const removeBatch = (idx) => setBatches((p) => p.filter((_, i) => i !== idx));
+  const updateBatch = (idx, key, val) =>
+    setBatches((p) => p.map((b, i) => (i === idx ? { ...b, [key]: val } : b)));
 
   const addFiles = useCallback((batchIdx, newFiles) => {
-    setBatches(prev => prev.map((b, i) => {
-      if (i !== batchIdx) return b;
-      const mapped = newFiles.map(f => ({
-        file: f,
-        title: titleFromFilename(f.name),
-        status: "pending",
-        error: "",
-      }));
-      return { ...b, files: [...b.files, ...mapped] };
-    }));
+    setBatches((prev) =>
+      prev.map((b, i) => {
+        if (i !== batchIdx) return b;
+        return {
+          ...b,
+          files: [
+            ...b.files,
+            ...newFiles.map((f) => ({
+              file: f,
+              title: titleFromFilename(f.name),
+              status: "pending",
+              error: "",
+            })),
+          ],
+        };
+      }),
+    );
   }, []);
 
-  const removeFile = (batchIdx, fileIdx) => {
-    setBatches(prev => prev.map((b, i) => {
-      if (i !== batchIdx) return b;
-      return { ...b, files: b.files.filter((_, fi) => fi !== fileIdx) };
-    }));
-  };
+  const removeFile = (batchIdx, fileIdx) =>
+    setBatches((prev) =>
+      prev.map((b, i) =>
+        i !== batchIdx
+          ? b
+          : { ...b, files: b.files.filter((_, fi) => fi !== fileIdx) },
+      ),
+    );
 
-  const changeTitle = (batchIdx, fileIdx, val) => {
-    setBatches(prev => prev.map((b, i) => {
-      if (i !== batchIdx) return b;
-      const files = b.files.map((f, fi) => fi === fileIdx ? { ...f, title: val } : f);
-      return { ...b, files };
-    }));
-  };
+  const changeTitle = (batchIdx, fileIdx, val) =>
+    setBatches((prev) =>
+      prev.map((b, i) =>
+        i !== batchIdx
+          ? b
+          : {
+              ...b,
+              files: b.files.map((f, fi) =>
+                fi === fileIdx ? { ...f, title: val } : f,
+              ),
+            },
+      ),
+    );
 
-  // ── Upload ───────────────────────────────────────────────────────────────
+  // ── Upload ─────────────────────────────────────────────────────────────
   const handleUpload = async () => {
     if (!withinLimits) return;
     setUploading(true);
     setGlobalError("");
-
     const endpoints = {
-      Note:      "resources/notes/",
-      Exam:      "resources/exams/",
+      Note: "resources/notes/",
+      Exam: "resources/exams/",
       PastPaper: "resources/past-papers/",
     };
 
@@ -515,41 +691,76 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
         const entry = batch.files[fi];
         if (entry.status === "success") continue;
 
-        setBatches(prev => prev.map((b, i) => {
-          if (i !== bi) return b;
-          return { ...b, files: b.files.map((f, j) => j === fi ? { ...f, status: "uploading" } : f) };
-        }));
+        setBatches((prev) =>
+          prev.map((b, i) =>
+            i !== bi
+              ? b
+              : {
+                  ...b,
+                  files: b.files.map((f, j) =>
+                    j === fi ? { ...f, status: "uploading" } : f,
+                  ),
+                },
+          ),
+        );
 
         try {
           const fd = new FormData();
-          fd.append("title", entry.title);
+
+          fd.append("title", entry.title.trim() || entry.file.name);
           fd.append("file", entry.file);
-          if (batch.price)      fd.append("price", batch.price);
-          if (batch.curriculum) fd.append("education_level_id", batch.curriculum);
-          if (batch.grade)      fd.append("grade_id", batch.grade);
-          if (batch.subject)    fd.append("subject_id", batch.subject);
-          if (batch.topic)      fd.append("topic_id", batch.topic);
-          if (batch.resourceType === "Exam"      && batch.date) fd.append("date", batch.date);
-          if (batch.resourceType === "PastPaper" && batch.year) fd.append("year", batch.year);
 
+          // Always send description/content (backend requires it for Notes)
+          const titleVal = entry.title.trim() || entry.file.name;
+          fd.append("description", titleVal);
+          if (batch.resourceType === "Note") fd.append("content", titleVal);
+
+          // Price: only send if non-empty and non-zero (match working modal behaviour)
+          if (batch.price) fd.append("price", batch.price);
+
+          if (batch.curriculum)
+            fd.append("education_level_id", batch.curriculum);
+          if (batch.grade) fd.append("grade_id", batch.grade);
+          if (batch.subject) fd.append("subject_id", batch.subject);
+          if (batch.topic) fd.append("topic_id", batch.topic);
+
+          if (batch.resourceType === "Exam" && batch.date)
+            fd.append("date", batch.date);
+          if (batch.resourceType === "PastPaper" && batch.year)
+            fd.append("year", batch.year);
           await api.post(endpoints[batch.resourceType], fd);
-
-          setBatches(prev => prev.map((b, i) => {
-            if (i !== bi) return b;
-            return { ...b, files: b.files.map((f, j) => j === fi ? { ...f, status: "success" } : f) };
-          }));
+          setBatches((prev) =>
+            prev.map((b, i) =>
+              i !== bi
+                ? b
+                : {
+                    ...b,
+                    files: b.files.map((f, j) =>
+                      j === fi ? { ...f, status: "success" } : f,
+                    ),
+                  },
+            ),
+          );
         } catch (err) {
+          console.error("400 detail:", err.response?.data);
           const msg = err.response?.data
             ? Object.values(err.response.data).flat().join(", ")
             : "Failed";
-          setBatches(prev => prev.map((b, i) => {
-            if (i !== bi) return b;
-            return { ...b, files: b.files.map((f, j) => j === fi ? { ...f, status: "error", error: msg } : f) };
-          }));
+          setBatches((prev) =>
+            prev.map((b, i) =>
+              i !== bi
+                ? b
+                : {
+                    ...b,
+                    files: b.files.map((f, j) =>
+                      j === fi ? { ...f, status: "error", error: msg } : f,
+                    ),
+                  },
+            ),
+          );
         }
       }
     }
-
     setUploading(false);
     onSuccess?.();
   };
@@ -561,38 +772,57 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  const completedFiles = batches.reduce((sum, b) => sum + b.files.filter(f => f.status === "success").length, 0);
-  const failedFiles = batches.reduce((sum, b) => sum + b.files.filter(f => f.status === "error").length, 0);
+  const completedFiles = batches.reduce(
+    (sum, b) => sum + b.files.filter((f) => f.status === "success").length,
+    0,
+  );
+  const failedFiles = batches.reduce(
+    (sum, b) => sum + b.files.filter((f) => f.status === "error").length,
+    0,
+  );
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6" onClick={onClose}>
-      <div className="absolute inset-0 bg-[#0f172a]/90 backdrop-blur-md" />
+    <div
+      className="fixed inset-0 z-[100] flex items-end md:items-center justify-center md:p-6"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-[#0a1220]/92 backdrop-blur-md" />
 
+      {/* Modal sheet */}
       <div
-        className="relative bg-[#131c31] w-full max-w-4xl rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-white/8"
+        className="relative bg-[#111927] w-full max-w-4xl rounded-t-3xl md:rounded-[1.75rem] shadow-2xl flex flex-col border border-white/8 overflow-hidden"
         style={{ maxHeight: "92vh" }}
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between px-7 py-5 border-b border-white/5 bg-white/1 shrink-0">
-          <div>
-            <p className="text-blue-400 text-[9px] font-black uppercase tracking-[0.25em] mb-1">Admin · Content Management</p>
-            <h2 className="text-xl font-black text-white">Bulk Upload</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Upload multiple files for multiple subjects in one session. Add as many subjects and files as you need before starting the upload.
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <div className="flex items-start justify-between px-6 md:px-8 py-5 border-b border-white/6 shrink-0">
+          <div className="space-y-0.5">
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-400/80">
+              Admin · Content Management
+            </p>
+            <h2 className="text-xl font-black text-white tracking-tight">
+              Bulk Upload
+            </h2>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Upload multiple files across multiple subjects in one session.
             </p>
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-3 pt-0.5 shrink-0">
             <LimitsInfo />
-            <button onClick={onClose} className="p-2.5 bg-white/5 text-slate-400 rounded-full hover:bg-white/10 transition-colors ml-3">
-              <X size={18} />
+            <div className="w-px h-4 bg-white/10" />
+            <button
+              onClick={onClose}
+              className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-full transition-all"
+            >
+              <X size={16} />
             </button>
           </div>
         </div>
 
-        {/* ── Summary ────────────────────────────────────────────────────── */}
+        {/* ── Summary bar ────────────────────────────────────────────── */}
         {totalFiles > 0 && (
-          <div className="px-7 py-4 border-b border-white/5 shrink-0">
+          <div className="px-6 md:px-8 py-4 border-b border-white/6 shrink-0">
             <SummaryPanel
               batches={batches}
               totalFiles={totalFiles}
@@ -603,8 +833,8 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
           </div>
         )}
 
-        {/* ── Batch list ─────────────────────────────────────────────────── */}
-        <div className="overflow-y-auto flex-1 px-7 py-5 space-y-5">
+        {/* ── Batch list ──────────────────────────────────────────────── */}
+        <div className="overflow-y-auto flex-1 px-6 md:px-8 py-5 space-y-4 custom-scroll">
           {batches.map((batch, idx) => (
             <BatchCard
               key={batch.id}
@@ -623,71 +853,93 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
             />
           ))}
 
-          {/* Add batch button */}
-          {batches.length < LIMITS.maxBatches && (
+          {batches.length < LIMITS.maxBatches ? (
             <button
               onClick={addBatch}
-              className="w-full py-4 border-2 border-dashed border-white/8 hover:border-blue-500/30 rounded-2xl flex items-center justify-center gap-2 text-slate-500 hover:text-blue-400 text-xs font-black uppercase tracking-widest transition-all"
+              className="w-full py-3.5 border border-dashed border-white/10 hover:border-blue-500/30 hover:bg-blue-500/[0.03] rounded-xl flex items-center justify-center gap-2 text-slate-600 hover:text-blue-400 text-[11px] font-bold uppercase tracking-widest transition-all"
             >
-              <Plus size={16} /> Add Another Subject Batch
+              <Plus size={14} /> Add Another Subject Batch
             </button>
-          )}
-          {batches.length >= LIMITS.maxBatches && (
-            <p className="text-center text-[10px] font-black text-amber-400 uppercase tracking-widest">
-              Maximum batch limit reached ({LIMITS.maxBatches})
+          ) : (
+            <p className="text-center text-[10px] font-black text-amber-500/70 uppercase tracking-widest py-2">
+              Maximum of {LIMITS.maxBatches} batches reached
             </p>
           )}
         </div>
 
-        {/* ── Footer ─────────────────────────────────────────────────────── */}
-        <div className="px-7 py-5 border-t border-white/5 bg-white/1 shrink-0 flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* Progress / error */}
-          <div className="flex items-center gap-4 text-xs">
-            {completedFiles > 0 && (
-              <span className="flex items-center gap-1.5 text-emerald-400 font-black">
-                <CheckCircle size={13} /> {completedFiles} uploaded
-              </span>
-            )}
-            {failedFiles > 0 && (
-              <span className="flex items-center gap-1.5 text-rose-400 font-black">
-                <AlertCircle size={13} /> {failedFiles} failed
-              </span>
-            )}
-            {globalError && <span className="text-rose-400 font-semibold">{globalError}</span>}
-          </div>
+        {/* ── Footer ─────────────────────────────────────────────────── */}
+        <div className="px-6 md:px-8 py-4 border-t border-white/6 bg-white/[0.01] shrink-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {/* Status indicators */}
+            <div className="flex items-center gap-4 min-h-[20px]">
+              {completedFiles > 0 && (
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                  <CheckCircle size={13} /> {completedFiles} uploaded
+                </span>
+              )}
+              {failedFiles > 0 && (
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-rose-400">
+                  <AlertCircle size={13} /> {failedFiles} failed
+                </span>
+              )}
+              {globalError && (
+                <span className="text-[11px] font-semibold text-rose-400">
+                  {globalError}
+                </span>
+              )}
+              {completedFiles === 0 && failedFiles === 0 && !globalError && (
+                <span className="text-[10px] text-slate-700 uppercase tracking-widest font-bold">
+                  {totalFiles > 0
+                    ? `${totalFiles} file${totalFiles !== 1 ? "s" : ""} queued`
+                    : "No files queued"}
+                </span>
+              )}
+            </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={clearAll}
-              disabled={uploading}
-              className="px-5 py-3 text-xs font-black text-slate-400 hover:text-white border border-white/10 hover:border-white/20 rounded-2xl uppercase tracking-widest transition-all disabled:opacity-40"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={() => {/* save for later: could serialize to localStorage */}}
-              disabled={uploading || totalFiles === 0}
-              className="px-5 py-3 text-xs font-black text-slate-300 hover:text-white border border-white/10 hover:border-white/20 rounded-2xl uppercase tracking-widest transition-all disabled:opacity-40"
-            >
-              Save for Later
-            </button>
-            <button
-              onClick={handleUpload}
-              disabled={uploading || !withinLimits}
-              className="px-8 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-black text-xs tracking-widest uppercase transition-all shadow-xl shadow-blue-900/30 flex items-center gap-2"
-            >
-              {uploading
-                ? <><Loader2 className="animate-spin" size={15} /> Uploading…</>
-                : <><Upload size={15} /> Start Upload</>}
-            </button>
+            {/* Action buttons */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={clearAll}
+                disabled={uploading}
+                className="flex-1 sm:flex-none px-4 py-2.5 text-[11px] font-bold text-slate-500 hover:text-slate-300 border border-white/8 hover:border-white/15 rounded-xl uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={() => {
+                  /* save for later */
+                }}
+                disabled={uploading || totalFiles === 0}
+                className="flex-1 sm:flex-none px-4 py-2.5 text-[11px] font-bold text-slate-400 hover:text-white border border-white/8 hover:border-white/15 rounded-xl uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Save for Later
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={uploading || !withinLimits}
+                className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-black text-[11px] tracking-widest uppercase transition-all shadow-lg shadow-blue-900/25 flex items-center justify-center gap-2"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="animate-spin shrink-0" size={14} />{" "}
+                    Uploading…
+                  </>
+                ) : (
+                  <>
+                    <Upload size={14} className="shrink-0" /> Start Upload
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <style>{`
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar       { width: 3px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
       `}</style>
     </div>
   );
