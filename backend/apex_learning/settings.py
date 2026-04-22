@@ -143,6 +143,9 @@ if DEBUG:
     CORS_ALLOWED_ORIGINS = list(set(CORS_ALLOWED_ORIGINS))
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
+    'cache-control',
+    'pragma',
+    'expires',
     'accept',
     'accept-encoding',
     'authorization',
