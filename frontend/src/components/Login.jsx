@@ -306,7 +306,7 @@ const Login = () => {
               Sign up here
             </button>
           </p>
-          <p className="text-gray-500 text-sm">
+          {/* <p className="text-gray-500 text-sm">
             Just browsing?{" "}
             <button
               onClick={() => navigate("/user-dashboard")}
@@ -314,7 +314,7 @@ const Login = () => {
             >
               Continue as guest
             </button>
-          </p>
+          </p> */}
           <p className="text-gray-500 text-xs">
             Join thousands of students learning with Apex Learning Hub
           </p>

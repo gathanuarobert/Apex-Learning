@@ -475,14 +475,24 @@ function BatchCard({
 }
 
 // ─── SummaryPanel ────────────────────────────────────────────────────────────
-function SummaryPanel({ batches, totalFiles, totalBytes, estimatedSec, withinLimits }) {
+function SummaryPanel({
+  batches,
+  totalFiles,
+  totalBytes,
+  estimatedSec,
+  withinLimits,
+}) {
   const [open, setOpen] = useState(false); // collapsed by default
   const isWarn = estimatedSec > LIMITS.estimatedUploadMinutes * 60 * 0.8;
 
   return (
-    <div className={`rounded-xl border transition-colors ${
-      withinLimits ? "bg-emerald-500/[0.04] border-emerald-500/12" : "bg-rose-500/[0.04] border-rose-500/12"
-    }`}>
+    <div
+      className={`rounded-xl border transition-colors ${
+        withinLimits
+          ? "bg-emerald-500/[0.04] border-emerald-500/12"
+          : "bg-rose-500/[0.04] border-rose-500/12"
+      }`}
+    >
       {/* ── Collapsed summary row (always visible) ── */}
       <button
         type="button"
@@ -491,10 +501,14 @@ function SummaryPanel({ batches, totalFiles, totalBytes, estimatedSec, withinLim
       >
         <div className="flex items-center gap-3 flex-wrap">
           {/* Status dot */}
-          <div className={`flex items-center gap-1.5 ${withinLimits ? "text-emerald-400" : "text-rose-400"}`}>
-            {withinLimits
-              ? <CheckCircle size={13} className="shrink-0" />
-              : <AlertTriangle size={13} className="shrink-0" />}
+          <div
+            className={`flex items-center gap-1.5 ${withinLimits ? "text-emerald-400" : "text-rose-400"}`}
+          >
+            {withinLimits ? (
+              <CheckCircle size={13} className="shrink-0" />
+            ) : (
+              <AlertTriangle size={13} className="shrink-0" />
+            )}
             <span className="text-[10px] font-black uppercase tracking-widest">
               {withinLimits ? "Ready to upload" : "Exceeds limits"}
             </span>
@@ -503,23 +517,36 @@ function SummaryPanel({ batches, totalFiles, totalBytes, estimatedSec, withinLim
           {/* Inline stats */}
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-slate-500 tabular-nums">
-              <span className="text-white font-bold">{batches.length}</span>/{LIMITS.maxBatches} batches
+              <span className="text-white font-bold">{batches.length}</span>/
+              {LIMITS.maxBatches} batches
             </span>
             <span className="text-[10px] text-slate-500 tabular-nums">
               <span className="text-white font-bold">{totalFiles}</span> files
             </span>
             <span className="text-[10px] text-slate-500 tabular-nums">
-              <span className="text-white font-bold">{formatBytes(totalBytes)}</span>
+              <span className="text-white font-bold">
+                {formatBytes(totalBytes)}
+              </span>
             </span>
             <span className="text-[10px] text-slate-500 tabular-nums">
-              ~<span className="text-white font-bold">{formatDuration(estimatedSec)}</span>
+              ~
+              <span className="text-white font-bold">
+                {formatDuration(estimatedSec)}
+              </span>
             </span>
           </div>
         </div>
         {/* Chevron */}
         <svg
-          xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
-          fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          xmlns="http://www.w3.org/2000/svg"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className={`text-slate-500 transition-transform duration-200 shrink-0 ml-2 ${open ? "rotate-180" : "rotate-0"}`}
         >
           <polyline points="6 9 12 15 18 9" />
@@ -527,34 +554,77 @@ function SummaryPanel({ batches, totalFiles, totalBytes, estimatedSec, withinLim
       </button>
 
       {/* ── Expanded detail ── */}
-      <div style={{
-        maxHeight: open ? "400px" : "0px",
-        opacity: open ? 1 : 0,
-        overflow: "hidden",
-        transition: "max-height 0.25s ease, opacity 0.2s ease",
-      }}>
+      <div
+        style={{
+          maxHeight: open ? "400px" : "0px",
+          opacity: open ? 1 : 0,
+          overflow: "hidden",
+          transition: "max-height 0.25s ease, opacity 0.2s ease",
+        }}
+      >
         <div className="px-4 pb-4 space-y-3.5 border-t border-white/5 pt-3">
           {/* Stat tiles */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
-              { icon: Package, label: "Total Batches", value: `${batches.length} / ${LIMITS.maxBatches}`, over: batches.length > LIMITS.maxBatches },
-              { icon: FileText, label: "Total Files", value: `${totalFiles} / ${LIMITS.maxFilesPerBatch * batches.length}`, over: false },
-              { icon: HardDrive, label: "Total Size", value: `${formatBytes(totalBytes)} / 2 GB`, over: totalBytes > LIMITS.maxTotalSizeGB * 1024 ** 3 },
-              { icon: Clock, label: "Upload Time", value: formatDuration(estimatedSec), over: isWarn },
+              {
+                icon: Package,
+                label: "Total Batches",
+                value: `${batches.length} / ${LIMITS.maxBatches}`,
+                over: batches.length > LIMITS.maxBatches,
+              },
+              {
+                icon: FileText,
+                label: "Total Files",
+                value: `${totalFiles} / ${LIMITS.maxFilesPerBatch * batches.length}`,
+                over: false,
+              },
+              {
+                icon: HardDrive,
+                label: "Total Size",
+                value: `${formatBytes(totalBytes)} / 2 GB`,
+                over: totalBytes > LIMITS.maxTotalSizeGB * 1024 ** 3,
+              },
+              {
+                icon: Clock,
+                label: "Upload Time",
+                value: formatDuration(estimatedSec),
+                over: isWarn,
+              },
             ].map(({ icon: Icon, label, value, over }) => (
-              <div key={label} className={`rounded-xl p-3 border bg-white/[0.02] ${over ? "border-rose-500/15" : "border-white/5"}`}>
+              <div
+                key={label}
+                className={`rounded-xl p-3 border bg-white/[0.02] ${over ? "border-rose-500/15" : "border-white/5"}`}
+              >
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <Icon size={11} className={over ? "text-rose-400" : "text-slate-600"} />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">{label}</span>
+                  <Icon
+                    size={11}
+                    className={over ? "text-rose-400" : "text-slate-600"}
+                  />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">
+                    {label}
+                  </span>
                 </div>
-                <p className={`text-sm font-black tabular-nums ${over ? "text-rose-400" : "text-white"}`}>{value}</p>
+                <p
+                  className={`text-sm font-black tabular-nums ${over ? "text-rose-400" : "text-white"}`}
+                >
+                  {value}
+                </p>
               </div>
             ))}
           </div>
           {/* Progress bars */}
           <div className="space-y-2">
-            <LimitBar label="Total Size" used={Math.round((totalBytes / 1024 ** 3) * 10) / 10} max={LIMITS.maxTotalSizeGB} unit=" GB" />
-            <LimitBar label="Batches" used={batches.length} max={LIMITS.maxBatches} />
+            <LimitBar
+              label="Total Size"
+              used={Math.round((totalBytes / 1024 ** 3) * 10) / 10}
+              max={LIMITS.maxTotalSizeGB}
+              unit=" GB"
+            />
+            <LimitBar
+              label="Batches"
+              used={batches.length}
+              max={LIMITS.maxBatches}
+            />
           </div>
         </div>
       </div>
