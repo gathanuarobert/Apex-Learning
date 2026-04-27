@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import * as api from "../Api";
+import { useAuth } from "../hooks/useAuth";
 
 const CBC_GRADES = [
   "Pre-Primary 1",
@@ -52,6 +53,7 @@ const Register = () => {
     label: "",
   });
   const [recaptchaToken, setRecaptchaToken] = useState("");
+  const { refetchAuth } = useAuth();
 
   const particlesInit = async (engine) => await loadSlim(engine);
 
@@ -142,6 +144,7 @@ const Register = () => {
       const user = response.data.user;
 
       setRegisterSuccess(true);
+      await refetchAuth();
       setTimeout(() => {
         if (user?.is_superuser || user?.role === "admin") {
           navigate("/dashboard");

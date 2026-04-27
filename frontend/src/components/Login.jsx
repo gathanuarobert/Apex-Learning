@@ -8,6 +8,7 @@ import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { loginUser } from "../Api";
 import api from "../Api";
+import { useAuth } from "../hooks/useAuth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
+  const { refetchAuth } = useAuth();
 
   const validateEmail = (email) => {
     const allowedDomains = [
@@ -62,7 +64,7 @@ const Login = () => {
       // ✅ Tokens are now in HttpOnly cookies set by the backend.
       // We only use the user object from the response body for navigation.
       const user = response.data.user;
-
+      await refetchAuth(); 
       if (user.is_superuser || user.role === "admin") {
         navigate("/dashboard");
       } else {
