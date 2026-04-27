@@ -1,14 +1,18 @@
 // src/pages/UserDashboard.jsx
+// CHANGES: Added GlobalSearchBar at the top of the dashboard (both guest + authenticated views)
+// It searches across ALL resources without requiring navigation into any category first.
+
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText, BookOpen, FileArchive, Video, User,
-  Download, Search, Lock, ShieldCheck, Eye, EyeOff,
+  Download, Lock, ShieldCheck, Eye, EyeOff,
 } from "lucide-react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import api, { getCurrentUser, getLibrary } from "../Api";
 import { useAuth } from "../hooks/useAuth";
+import GlobalSearchBar from "../components/GlobalSearchBar"; // ← NEW
 
 const getExtensionFromContentType = (contentType, filename) => {
   if (!contentType) {
@@ -29,8 +33,6 @@ const getExtensionFromContentType = (contentType, filename) => {
 export default function UserDashboard({ openAuthModal }) {
   const navigate  = useNavigate();
   const location  = useLocation();
-
-  // ✅ FIX 1: destructure isLoading from useAuth so it's defined
   const { isGuest, user: authUser, isLoading } = useAuth();
 
   const [currentUser, setCurrentUser] = useState(null);
@@ -41,7 +43,6 @@ export default function UserDashboard({ openAuthModal }) {
   const currentTab = new URLSearchParams(location.search).get("tab");
   const activeTab  = currentTab || "dashboard";
 
-  // ─── Profile editing ──────────────────────────────────────────────────────
   const [editingProfile, setEditingProfile]   = useState(false);
   const [editName, setEditName]               = useState("");
   const [editEmail, setEditEmail]             = useState("");
@@ -49,7 +50,6 @@ export default function UserDashboard({ openAuthModal }) {
   const [profileError, setProfileError]       = useState("");
   const [profileSuccess, setProfileSuccess]   = useState("");
 
-  // ─── Password change ──────────────────────────────────────────────────────
   const [currentPassword, setCurrentPassword]   = useState("");
   const [newPassword, setNewPassword]           = useState("");
   const [confirmPassword, setConfirmPassword]   = useState("");
@@ -61,9 +61,9 @@ export default function UserDashboard({ openAuthModal }) {
   const [passwordSuccess, setPasswordSuccess]   = useState("");
 
   const cards = [
-    { title: "Notes",       icon: <FileText />,    color: "from-blue-600/80 to-blue-800/90",    route: "/notes" },
-    { title: "Exams",       icon: <BookOpen />,    color: "from-purple-600/80 to-purple-800/90", route: "/exams" },
-    { title: "Past Papers", icon: <FileArchive />, color: "from-pink-600/80 to-pink-800/90",    route: "/past-papers" },
+    { title: "Notes",       icon: <FileText />,    color: "from-blue-600/80 to-blue-800/90",       route: "/notes" },
+    { title: "Exams",       icon: <BookOpen />,    color: "from-purple-600/80 to-purple-800/90",   route: "/exams" },
+    { title: "Past Papers", icon: <FileArchive />, color: "from-pink-600/80 to-pink-800/90",       route: "/past-papers" },
     { title: "News",        icon: <Video />,       color: "from-emerald-600/80 to-emerald-800/90", route: "/news" },
   ];
 
@@ -89,7 +89,6 @@ export default function UserDashboard({ openAuthModal }) {
     card.style.background = "";
   };
 
-  // ─── Library fetch — only for authenticated users ─────────────────────────
   const fetchLibrary = async () => {
     if (isGuest) { setDownloads([]); return; }
     try {
@@ -119,12 +118,8 @@ export default function UserDashboard({ openAuthModal }) {
     }
   };
 
-  // ─── User info fetch — only for authenticated users ───────────────────────
   const fetchUserInfo = async () => {
-    if (isGuest) {
-      setCurrentUser(null);
-      return;
-    }
+    if (isGuest) { setCurrentUser(null); return; }
     try {
       const res = await getCurrentUser();
       setCurrentUser(res.data);
@@ -135,8 +130,7 @@ export default function UserDashboard({ openAuthModal }) {
 
   const handleSaveProfile = async () => {
     setSavingProfile(true);
-    setProfileError("");
-    setProfileSuccess("");
+    setProfileError(""); setProfileSuccess("");
     try {
       const res = await api.patch("users/me/update/", { name: editName, email: editEmail });
       setCurrentUser(res.data);
@@ -151,8 +145,7 @@ export default function UserDashboard({ openAuthModal }) {
   };
 
   const handleChangePassword = async () => {
-    setPasswordError("");
-    setPasswordSuccess("");
+    setPasswordError(""); setPasswordSuccess("");
     if (!currentPassword || !newPassword || !confirmPassword) { setPasswordError("All fields are required."); return; }
     if (newPassword !== confirmPassword) { setPasswordError("New passwords do not match."); return; }
     if (newPassword.length < 8) { setPasswordError("Password must be at least 8 characters."); return; }
@@ -170,9 +163,8 @@ export default function UserDashboard({ openAuthModal }) {
     }
   };
 
-  // ✅ FIX 2: Guard against isLoading being undefined; use local `loading` state in JSX
   useEffect(() => {
-    if (isLoading) return; // wait for auth to resolve before fetching
+    if (isLoading) return;
     const fetchAllData = async () => {
       setLoading(true);
       await Promise.all([fetchLibrary(), fetchUserInfo()]);
@@ -188,14 +180,10 @@ export default function UserDashboard({ openAuthModal }) {
     }
   }, [location.state]);
 
-  // ─── Download — intercept guests ─────────────────────────────────────────
   const handleDownload = async (item) => {
-    if (isGuest) {
-      openAuthModal?.();
-      return;
-    }
+    if (isGuest) { openAuthModal?.(); return; }
     try {
-      const typeMap = { Note: "notes", Exam: "exams", PastPaper: "past-papers" };
+      const typeMap  = { Note: "notes", Exam: "exams", PastPaper: "past-papers" };
       const endpoint = typeMap[item.resource_type] || "notes";
 
       const toast = document.createElement("div");
@@ -203,20 +191,15 @@ export default function UserDashboard({ openAuthModal }) {
       toast.innerHTML = "...Downloading...";
       document.body.appendChild(toast);
 
-      const response = await api.get(`resources/${endpoint}/${item.resource_id}/download/`, {
-        responseType: "blob",
-        timeout: 120000,
-      });
-
+      const response = await api.get(`resources/${endpoint}/${item.resource_id}/download/`, { responseType: "blob", timeout: 120000 });
       const contentType = response.headers["content-type"];
       const extension   = getExtensionFromContentType(contentType, item.item);
-      const url         = window.URL.createObjectURL(new Blob([response.data]));
-      const link        = document.createElement("a");
-      link.href = url;
+      const url  = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href  = url;
       link.setAttribute("download", `${item.item}${extension}`);
       document.body.appendChild(link);
-      link.click();
-      link.remove();
+      link.click(); link.remove();
       window.URL.revokeObjectURL(url);
       toast.remove();
 
@@ -262,15 +245,28 @@ export default function UserDashboard({ openAuthModal }) {
     </div>
   );
 
-  // ─── Guest dashboard view ─────────────────────────────────────────────────
+  // ─── Guest dashboard ──────────────────────────────────────────────────────
   const GuestDashboard = () => (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="mb-10">
+      <div className="mb-8">
         <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
           Welcome, Guest! 👋
         </h2>
         <p className="text-slate-400 mt-2 text-base md:text-lg">
           Browse our resources below. Sign in to download or purchase.
+        </p>
+      </div>
+
+      {/* ── GLOBAL SEARCH (Guest) ── */}
+      <div className="mb-8">
+        <GlobalSearchBar
+          placeholder="Search notes, exams, past papers…"
+          accentColor="focus:border-blue-500/50"
+          iconColor="group-focus-within:text-blue-400"
+          className="w-full md:max-w-xl"
+        />
+        <p className="text-slate-600 text-xs mt-2 ml-1">
+          Search across all resources without opening any category
         </p>
       </div>
 
@@ -284,13 +280,9 @@ export default function UserDashboard({ openAuthModal }) {
             onMouseMove={(e)  => handleMouseMove(e, cardRefs.current[idx])}
             onMouseLeave={() => handleMouseLeave(cardRefs.current[idx])}
           >
-            <div className="absolute top-6 right-6 opacity-20 group-hover:opacity-40 group-hover:scale-110 transition-all duration-500 [&>svg]:w-12 [&>svg]:h-12">
-              {card.icon}
-            </div>
+            <div className="absolute top-6 right-6 opacity-20 group-hover:opacity-40 group-hover:scale-110 transition-all duration-500 [&>svg]:w-12 [&>svg]:h-12">{card.icon}</div>
             <div className="relative z-10">
-              <div className="p-3 bg-white/20 rounded-2xl mb-4 backdrop-blur-md inline-block [&>svg]:w-6 [&>svg]:h-6">
-                {card.icon}
-              </div>
+              <div className="p-3 bg-white/20 rounded-2xl mb-4 backdrop-blur-md inline-block [&>svg]:w-6 [&>svg]:h-6">{card.icon}</div>
               <h3 className="text-xl font-bold text-white tracking-wide">{card.title}</h3>
               <p className="text-white/70 text-sm mt-1">Browse resources →</p>
             </div>
@@ -298,27 +290,14 @@ export default function UserDashboard({ openAuthModal }) {
         ))}
       </div>
 
-      {/* Sign-in prompt */}
       <div className="mt-10 bg-slate-800/40 border border-slate-700/50 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
         <div>
           <h3 className="text-lg font-bold text-white">Ready to download?</h3>
-          <p className="text-slate-400 text-sm mt-1">
-            Create a free account to access downloads, track your library, and more.
-          </p>
+          <p className="text-slate-400 text-sm mt-1">Create a free account to access downloads, track your library, and more.</p>
         </div>
         <div className="flex gap-3 shrink-0">
-          <button
-            onClick={() => navigate("/login")}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all"
-          >
-            Sign in
-          </button>
-          <button
-            onClick={() => navigate("/register")}
-            className="px-6 py-3 border border-slate-600 hover:border-blue-500/50 text-slate-300 hover:text-white rounded-xl font-bold text-sm transition-all"
-          >
-            Create account
-          </button>
+          <button onClick={() => navigate("/login")}    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all">Sign in</button>
+          <button onClick={() => navigate("/register")} className="px-6 py-3 border border-slate-600 hover:border-blue-500/50 text-slate-300 hover:text-white rounded-xl font-bold text-sm transition-all">Create account</button>
         </div>
       </div>
     </div>
@@ -344,7 +323,6 @@ export default function UserDashboard({ openAuthModal }) {
         className="absolute inset-0 -z-10 pointer-events-none"
       />
 
-      {/* ✅ FIX 3: Use local `loading` state (not isLoading) for the spinner */}
       {loading ? (
         <div className="flex items-center justify-center min-h-screen">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -352,13 +330,12 @@ export default function UserDashboard({ openAuthModal }) {
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
 
-          {/* ── Guest sees a simplified dashboard, no tabs ── */}
           {isGuest && <GuestDashboard />}
 
-          {/* ── Authenticated: dashboard tab ── */}
+          {/* ── Authenticated: dashboard ── */}
           {!isGuest && activeTab === "dashboard" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                   <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
                     Welcome back{currentUser ? `, ${currentUser.email?.split("@")[0]}` : ""}! 👋
@@ -367,6 +344,14 @@ export default function UserDashboard({ openAuthModal }) {
                     Access your study resources and track your progress.
                   </p>
                 </div>
+
+                {/* ── GLOBAL SEARCH (Authenticated) ── */}
+                <GlobalSearchBar
+                  placeholder="Search all resources…"
+                  accentColor="focus:border-blue-500/50"
+                  iconColor="group-focus-within:text-blue-400"
+                  className="w-full md:w-80"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -391,7 +376,7 @@ export default function UserDashboard({ openAuthModal }) {
             </div>
           )}
 
-          {/* ── Authenticated: credentials tab ── */}
+          {/* ── Authenticated: credentials ── */}
           {!isGuest && activeTab === "credentials" && (
             <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in zoom-in-95 duration-500">
               {/* Profile card */}
@@ -400,24 +385,21 @@ export default function UserDashboard({ openAuthModal }) {
                   <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-400"><User size={24} /></div>
                   <h2 className="text-2xl font-bold">Profile Details</h2>
                 </div>
-
                 {currentUser ? (
                   <div className="space-y-5">
                     <div>
                       <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider ml-1 mb-1.5 block">Full Name</label>
-                      {editingProfile ? (
-                        <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full bg-slate-900/50 border border-slate-600 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm transition-all outline-none" />
-                      ) : (
-                        <div className="bg-slate-900/30 border border-transparent px-4 py-3 rounded-xl text-white font-medium">{currentUser.name || "Not specified"}</div>
-                      )}
+                      {editingProfile
+                        ? <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full bg-slate-900/50 border border-slate-600 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm transition-all outline-none" />
+                        : <div className="bg-slate-900/30 border border-transparent px-4 py-3 rounded-xl text-white font-medium">{currentUser.name || "Not specified"}</div>
+                      }
                     </div>
                     <div>
                       <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider ml-1 mb-1.5 block">Email Address</label>
-                      {editingProfile ? (
-                        <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full bg-slate-900/50 border border-slate-600 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm transition-all outline-none" />
-                      ) : (
-                        <div className="bg-slate-900/30 px-4 py-3 rounded-xl text-white font-medium break-all">{currentUser.email}</div>
-                      )}
+                      {editingProfile
+                        ? <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full bg-slate-900/50 border border-slate-600 focus:border-blue-500 text-white rounded-xl px-4 py-3 text-sm transition-all outline-none" />
+                        : <div className="bg-slate-900/30 px-4 py-3 rounded-xl text-white font-medium break-all">{currentUser.email}</div>
+                      }
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -457,8 +439,8 @@ export default function UserDashboard({ openAuthModal }) {
                   <h2 className="text-2xl font-bold">Security</h2>
                 </div>
                 <div className="space-y-4 flex-1">
-                  <PasswordField placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} show={showCurrentPw} onToggle={() => setShowCurrentPw(v => !v)} focusColor="focus:border-amber-500/50" />
-                  <PasswordField placeholder="New Password"     value={newPassword}     onChange={(e) => setNewPassword(e.target.value)}     show={showNewPw}     onToggle={() => setShowNewPw(v => !v)} />
+                  <PasswordField placeholder="Current Password"     value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} show={showCurrentPw} onToggle={() => setShowCurrentPw(v => !v)} focusColor="focus:border-amber-500/50" />
+                  <PasswordField placeholder="New Password"         value={newPassword}     onChange={(e) => setNewPassword(e.target.value)}     show={showNewPw}     onToggle={() => setShowNewPw(v => !v)} />
                   <PasswordField placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} show={showConfirmPw} onToggle={() => setShowConfirmPw(v => !v)} />
                   {passwordError   && <p className="text-rose-400 text-xs mt-2 ml-1">⚠ {passwordError}</p>}
                   {passwordSuccess && <p className="text-emerald-400 text-xs mt-2 ml-1">✓ {passwordSuccess}</p>}
@@ -470,7 +452,7 @@ export default function UserDashboard({ openAuthModal }) {
             </div>
           )}
 
-          {/* ── Authenticated: library tab ── */}
+          {/* ── Authenticated: library ── */}
           {!isGuest && activeTab === "downloads" && (
             <div className="max-w-4xl mx-auto bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-10 rounded-3xl shadow-2xl animate-in fade-in slide-in-from-bottom-6 duration-500">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
@@ -482,7 +464,7 @@ export default function UserDashboard({ openAuthModal }) {
                   </div>
                 </div>
                 <div className="relative group w-full md:w-72">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={18} />
+                  <Download className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={18} />
                   <input type="text" placeholder="Filter resources..." value={dlSearch} onChange={(e) => setDlSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700 focus:border-cyan-500/50 text-white placeholder-slate-500 text-sm outline-none transition-all shadow-inner" />
                 </div>
               </div>

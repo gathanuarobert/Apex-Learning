@@ -1,4 +1,10 @@
 // src/pages/NotesPage.jsx
+// CHANGES: The header search bar is now GlobalSearchBar.
+// At step 0 (no curriculum selected) it shows global results across ALL resource types.
+// Once you drill in (step 1+) it still filters within the current drill-down normally.
+// So you can open /notes and immediately search "CBC Finance Grade 10 notes" without
+// clicking through any menus.
+
 import React from "react";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
@@ -9,6 +15,7 @@ import { getNotes } from "../Api";
 import { useResourcePage } from "../hooks/useResourcePage";
 import ResourceCard  from "../components/ResourceCard";
 import ResourceModal from "../components/ResourceModal";
+import GlobalSearchBar from "../components/GlobalSearchBar"; // ← NEW
 
 const GRADS = [
   "from-cyan-600/80 to-blue-700/90",
@@ -31,6 +38,10 @@ export default function NotesPage() {
     "Select Curriculum", "Select Grade", "Select Subject",
     `Study Notes · ${options[0]?.subject ?? ""}`,
   ][step];
+
+  // Show GlobalSearchBar only when at the top level (step 0) — no curriculum chosen yet.
+  // Once the user drills in, we switch to the normal in-page search.
+  const showGlobalSearch = step === 0;
 
   return (
     <div className="relative min-h-screen text-slate-100 bg-[#0f172a]">
@@ -60,43 +71,50 @@ export default function NotesPage() {
               <BookOpen size={14} /> Knowledge Base
             </div>
             <h1 className="text-4xl font-extrabold text-white tracking-tight">{stepLabel}</h1>
+            {showGlobalSearch && (
+              <p className="text-slate-500 text-sm mt-1">
+                Search notes, exams & past papers — or browse by curriculum below
+              </p>
+            )}
           </div>
 
-          <div className="relative group w-full md:w-80">
-            <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors"
-              size={18}
+          {/* Global search at step 0, local search when drilled in */}
+          {showGlobalSearch ? (
+            <GlobalSearchBar
+              placeholder="Search all resources…"
+              accentColor="focus:border-cyan-500/50"
+              iconColor="group-focus-within:text-cyan-400"
+              className="w-full md:w-80"
             />
-            <input
-              type="text"
-              placeholder="Search notes…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-10 py-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/50 focus:border-cyan-500/50 text-white placeholder-slate-500 outline-none transition-all backdrop-blur-md"
-            />
-          </div>
+          ) : (
+            <div className="relative group w-full md:w-80">
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors"
+                size={18}
+              />
+              <input
+                type="text"
+                placeholder="Search notes…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-10 py-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/50 focus:border-cyan-500/50 text-white placeholder-slate-500 outline-none transition-all backdrop-blur-md"
+              />
+            </div>
+          )}
         </div>
 
         {/* ── Breadcrumbs ── */}
         {breadcrumbs.length > 0 && (
           <div className="flex items-center gap-2 mb-8 flex-wrap animate-in fade-in duration-500">
-            <button
-              onClick={clearAll}
-              className="p-2.5 bg-slate-800/50 rounded-xl text-slate-400 hover:text-white transition-all"
-            >
+            <button onClick={clearAll} className="p-2.5 bg-slate-800/50 rounded-xl text-slate-400 hover:text-white transition-all">
               <ArrowLeft size={16} />
             </button>
             {breadcrumbs.map((b, i) => (
               <React.Fragment key={b.label}>
-                <button
-                  onClick={b.clear}
-                  className="text-sm px-4 py-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all font-semibold"
-                >
+                <button onClick={b.clear} className="text-sm px-4 py-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all font-semibold">
                   {b.label}
                 </button>
-                {i < breadcrumbs.length - 1 && (
-                  <ChevronRight size={14} className="text-slate-600" />
-                )}
+                {i < breadcrumbs.length - 1 && <ChevronRight size={14} className="text-slate-600" />}
               </React.Fragment>
             ))}
           </div>
@@ -117,18 +135,12 @@ export default function NotesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {options.map((opt, i) => {
               const isItem = step === 3;
-
               if (!isItem) {
                 return (
                   <div
                     key={opt}
                     onClick={() => pick(opt)}
-                    className={`
-                      relative group bg-gradient-to-br ${GRADS[i % GRADS.length]}
-                      p-8 rounded-[2rem] shadow-xl border border-white/10
-                      flex flex-col min-h-[160px] cursor-pointer
-                      transition-all duration-300 active:scale-95 overflow-hidden
-                    `}
+                    className={`relative group bg-gradient-to-br ${GRADS[i % GRADS.length]} p-8 rounded-[2rem] shadow-xl border border-white/10 flex flex-col min-h-[160px] cursor-pointer transition-all duration-300 active:scale-95 overflow-hidden`}
                   >
                     <div className="absolute top-4 right-4 text-white/15 group-hover:text-white/30 transition-all duration-500 pointer-events-none">
                       <FileText size={48} />
@@ -139,7 +151,6 @@ export default function NotesPage() {
                   </div>
                 );
               }
-
               return (
                 <ResourceCard
                   key={opt.id}
