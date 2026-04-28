@@ -6,11 +6,14 @@ import App from "./App";
 import Loader from "./components/Loader";
 import { AuthProvider } from "./hooks/useAuth";  
 import "./index.css";
+import { HelmetProvider } from "react-helmet-async";
+
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
+    <HelmetProvider>
     <GoogleOAuthProvider clientId={clientId}>
       <BrowserRouter>
         <AuthProvider>          
@@ -20,5 +23,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         </AuthProvider>         
       </BrowserRouter>
     </GoogleOAuthProvider>
+    </HelmetProvider>
   </React.StrictMode>
 );
