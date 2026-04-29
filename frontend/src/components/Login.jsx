@@ -64,6 +64,7 @@ const Login = () => {
       // ✅ Tokens are now in HttpOnly cookies set by the backend.
       // We only use the user object from the response body for navigation.
       const user = response.data.user;
+      await new Promise(resolve => setTimeout(resolve, 100));
       await refetchAuth(); 
       if (user.is_superuser || user.role === "admin") {
         navigate("/dashboard");

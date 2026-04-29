@@ -144,7 +144,9 @@ const Register = () => {
       const user = response.data.user;
 
       setRegisterSuccess(true);
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await refetchAuth();
+      
       setTimeout(() => {
         if (user?.is_superuser || user?.role === "admin") {
           navigate("/dashboard");

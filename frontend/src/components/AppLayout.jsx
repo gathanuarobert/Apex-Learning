@@ -475,6 +475,7 @@ export default function AppLayout({ children }) {
         show={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onLoginSuccess={async () => {
+          await new Promise(resolve => setTimeout(resolve, 100));
           await refetchAuth();
           setShowAuthModal(false);
         }}
