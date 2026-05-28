@@ -15,6 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load .env
 load_dotenv(BASE_DIR / ".env")
 DATABASE_URL = os.getenv("DATABASE_URL")
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
 # -------------------------------------------------------------------
 # SECURITY
@@ -96,6 +97,27 @@ DATABASES = {
         conn_max_age=600
     )
 }
+
+#-------------------------------------------------------------------
+# RESET PASSWORD URL
+#-------------------------------------------------------------------
+if DEBUG:
+    # Prints emails to the console during local development
+    EMAIL_BACKEND  = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'no-reply@apexlearning.local'
+else:
+    # Production — add these to your .env on the VPS
+    EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST          = os.getenv('EMAIL_HOST', 'mail.apexlearning.co.ke')
+    EMAIL_PORT          = int(os.getenv('EMAIL_PORT', 465))
+    EMAIL_USE_SSL       = os.getenv('EMAIL_USE_SSL', 'True') == 'True'
+    EMAIL_USE_TLS       = os.getenv('EMAIL_USE_TLS', 'False') == 'True'
+    EMAIL_HOST_USER     = os.getenv('EMAIL_HOST_USER')     # your cPanel email address
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') # cPanel email password
+    DEFAULT_FROM_EMAIL  = os.getenv('EMAIL_HOST_USER', 'no-reply@apexlearning.co.ke')
+
+# Token valid for 1 hour
+PASSWORD_RESET_TIMEOUT = 3600
 
 # -------------------------------------------------------------------
 # JWT & REST FRAMEWORK
