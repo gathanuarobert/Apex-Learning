@@ -11,6 +11,10 @@ from .permissions import IsAuthenticatedOrReadOnly, IsAuthenticatedForDownload
 from django.conf import settings
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
 import requests
 import logging
 import os
@@ -400,3 +404,84 @@ class DownloadResourceView(APIView):
             {"detail": f"Download link for resource {resource_id}"},
             status=status.HTTP_200_OK,
         )    
+    
+
+class ForgotPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        email = request.data.get("email", "").strip().lower()
+
+        try:
+            user = User.objects.get(email=email)
+            token = default_token_generator.make_token(user)
+            uid   = urlsafe_base64_encode(force_bytes(user.pk))
+
+            reset_url = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+
+            send_mail(
+                subject="Reset your Apex Learning Hub password",
+                message=(
+                    f"Hi {user.name or user.email},\n\n"
+                    f"Click the link below to reset your password.\n"
+                    f"This link expires in 1 hour.\n\n"
+                    f"{reset_url}\n\n"
+                    f"If you didn't request this, you can safely ignore this email."
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except User.DoesNotExist:
+            pass  # Never reveal whether the email exists
+
+        return Response(
+            {"detail": "If that email is registered, you'll receive a reset link shortly."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ResetPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        uid          = request.data.get("uid")
+        token        = request.data.get("token")
+        new_password = request.data.get("password")
+
+        if not all([uid, token, new_password]):
+            return Response(
+                {"detail": "uid, token, and password are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {"detail": "Password must be at least 8 characters."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user_pk = force_str(urlsafe_base64_decode(uid))
+            user    = User.objects.get(pk=user_pk)
+        except (User.DoesNotExist, ValueError, OverflowError):
+            return Response(
+                {"detail": "Invalid reset link."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not default_token_generator.check_token(user, token):
+            return Response(
+                {"detail": "This reset link is invalid or has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response(
+            {"detail": "Password reset successfully. You can now log in."},
+            status=status.HTTP_200_OK,
+        )
