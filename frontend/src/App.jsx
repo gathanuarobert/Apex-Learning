@@ -16,7 +16,8 @@ import NotesPage from './pages/NotesPage'
 import UserDashboard from './pages/UserDashboard'
 import ExamsPage from './pages/ExamsPage'
 import PastPapersPage from './pages/PastPapersPage'
-import ForgotPassword from './pages/ForgotPaasword'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import RevisionPage from './pages/RevisionPage'
 import NewsPage from './pages/NewsPage'
 import PaymentComplete from './pages/PaymentComplete'
@@ -34,6 +35,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/payment/complete" element={<PaymentComplete />} />
 
         {/* ── Admin pages — NO sidebar ── */}
