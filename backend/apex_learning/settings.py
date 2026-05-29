@@ -13,7 +13,7 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 DATABASE_URL = os.getenv("DATABASE_URL")
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
