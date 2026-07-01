@@ -33,6 +33,9 @@ class Payment(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     transaction_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     pesapal_tracking_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    mpesa_checkout_request_id = models.CharField(
+        max_length=100, blank=True, null=True, db_index=True
+    )
     provider_response = models.JSONField(blank=True, null=True)
     error_message = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
