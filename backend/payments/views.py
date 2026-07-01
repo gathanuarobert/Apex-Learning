@@ -10,7 +10,9 @@ from .services import handle_pesapal_ipn
 from .serializers import PaymentSerializer, WalletSerializer, TransactionSerializer, PaymentSettingsSerializer
 from .services import (
     initiate_wallet_deposit, initiate_one_time_purchase,
-    handle_pesapal_ipn, process_wallet_purchase, get_resource
+    handle_pesapal_ipn, process_wallet_purchase, get_resource,
+    initiate_mpesa_purchase, initiate_mpesa_deposit,
+    handle_mpesa_callback, get_mpesa_payment_status,
 )
 from .models import Payment, Wallet, Transaction, PaymentSettings
 
@@ -95,6 +97,81 @@ class PesapalIPNView(APIView):
             "orderMerchantReference": merchant_reference,
             "status": 200,
         })
+    
+
+class ActiveGatewayView(APIView):
+    """Lightweight endpoint — tells the frontend which gateway is currently live."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import PaymentSettings
+        cfg = PaymentSettings.load()
+        return Response({"active_gateway": cfg.active_gateway})
+
+
+class MpesaStkPushView(APIView):
+    """Initiate an M-Pesa STK push for a resource purchase or wallet deposit."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        phone = request.data.get("phone_number", "").strip()
+        purpose = request.data.get("purpose", "purchase")
+
+        if not phone:
+            return Response({"error": "phone_number is required."}, status=400)
+
+        try:
+            if purpose == "purchase":
+                resource_type = request.data.get("resource_type")
+                resource_id = request.data.get("resource_id")
+                if not resource_type or not resource_id:
+                    return Response({"error": "resource_type and resource_id required."}, status=400)
+                resource, _ = get_resource(resource_type, resource_id)
+                payment = initiate_mpesa_purchase(request.user, resource, phone)
+
+            elif purpose == "deposit":
+                try:
+                    amount = Decimal(request.data.get("amount"))
+                except (TypeError, InvalidOperation):
+                    return Response({"error": "Invalid amount."}, status=400)
+                if amount <= 0:
+                    return Response({"error": "Amount must be greater than zero."}, status=400)
+                payment = initiate_mpesa_deposit(request.user, amount, phone)
+
+            else:
+                return Response({"error": "Invalid purpose."}, status=400)
+
+        except (ValueError, LookupError, AttributeError) as e:
+            return Response({"error": str(e)}, status=400)
+        except Exception as e:
+            logger.error(f"M-Pesa STK push error: {e}")
+            return Response({"error": "Could not initiate M-Pesa payment. Check credentials."}, status=500)
+
+        return Response({
+            "payment_id": str(payment.id),
+            "message": "STK push sent. Waiting for user confirmation.",
+        }, status=201)
+
+
+class MpesaCallbackView(APIView):
+    """Safaricom POSTs here after the user pays or cancels the STK prompt."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        handle_mpesa_callback(request.data)
+        # Safaricom expects this exact response shape
+        return Response({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+
+class MpesaPaymentStatusView(APIView):
+    """Frontend polls this every 3 seconds to check if payment completed."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, payment_id):
+        result = get_mpesa_payment_status(str(payment_id))
+        if not result["found"]:
+            return Response({"error": "Payment not found."}, status=404)
+        return Response(result)    
 
 
 class PaymentCallbackView(APIView):
