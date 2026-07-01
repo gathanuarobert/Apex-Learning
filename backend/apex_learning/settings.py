@@ -116,6 +116,25 @@ else:
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') # cPanel email password
     DEFAULT_FROM_EMAIL  = os.getenv('EMAIL_HOST_USER', 'no-reply@apexlearning.co.ke')
 
+#-------------------------------------------------------------------
+# LOGGING
+#-------------------------------------------------------------------
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR, "logs/django.log"),
+        },
+    },
+    "root": {
+        "handlers": ["file"],
+        "level": "ERROR",
+    },
+}    
+
 # Token valid for 1 hour
 PASSWORD_RESET_TIMEOUT = 3600
 
@@ -244,11 +263,6 @@ USE_TZ        = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# -------------------------------------------------------------------
-# EMAIL
-# -------------------------------------------------------------------
-EMAIL_BACKEND     = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'no-reply@apexlearning.local'
 
 print("DATABASE_URL:", os.getenv("DATABASE_URL"))
 print("CORS_ALLOWED_ORIGINS RAW:", os.getenv('CORS_ALLOWED_ORIGINS'))

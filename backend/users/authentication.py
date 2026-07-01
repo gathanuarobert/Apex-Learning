@@ -1,5 +1,5 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.exceptions import AuthenticationFailed
 from django.conf import settings
 
@@ -19,12 +19,12 @@ class CookieJWTAuthentication(JWTAuthentication):
         raw_token = request.COOKIES.get(cookie_name)
 
         if raw_token is None:
-            return None  # No cookie → DRF returns 401 naturally
+            return None  # No cookie → anonymous user
 
         try:
             validated_token = self.get_validated_token(raw_token)
-        except TokenError as e:
-            raise InvalidToken(e.args[0])
+        except TokenError:
+            return None  # Expired/invalid token → anonymous, not 401
 
         try:
             user = self.get_user(validated_token)

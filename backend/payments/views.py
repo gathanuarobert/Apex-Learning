@@ -7,12 +7,12 @@ from rest_framework.decorators import action
 from decimal import Decimal, InvalidOperation
 from .services import handle_pesapal_ipn
 
-from .serializers import PaymentSerializer, WalletSerializer, TransactionSerializer
+from .serializers import PaymentSerializer, WalletSerializer, TransactionSerializer, PaymentSettingsSerializer
 from .services import (
     initiate_wallet_deposit, initiate_one_time_purchase,
     handle_pesapal_ipn, process_wallet_purchase, get_resource
 )
-from .models import Payment, Wallet, Transaction
+from .models import Payment, Wallet, Transaction, PaymentSettings
 
 
 class IsAdminOnly(permissions.BasePermission):
@@ -171,3 +171,30 @@ class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Transaction.objects.all().order_by('-created_at')
     serializer_class = TransactionSerializer
     permission_classes = [IsAdminOnly]
+
+
+class PaymentSettingsView(APIView):
+    """
+    GET  /api/payments/settings/  — returns current config (secrets masked)
+    PUT  /api/payments/settings/  — full update
+    PATCH /api/payments/settings/ — partial update (change one field at a time)
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        settings_obj = PaymentSettings.load()
+        return Response(PaymentSettingsSerializer(settings_obj).data)
+
+    def put(self, request):
+        settings_obj = PaymentSettings.load()
+        serializer = PaymentSettingsSerializer(settings_obj, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Payment settings updated."})
+
+    def patch(self, request):
+        settings_obj = PaymentSettings.load()
+        serializer = PaymentSettingsSerializer(settings_obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Payment settings updated."})

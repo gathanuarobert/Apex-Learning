@@ -108,3 +108,51 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.transaction_type} - {self.amount}"
+
+class PaymentSettings(models.Model):
+    GATEWAY_CHOICES = [
+        ('pesapal', 'Pesapal'),
+        ('mpesa', 'M-Pesa'),
+    ]
+    ENV_CHOICES = [
+        ('sandbox', 'Sandbox'),
+        ('live', 'Live'),
+    ]
+
+    active_gateway = models.CharField(
+        max_length=20, choices=GATEWAY_CHOICES, default='pesapal'
+    )
+
+    # ── Pesapal ──────────────────────────────────────────────────
+    pesapal_consumer_key    = models.CharField(max_length=255, blank=True)
+    pesapal_consumer_secret = models.CharField(max_length=255, blank=True)
+    pesapal_environment     = models.CharField(max_length=10, choices=ENV_CHOICES, default='live')
+    pesapal_ipn_id          = models.CharField(max_length=255, blank=True,
+                                  help_text="Register once via shell then paste the returned IPN ID here.")
+
+    # ── M-Pesa (scaffold — fill when client provides details) ────
+    mpesa_consumer_key    = models.CharField(max_length=255, blank=True)
+    mpesa_consumer_secret = models.CharField(max_length=255, blank=True)
+    mpesa_shortcode       = models.CharField(max_length=20, blank=True)
+    mpesa_passkey         = models.CharField(max_length=255, blank=True)
+    mpesa_environment     = models.CharField(max_length=10, choices=ENV_CHOICES, default='sandbox')
+
+    class Meta:
+        verbose_name = "Payment Settings"
+        verbose_name_plural = "Payment Settings"
+
+    # Singleton enforcement
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass  # prevent deletion
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return f"Payment Settings — active: {self.active_gateway}"

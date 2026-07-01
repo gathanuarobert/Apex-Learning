@@ -1,15 +1,33 @@
 from decimal import Decimal
 from django.db import transaction as db_transaction
-from .models import Wallet, Transaction, Payment
+from .models import Wallet, Transaction, Payment, PaymentSettings
 from .pesapal import submit_order, get_transaction_status
 from resources.models import Note, Exam, PastPaper
 from decouple import config
 
-SITE_URL = config('SITE_URL')        # ngrok — must be public, used for IPN
-FRONTEND_URL = config('FRONTEND_URL') # React frontend — used for browser redirect
+SITE_URL = config('SITE_URL')
+FRONTEND_URL = config('FRONTEND_URL')
+
+
+def _assert_gateway_implemented():
+    """
+    Pesapal is the only gateway with actual routing code right now.
+    M-Pesa credentials can be stored safely, but selecting M-Pesa as the
+    active gateway before the Daraja integration is built would silently
+    misroute or break checkout. This fails loudly instead.
+    """
+    active = PaymentSettings.load().active_gateway
+    if active != 'pesapal':
+        raise NotImplementedError(
+            f"Active gateway is set to '{active}', but only Pesapal is "
+            f"currently wired up in services.py. Build the M-Pesa "
+            f"integration (mpesa.py + service routing) before switching "
+            f"the active gateway, or set it back to 'pesapal'."
+        )
 
 
 def initiate_wallet_deposit(user, amount):
+    _assert_gateway_implemented()
     payment = Payment.objects.create(
         user=user,
         amount=Decimal(amount),
@@ -33,6 +51,7 @@ def initiate_wallet_deposit(user, amount):
 
 
 def initiate_one_time_purchase(user, resource):
+    _assert_gateway_implemented()
     amount = Decimal(resource.price)
 
     payment = Payment.objects.create(

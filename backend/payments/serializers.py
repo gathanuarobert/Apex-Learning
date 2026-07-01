@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Payment, Wallet, Transaction
+from .models import Payment, Wallet, Transaction, PaymentSettings
 import re
 
 
@@ -77,3 +77,28 @@ class WalletSerializer(serializers.ModelSerializer):
             data["transactions"], key=lambda x: x["created_at"], reverse=True
         )
         return data
+
+
+class PaymentSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentSettings
+        fields = [
+            'active_gateway',
+            # Pesapal
+            'pesapal_consumer_key',
+            'pesapal_consumer_secret',
+            'pesapal_environment',
+            'pesapal_ipn_id',
+            # M-Pesa
+            'mpesa_consumer_key',
+            'mpesa_consumer_secret',
+            'mpesa_shortcode',
+            'mpesa_passkey',
+            'mpesa_environment',
+        ]
+        # Secrets are write-only — never returned in GET responses
+        extra_kwargs = {
+            'pesapal_consumer_secret': {'write_only': True},
+            'mpesa_consumer_secret':   {'write_only': True},
+            'mpesa_passkey':           {'write_only': True},
+        }

@@ -4,7 +4,7 @@ from .views import (
     WalletDepositInitiateView, OneTimePurchaseInitiateView,
     WalletPurchaseAPIView, PesapalIPNView, PaymentCallbackView,
     TransactionHistoryView, AdminTransactionHistoryView,
-    WalletDetailView, TransactionViewSet,
+    WalletDetailView, TransactionViewSet, PaymentSettingsView
 )
 
 router = DefaultRouter()
@@ -19,4 +19,5 @@ urlpatterns = [
     path("payment/callback/", PaymentCallbackView.as_view(), name="payment-callback"),
     path("transactions/", TransactionHistoryView.as_view(), name="transaction-history"),
     path("admin/transactions/", AdminTransactionHistoryView.as_view(), name="admin-transactions"),
+    path('settings/',            PaymentSettingsView.as_view()),
 ] + router.urls
