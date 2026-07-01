@@ -8,26 +8,11 @@ from decouple import config
 SITE_URL = config('SITE_URL')
 FRONTEND_URL = config('FRONTEND_URL')
 
+import logging
 
-def _assert_gateway_implemented():
-    """
-    Pesapal is the only gateway with actual routing code right now.
-    M-Pesa credentials can be stored safely, but selecting M-Pesa as the
-    active gateway before the Daraja integration is built would silently
-    misroute or break checkout. This fails loudly instead.
-    """
-    active = PaymentSettings.load().active_gateway
-    if active != 'pesapal':
-        raise NotImplementedError(
-            f"Active gateway is set to '{active}', but only Pesapal is "
-            f"currently wired up in services.py. Build the M-Pesa "
-            f"integration (mpesa.py + service routing) before switching "
-            f"the active gateway, or set it back to 'pesapal'."
-        )
-
+logger = logging.getLogger(__name__)
 
 def initiate_wallet_deposit(user, amount):
-    _assert_gateway_implemented()
     payment = Payment.objects.create(
         user=user,
         amount=Decimal(amount),
@@ -51,7 +36,6 @@ def initiate_wallet_deposit(user, amount):
 
 
 def initiate_one_time_purchase(user, resource):
-    _assert_gateway_implemented()
     amount = Decimal(resource.price)
 
     payment = Payment.objects.create(
@@ -98,6 +82,139 @@ def handle_pesapal_ipn(order_tracking_id, merchant_reference):
         payment.save()
 
     return {"success": True}
+
+
+# ── M-Pesa STK Push ──────────────────────────────────────────────────────
+
+def initiate_mpesa_purchase(user, resource, phone_number):
+    """Create a Payment and fire the Daraja STK push for a resource purchase."""
+    from .mpesa import stk_push
+
+    amount = Decimal(resource.price)
+    payment = Payment.objects.create(
+        user=user,
+        amount=amount,
+        purpose="purchase",
+        resource_id=str(resource.id),
+        resource_type=resource.__class__.__name__,
+        status="pending",
+        phone_number=phone_number,
+    )
+
+    data = stk_push(
+        phone_number=phone_number,
+        amount=amount,
+        account_reference=str(payment.id)[:12],
+        description="Apex Purchase",
+        callback_url=f"{SITE_URL}/api/payments/mpesa-callback/",
+    )
+
+    payment.mpesa_checkout_request_id = data.get("CheckoutRequestID")
+    payment.provider_response = data
+    payment.save()
+    return payment
+
+
+def initiate_mpesa_deposit(user, amount, phone_number):
+    """Create a Payment and fire the Daraja STK push for a wallet deposit."""
+    from .mpesa import stk_push
+
+    amount = Decimal(amount)
+    payment = Payment.objects.create(
+        user=user,
+        amount=amount,
+        purpose="deposit",
+        status="pending",
+        phone_number=phone_number,
+    )
+
+    data = stk_push(
+        phone_number=phone_number,
+        amount=amount,
+        account_reference=str(payment.id)[:12],
+        description="Apex Deposit",
+        callback_url=f"{SITE_URL}/api/payments/mpesa-callback/",
+    )
+
+    payment.mpesa_checkout_request_id = data.get("CheckoutRequestID")
+    payment.provider_response = data
+    payment.save()
+    return payment
+
+
+def handle_mpesa_callback(data):
+    """
+    Process Safaricom's STK callback payload.
+    Safaricom POSTs to /api/payments/mpesa-callback/ after the user pays or cancels.
+    """
+    try:
+        stk_callback = data["Body"]["stkCallback"]
+        result_code = stk_callback.get("ResultCode")
+        checkout_request_id = stk_callback.get("CheckoutRequestID")
+
+        payment = Payment.objects.get(mpesa_checkout_request_id=checkout_request_id)
+
+        if result_code == 0:
+            # Payment succeeded — extract receipt number from callback metadata
+            items = {
+                item["Name"]: item.get("Value")
+                for item in stk_callback.get("CallbackMetadata", {}).get("Item", [])
+            }
+            with db_transaction.atomic():
+                payment.status = "completed"
+                payment.transaction_id = items.get("MpesaReceiptNumber", "")
+                payment.save()
+                _fulfill_payment(payment)
+        else:
+            payment.status = "failed"
+            payment.error_message = stk_callback.get("ResultDesc", "Payment failed or cancelled.")
+            payment.save()
+
+        return {"success": True}
+    except Payment.DoesNotExist:
+        return {"success": False, "error": "Payment not found"}
+    except Exception as e:
+        logger.error(f"M-Pesa callback error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def get_mpesa_payment_status(payment_id):
+    """
+    Called by the frontend polling endpoint.
+    If payment is still pending, queries Daraja directly for a live status update.
+    """
+    try:
+        payment = Payment.objects.get(id=payment_id)
+    except Payment.DoesNotExist:
+        return {"found": False}
+
+    if payment.status == "pending" and payment.mpesa_checkout_request_id:
+        try:
+            from .mpesa import query_stk_status
+            result = query_stk_status(payment.mpesa_checkout_request_id)
+            result_code = result.get("ResultCode")
+
+            if result_code is not None:
+                result_code = int(result_code)
+                if result_code == 0:
+                    with db_transaction.atomic():
+                        payment.status = "completed"
+                        payment.save()
+                        _fulfill_payment(payment)
+                elif result_code not in [1]:   # 1 = still processing, don't mark failed yet
+                    payment.status = "failed"
+                    payment.error_message = result.get("ResultDesc", "Payment failed.")
+                    payment.save()
+        except Exception as e:
+            logger.warning(f"STK status query failed: {e}")
+
+    return {
+        "found": True,
+        "status": payment.status,
+        "purpose": payment.purpose,
+        "amount": float(payment.amount),
+        "error": payment.error_message or "",
+    }
 
 
 def _fulfill_payment(payment):
