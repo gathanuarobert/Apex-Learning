@@ -26,7 +26,7 @@ api.interceptors.request.use(
     }
 
     // ✅ Add timestamp to all GET requests to bust browser cache
-    if (config.method === 'get') {
+    if (config.method === "get") {
       config.params = {
         ...config.params,
         _t: Date.now(),
@@ -35,7 +35,7 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // ------------------- RESPONSE INTERCEPTOR -------------------
@@ -45,7 +45,7 @@ let refreshQueue = [];
 
 function processQueue(error) {
   refreshQueue.forEach(({ resolve, reject }) =>
-    error ? reject(error) : resolve()
+    error ? reject(error) : resolve(),
   );
   refreshQueue = [];
 }
@@ -65,9 +65,18 @@ api.interceptors.response.use(
       const isAuthEndpoint =
         originalRequest.url?.includes("token/refresh") ||
         originalRequest.url?.includes("users/login") ||
-        originalRequest.url?.includes("users/register");
+        originalRequest.url?.includes("users/register") ||
+        originalRequest.url?.includes("users/guest-status") ||
+        originalRequest.url?.includes("resources/news/unread");
 
       if (isAuthEndpoint) {
+        // Silent reject for guest-safe endpoints — don't logout
+        if (
+          originalRequest.url?.includes("users/guest-status") ||
+          originalRequest.url?.includes("resources/news/unread")
+        ) {
+          return Promise.reject(error);
+        }
         handleLogout();
         return Promise.reject(error);
       }
@@ -99,7 +108,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // ------------------- HELPERS -------------------
@@ -118,26 +127,36 @@ function getCookie(name) {
 
 // ------------------- USERS -------------------
 export const registerUser = (userData) => api.post("users/register/", userData);
-export const loginUser    = (credentials) => api.post("users/login/", credentials);
-export const logoutUser   = () => api.post("users/logout/");
+export const loginUser = (credentials) => api.post("users/login/", credentials);
+export const logoutUser = () => api.post("users/logout/");
 
 // ------------------- USERS -------------------
-export const addChildren  = (childrenIds) =>api.post("users/add-children/", { children: childrenIds });
+export const addChildren = (childrenIds) =>
+  api.post("users/add-children/", { children: childrenIds });
 export const getCurrentUser = () => api.get("users/me/");
 export const updateUser = (data) => api.patch("users/me/update/", data);
-export const changePassword = (data) => api.post("users/me/change-password/", data);
+export const changePassword = (data) =>
+  api.post("users/me/change-password/", data);
 
 // ------------------- PAYMENTS -------------------
-export const initiateWalletDeposit   = (data) => api.post("payments/wallet/deposit/initiate/", data);
-export const initiateOneTimePurchase = (data) => api.post("payments/purchase/resource/initiate/", data);
-export const walletPurchase          = (data) => api.post("payments/wallet/purchase/", data);
-export const mpesaCallback           = (data) => api.post("payments/mpesa-callback/", data);
+export const initiateWalletDeposit = (data) =>
+  api.post("payments/wallet/deposit/initiate/", data);
+export const initiateOneTimePurchase = (data) =>
+  api.post("payments/purchase/resource/initiate/", data);
+export const walletPurchase = (data) =>
+  api.post("payments/wallet/purchase/", data);
+export const mpesaCallback = (data) =>
+  api.post("payments/mpesa-callback/", data);
 
 // ------------------- RESOURCES -------------------
-export const getLibrary    = () => api.get("resources/library/my-downloads/", { params: { _t: Date.now() } });
-export const getNotes      = () => api.get("resources/notes/", { params: { _t: Date.now() } });
-export const getExams      = () => api.get("resources/exams/", { params: { _t: Date.now() } });
-export const getPastPapers = () => api.get("resources/past-papers/", { params: { _t: Date.now() } });
+export const getLibrary = () =>
+  api.get("resources/library/my-downloads/", { params: { _t: Date.now() } });
+export const getNotes = () =>
+  api.get("resources/notes/", { params: { _t: Date.now() } });
+export const getExams = () =>
+  api.get("resources/exams/", { params: { _t: Date.now() } });
+export const getPastPapers = () =>
+  api.get("resources/past-papers/", { params: { _t: Date.now() } });
 
 // ------------------- M-PESA -------------------
 const getTimestamp = () => {
@@ -150,18 +169,22 @@ export const getMpesaToken = async () => {
   return response.data.access_token;
 };
 
-export const initiateMpesaPayment = async (phoneNumber, amount, resourceTitle) => {
+export const initiateMpesaPayment = async (
+  phoneNumber,
+  amount,
+  resourceTitle,
+) => {
   const payload = {
     BusinessShortCode: import.meta.env.VITE_MPESA_SHORTCODE,
-    Timestamp:         getTimestamp(),
-    TransactionType:   "CustomerPayBillOnline",
-    Amount:            amount,
-    PartyA:            phoneNumber,
-    PartyB:            import.meta.env.VITE_MPESA_SHORTCODE,
-    PhoneNumber:       phoneNumber,
-    CallBackURL:       `${import.meta.env.VITE_API_BASE_URL}payments/mpesa-callback/`,
-    AccountReference:  resourceTitle,
-    TransactionDesc:   `Payment for ${resourceTitle}`,
+    Timestamp: getTimestamp(),
+    TransactionType: "CustomerPayBillOnline",
+    Amount: amount,
+    PartyA: phoneNumber,
+    PartyB: import.meta.env.VITE_MPESA_SHORTCODE,
+    PhoneNumber: phoneNumber,
+    CallBackURL: `${import.meta.env.VITE_API_BASE_URL}payments/mpesa-callback/`,
+    AccountReference: resourceTitle,
+    TransactionDesc: `Payment for ${resourceTitle}`,
   };
   const response = await api.post("payments/mpesa-stkpush/", payload);
   return response.data;

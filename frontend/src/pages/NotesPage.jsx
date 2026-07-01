@@ -24,13 +24,13 @@ const GRADS = [
   "from-sky-600/80 to-blue-800/90",
 ];
 
-export default function NotesPage() {
+export default function NotesPage({ openAuthModal }) {
   const {
     loading, step, search, modal, options, breadcrumbs,
     payingWallet, payingPesapal, isPaying,
     setSearch, setModal,
     pick, clearAll, getRelated, handleDownload, payWithWallet, payWithPesapal,
-  } = useResourcePage(getNotes, "Note", "notes");
+  } = useResourcePage(getNotes, "Note", "notes", openAuthModal);
 
   const particlesInit = async (e) => { await loadSlim(e); };
 

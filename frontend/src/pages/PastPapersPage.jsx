@@ -21,13 +21,13 @@ const GRADS = [
   "from-rose-600/80 to-purple-700/90",
 ];
 
-export default function PastPapersPage() {
+export default function PastPapersPage({ openAuthModal }) {
   const {
     loading, step, search, modal, options, breadcrumbs,
     payingWallet, payingPesapal, isPaying,
     setSearch, setModal,
     pick, clearAll, getRelated, handleDownload, payWithWallet, payWithPesapal,
-  } = useResourcePage(getPastPapers, "PastPaper", "past-papers");
+  } = useResourcePage(getPastPapers, "PastPaper", "past-papers", openAuthModal);
 
   const particlesInit = async (e) => { await loadSlim(e); };
 

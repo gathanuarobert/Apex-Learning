@@ -400,7 +400,7 @@ const Register = () => {
                     Log In
                   </button>
                 </p>
-                {/* <p className="text-center text-gray-500 text-sm">
+                <p className="text-center text-gray-500 text-sm">
                   Not ready to sign up?{" "}
                   <button
                     onClick={() => navigate("/user-dashboard")}
@@ -408,7 +408,7 @@ const Register = () => {
                   >
                     Browse as guest
                   </button>
-                </p> */}
+                </p>
               </div>
             </>
           )}

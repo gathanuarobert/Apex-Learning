@@ -30,13 +30,13 @@ const STEP_LABELS = [
   null,
 ];
 
-export default function ExamsPage() {
+export default function ExamsPage({ openAuthModal }) {
   const {
     loading, step, search, modal, options, breadcrumbs,
     payingWallet, payingPesapal, isPaying, filtered,
     setSearch, setModal,
     pick, clearAll, getRelated, handleDownload, payWithWallet, payWithPesapal,
-  } = useResourcePage(getExams, "Exam", "exams");
+  } = useResourcePage(getExams, "Exam", "exams", openAuthModal);
 
   const particlesInit = async (e) => { await loadSlim(e); };
 

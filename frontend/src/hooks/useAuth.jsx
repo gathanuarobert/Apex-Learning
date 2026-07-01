@@ -9,19 +9,18 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAuthStatus = () => {
-  setIsLoading(true);
-  return api.get("users/guest-status/")   // ← add return
+  return api.get("users/guest-status/")
     .then(res => {
       setIsGuest(res.data.is_guest);
       setUser(res.data.user ?? null);
     })
     .catch(() => {
+      // No session = guest, not an error worth logging out over
       setIsGuest(true);
       setUser(null);
     })
     .finally(() => setIsLoading(false));
 };
-
   useEffect(() => {
     fetchAuthStatus();
   }, []);

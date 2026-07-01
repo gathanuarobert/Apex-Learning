@@ -2,17 +2,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { walletPurchase, initiateOneTimePurchase } from "../Api";
 import api from "../Api";
+import { useAuth } from "./useAuth";
 
-/**
- * useResourcePage
- *
- * Centralises all shared logic for Exams, Notes and PastPapers pages.
- *
- * @param {Function} fetchFn        – API function e.g. getExams
- * @param {string}   resourceType   – "Exam" | "Note" | "PastPaper"
- * @param {string}   downloadPath   – URL segment e.g. "exams" → resources/exams/:id/download/
- */
-export function useResourcePage(fetchFn, resourceType, downloadPath) {
+export function useResourcePage(fetchFn, resourceType, downloadPath, openAuthModal) {
+  const { isGuest } = useAuth(); // ← only isGuest, no openAuthModal
   const [items,         setItems]         = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [curriculum,    setCurriculum]    = useState(null);
@@ -29,9 +22,6 @@ export function useResourcePage(fetchFn, resourceType, downloadPath) {
       try {
         setLoading(true);
         const res = await fetchFn();
-        // Normalise: Notes use `content` as their description field.
-        // For Exams and PastPapers `description` exists on the model.
-        // We map everything to `description` so ResourceModal always reads one field.
         const normalised = (res.data || []).map((item) => ({
           ...item,
           description: item.description || item.content || null,
@@ -102,28 +92,28 @@ export function useResourcePage(fetchFn, resourceType, downloadPath) {
     subject    && { label: subject,    clear: () => clearFrom(3) },
   ].filter(Boolean);
 
-  // ── Related (same subject, exclude current item) ─────────────────────────
+  // ── Related ───────────────────────────────────────────────────────────────
   const getRelated = (item) =>
     filtered.filter((i) => i.subject === item.subject && i.id !== item.id).slice(0, 4);
 
-  // ── Download ─────────────────────────────────────────────────────────────
+  // ── Download ──────────────────────────────────────────────────────────────
   const getExtension = (contentType, filename) => {
     if (!contentType) {
       const ext = filename?.split(".").pop();
       return ext && ext.length <= 5 ? `.${ext}` : ".pdf";
     }
-    if (contentType.includes("pdf"))            return ".pdf";
+    if (contentType.includes("pdf"))                    return ".pdf";
     if (contentType.includes("spreadsheetml") ||
-        contentType.includes("excel"))          return ".xlsx";
-    if (contentType.includes("ms-excel"))       return ".xls";
-    if (contentType.includes("csv"))            return ".csv";
+        contentType.includes("excel"))                  return ".xlsx";
+    if (contentType.includes("ms-excel"))               return ".xls";
+    if (contentType.includes("csv"))                    return ".csv";
     if (contentType.includes("wordprocessingml") ||
-        contentType.includes("msword"))         return ".docx";
+        contentType.includes("msword"))                 return ".docx";
     if (contentType.includes("presentationml") ||
-        contentType.includes("powerpoint"))     return ".pptx";
+        contentType.includes("powerpoint"))             return ".pptx";
     if (contentType.includes("jpeg") ||
-        contentType.includes("jpg"))            return ".jpg";
-    if (contentType.includes("png"))            return ".png";
+        contentType.includes("jpg"))                    return ".jpg";
+    if (contentType.includes("png"))                    return ".png";
     return ".pdf";
   };
 
@@ -148,8 +138,12 @@ export function useResourcePage(fetchFn, resourceType, downloadPath) {
     }
   };
 
-  // ── Payments ─────────────────────────────────────────────────────────────
+  // ── Payments ──────────────────────────────────────────────────────────────
   const payWithWallet = async () => {
+    if (isGuest) {
+      openAuthModal?.();
+      return;
+    }
     setPayingWallet(true);
     try {
       await walletPurchase({ resource_id: modal.item.id, resource_type: resourceType });
@@ -164,6 +158,10 @@ export function useResourcePage(fetchFn, resourceType, downloadPath) {
   };
 
   const payWithPesapal = async () => {
+    if (isGuest) {
+      openAuthModal?.();
+      return;
+    }
     setPayingPesapal(true);
     try {
       const res = await initiateOneTimePurchase({

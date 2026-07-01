@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   FaUsers, FaFileInvoiceDollar, FaUpload, FaHistory,
   FaTrash, FaDollarSign, FaNewspaper, FaBars, FaTimes, FaEdit,
+  FaCreditCard,
 } from "react-icons/fa";
 import { AiOutlineLogout } from "react-icons/ai";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -13,6 +14,7 @@ import { Layers } from "lucide-react";
 import api from "../Api";
 import UploadResourceModal from "../components/UploadResourceModal";
 import BulkUploadModal from "../components/BulkUploadModal";
+import PaymentSettingsPanel from "../components/PaymentSettingsPanel";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -61,6 +63,7 @@ export default function AdminDashboard() {
     { icon: FaUsers,             label: "users",         onClick: () => setActiveTab("manageUsers") },
     { icon: FaUpload,            label: "uploads",       onClick: () => setActiveTab("manageUploads") },
     { icon: FaNewspaper,         label: "news",          onClick: () => setActiveTab("newsComposer") },
+    { icon: FaCreditCard, label: "paymentSettings", onClick: () => setActiveTab("paymentSettings") },
   ];
 
   // ── Chart builder ────────────────────────────────────────────────────────
@@ -227,6 +230,7 @@ export default function AdminDashboard() {
         <nav className="mt-6 flex flex-col gap-2 px-2">
           <TabButton active={activeTab === "overview"}      onClick={() => setActiveTab("overview")}      icon={<FaFileInvoiceDollar />} label="Overview"       isCollapsed={!isSidebarOpen} />
           <TabButton active={activeTab === "transactions"}  onClick={() => setActiveTab("transactions")}  icon={<FaDollarSign />}        label="Transactions"   isCollapsed={!isSidebarOpen} />
+          <TabButton active={activeTab === "paymentSettings"} onClick={() => setActiveTab("paymentSettings")} icon={<FaCreditCard />} label="Payment Settings" isCollapsed={!isSidebarOpen} />
           <TabButton active={activeTab === "history"}       onClick={() => setActiveTab("history")}       icon={<FaHistory />}           label="History Logs"   isCollapsed={!isSidebarOpen} />
           <TabButton active={activeTab === "manageUsers"}   onClick={() => setActiveTab("manageUsers")}   icon={<FaUsers />}             label="Manage Users"   isCollapsed={!isSidebarOpen} />
           <TabButton active={activeTab === "manageUploads"} onClick={() => setActiveTab("manageUploads")} icon={<FaUpload />}            label="Manage Uploads" isCollapsed={!isSidebarOpen} />
@@ -319,6 +323,8 @@ export default function AdminDashboard() {
             </div>
           </section>
         )}
+
+        {activeTab === "paymentSettings" && <PaymentSettingsPanel />}
 
         {/* ── History ──────────────────────────────────────────────────── */}
         {activeTab === "history" && (
