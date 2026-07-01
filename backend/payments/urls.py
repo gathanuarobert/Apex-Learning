@@ -4,20 +4,33 @@ from .views import (
     WalletDepositInitiateView, OneTimePurchaseInitiateView,
     WalletPurchaseAPIView, PesapalIPNView, PaymentCallbackView,
     TransactionHistoryView, AdminTransactionHistoryView,
-    WalletDetailView, TransactionViewSet, PaymentSettingsView
+    WalletDetailView, TransactionViewSet, PaymentSettingsView,
+    ActiveGatewayView,
+    MpesaStkPushView, MpesaCallbackView, MpesaPaymentStatusView,
 )
 
 router = DefaultRouter()
 router.register(r'admin/transactions-viewset', TransactionViewSet, basename='transaction-viewset')
 
 urlpatterns = [
-    path("wallet/deposit/initiate/", WalletDepositInitiateView.as_view(), name="wallet-deposit-initiate"),
-    path("purchase/resource/initiate/", OneTimePurchaseInitiateView.as_view(), name="one-time-purchase-initiate"),
-    path("wallet/purchase/", WalletPurchaseAPIView.as_view(), name="wallet-purchase"),
-    path("wallet/", WalletDetailView.as_view(), name="wallet-detail"),
-    path("pesapal-ipn/", PesapalIPNView.as_view(), name="pesapal-ipn"),
-    path("payment/callback/", PaymentCallbackView.as_view(), name="payment-callback"),
-    path("transactions/", TransactionHistoryView.as_view(), name="transaction-history"),
-    path("admin/transactions/", AdminTransactionHistoryView.as_view(), name="admin-transactions"),
-    path('settings/',            PaymentSettingsView.as_view()),
+    # Wallet
+    path("wallet/deposit/initiate/",    WalletDepositInitiateView.as_view()),
+    path("wallet/purchase/",            WalletPurchaseAPIView.as_view()),
+    path("wallet/",                     WalletDetailView.as_view()),
+    # One-time purchase (Pesapal)
+    path("purchase/resource/initiate/", OneTimePurchaseInitiateView.as_view()),
+    # Pesapal IPN + callback
+    path("pesapal-ipn/",                PesapalIPNView.as_view()),
+    path("payment/callback/",           PaymentCallbackView.as_view()),
+    # Transactions
+    path("transactions/",               TransactionHistoryView.as_view()),
+    path("admin/transactions/",         AdminTransactionHistoryView.as_view()),
+    # Payment settings (admin)
+    path("settings/",                   PaymentSettingsView.as_view()),
+    # Active gateway (authenticated users)
+    path("active-gateway/",             ActiveGatewayView.as_view()),
+    # M-Pesa STK Push
+    path("mpesa/stk-push/",             MpesaStkPushView.as_view()),
+    path("mpesa/callback/",             MpesaCallbackView.as_view()),
+    path("mpesa/status/<uuid:payment_id>/", MpesaPaymentStatusView.as_view()),
 ] + router.urls
