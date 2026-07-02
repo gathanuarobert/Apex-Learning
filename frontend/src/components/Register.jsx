@@ -376,13 +376,14 @@ const Register = () => {
                 </button>
               </form>
 
-              <div className="mt-10 space-y-6">
+              <div className="mt-10 space-y-4">
                 <div className="relative flex items-center justify-center">
                   <span className="absolute inset-x-0 h-px bg-white/10"></span>
                   <span className="relative bg-[#161b22] px-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                    Or Secure Sign Up With
+                    Or Sign Up With
                   </span>
                 </div>
+
                 <div className="flex justify-center">
                   <GoogleLogin
                     onSuccess={() => {}}
@@ -391,6 +392,19 @@ const Register = () => {
                     size="large"
                   />
                 </div>
+
+                {/* Guest button */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/user-dashboard")}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-sm font-medium transition-all"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Browse as Guest
+                </button>
+
                 <p className="text-center text-gray-500 text-sm">
                   Already have an account?{" "}
                   <button
@@ -398,15 +412,6 @@ const Register = () => {
                     className="text-blue-400 font-bold hover:text-blue-300 transition-colors"
                   >
                     Log In
-                  </button>
-                </p>
-                <p className="text-center text-gray-500 text-sm">
-                  Not ready to sign up?{" "}
-                  <button
-                    onClick={() => navigate("/user-dashboard")}
-                    className="text-gray-400 hover:text-white transition-colors hover:underline"
-                  >
-                    Browse as guest
                   </button>
                 </p>
               </div>
