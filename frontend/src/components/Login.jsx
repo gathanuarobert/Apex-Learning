@@ -297,6 +297,18 @@ const Login = () => {
               text="signin_with"
             />
           </div>
+
+          {/* Guest button */}
+          <button
+            type="button"
+            onClick={() => navigate("/user-dashboard")}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-600 hover:border-gray-500 bg-gray-800/50 hover:bg-gray-800 text-gray-300 hover:text-white text-sm font-medium transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Continue as Guest
+          </button>
         </form>
 
         <div className="text-center space-y-2">
@@ -307,15 +319,6 @@ const Login = () => {
               className="text-blue-400 hover:text-blue-300 font-semibold transition-colors hover:underline"
             >
               Sign up here
-            </button>
-          </p>
-          <p className="text-gray-500 text-sm">
-            Just browsing?{" "}
-            <button
-              onClick={() => navigate("/user-dashboard")}
-              className="text-gray-400 hover:text-white transition-colors hover:underline"
-            >
-              Continue as guest
             </button>
           </p>
           <p className="text-gray-500 text-xs">
