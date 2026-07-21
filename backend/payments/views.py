@@ -16,6 +16,9 @@ from .services import (
 )
 from .models import Payment, Wallet, Transaction, PaymentSettings
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class IsAdminOnly(permissions.BasePermission):
     def has_permission(self, request, view):
