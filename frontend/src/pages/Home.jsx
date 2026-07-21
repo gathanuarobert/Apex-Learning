@@ -75,15 +75,12 @@ const Home = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Apex Learning Hub | Notes, Exams & Past Papers</title>
-        <meta
-          name="description"
-          content="Download notes, exams and past papers for Kenyan students. KCSE and primary school resources."
-        />
-        <link rel="canonical" href="https://apexlearning.co.ke/" />
-      </Helmet>
-      
+      <SEO
+        title="Apex Learning Hub | Notes, Exams & Past Papers"
+        description="Download notes, exams and past papers for Kenyan students. KCSE and primary school resources."
+        path="/"
+      />
+
       <div className="relative min-h-screen w-full text-white bg-gray-950 overflow-x-hidden">
         {/* 1. Fix: Particles Layer */}
         <div className="absolute inset-0 z-0">

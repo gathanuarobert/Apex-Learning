@@ -105,14 +105,11 @@ const AboutUs = () => {
 
   return (
     <>
-      <Helmet>
-        <title>About Us | Apex Learning Hub</title>
-        <meta
-          name="description"
-          content="Learn more about Apex Learning Hub — Kenya's resource platform for students."
-        />
-        <link rel="canonical" href="https://apexlearning.co.ke/about" />
-      </Helmet>
+      <SEO
+        title="About Us | Apex Learning Hub"
+        description="Learn more about Apex Learning Hub — Kenya's resource platform for students."
+        path="/about"
+      />
 
       <div className="relative min-h-screen flex flex-col items-center bg-[#0b0f1a] overflow-x-hidden text-slate-200 selection:bg-blue-500/30">
         {/* Dynamic Background */}
