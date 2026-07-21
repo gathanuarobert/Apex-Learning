@@ -26,7 +26,10 @@ export default function PastPapersPage({ openAuthModal }) {
     loading, step, search, modal, options, breadcrumbs,
     payingWallet, payingPesapal, isPaying,
     setSearch, setModal,
-    pick, clearAll, getRelated, handleDownload, payWithWallet, payWithPesapal,
+    pick, clearAll, getRelated, handleDownload, payWithWallet, payWithPesapal, activeGateway,
+  mpesaPhone, setMpesaPhone,
+  payingMpesa, mpesaPolling, mpesaError,
+  payWithMpesa,
   } = useResourcePage(getPastPapers, "PastPaper", "past-papers", openAuthModal);
 
   const particlesInit = async (e) => { await loadSlim(e); };
@@ -176,6 +179,13 @@ export default function PastPapersPage({ openAuthModal }) {
           onClose={() => !isPaying && setModal(null)}
           relatedItems={getRelated(modal.item)}
           onSelectRelated={(item) => setModal({ item })}
+          activeGateway={activeGateway}
+          mpesaPhone={mpesaPhone}
+          onMpesaPhoneChange={setMpesaPhone}
+          payingMpesa={payingMpesa}
+          mpesaPolling={mpesaPolling}
+          mpesaError={mpesaError}
+          onPayMpesa={payWithMpesa}
         />
       )}
     </div>
