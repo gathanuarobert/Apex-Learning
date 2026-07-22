@@ -1,3 +1,7 @@
+import { Helmet } from "react-helmet-async";
+
+const SITE_URL = "https://apexlearning.co.ke";
+
 export default function SEO({ title, description, path, image }) {
   const url = `${SITE_URL}${path}`;
   const fullImage = image ? `${SITE_URL}${image}` : null;
