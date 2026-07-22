@@ -103,8 +103,10 @@ class PesapalIPNView(APIView):
     
 
 class ActiveGatewayView(APIView):
-    """Lightweight endpoint — tells the frontend which gateway is currently live."""
-    permission_classes = [IsAuthenticated]
+    """Lightweight endpoint — tells the frontend which gateway is currently live.
+    Public: guests need to know the active gateway just as much as logged-in
+    users do before they ever attempt a purchase (which itself stays gated)."""
+    permission_classes = [AllowAny]
 
     def get(self, request):
         from .models import PaymentSettings
