@@ -3,8 +3,7 @@ import React, { useRef } from "react";
 import emailjs from "@emailjs/browser";
 import { motion } from "framer-motion";
 import { FaGlobe, FaLaptopCode, FaChartBar } from "react-icons/fa";
-import { Helmet } from "react-helmet-async";
-
+import SEO from "../components/SEO";
 const ContactUs = () => {
   const form = useRef();
 

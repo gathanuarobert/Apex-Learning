@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import api, { getCurrentUser } from "../Api";
-import { Helmet } from "react-helmet-async";
-
+import SEO from "../components/SEO";
 const Home = () => {
   const navigate = useNavigate();
   const [loadingUser, setLoadingUser] = useState(true);

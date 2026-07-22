@@ -3,8 +3,7 @@ import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Rocket, Target, Globe, Lightbulb } from "lucide-react";
-import { Helmet } from "react-helmet-async";
-
+import SEO from "../components/SEO";
 const AboutUs = () => {
   const navigate = useNavigate();
 
