@@ -67,13 +67,15 @@ api.interceptors.response.use(
         originalRequest.url?.includes("users/login") ||
         originalRequest.url?.includes("users/register") ||
         originalRequest.url?.includes("users/guest-status") ||
-        originalRequest.url?.includes("resources/news/unread");
+        originalRequest.url?.includes("resources/news/unread") ||
+         originalRequest.url?.includes("payments/active-gateway");
 
       if (isAuthEndpoint) {
         // Silent reject for guest-safe endpoints — don't logout
         if (
           originalRequest.url?.includes("users/guest-status") ||
-          originalRequest.url?.includes("resources/news/unread")
+          originalRequest.url?.includes("resources/news/unread") ||
+          originalRequest.url?.includes("payments/active-gateway") 
         ) {
           return Promise.reject(error);
         }
