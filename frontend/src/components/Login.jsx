@@ -174,14 +174,41 @@ const Login = () => {
       {/* Login Card */}
       <div className="relative z-10 w-full max-w-md bg-gray-900/80 shadow-2xl border border-gray-700 rounded-2xl p-6 sm:p-8 space-y-6 text-white backdrop-blur-lg animate-slideUp">
         {/* Header */}
-        <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-blue-400">
-            Welcome Back!
-          </h2>
-          <p className="text-gray-400 text-sm mt-2">
-            Sign in to continue your learning journey
-          </p>
-        </div>
+<div className="text-center">
+  <h2 className="text-2xl sm:text-3xl font-extrabold text-blue-400">
+    Welcome Back!
+  </h2>
+  <p className="text-gray-400 text-sm mt-2">
+    Sign in to continue your learning journey
+  </p>
+</div>
+
+{/* Guest button */}
+<button
+  type="button"
+  onClick={() => navigate("/user-dashboard")}
+  className="w-full group flex items-center justify-center gap-2.5 py-3.5 rounded-xl border-2 border-cyan-500/50 bg-cyan-500/10 hover:bg-cyan-500/20 hover:border-cyan-400 text-cyan-300 hover:text-cyan-100 text-sm font-semibold transition-all transform hover:scale-[1.02] shadow-md hover:shadow-cyan-500/25"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+  Continue as Guest
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+  </svg>
+</button>
+
+{/* Divider between guest and form */}
+<div className="relative">
+  <div className="absolute inset-0 flex items-center">
+    <div className="w-full border-t border-gray-700"></div>
+  </div>
+  <div className="relative flex justify-center text-xs">
+    <span className="px-2 bg-gray-900/80 text-gray-500 uppercase tracking-wider">
+      Or sign in below
+    </span>
+  </div>
+</div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Email */}
@@ -298,17 +325,7 @@ const Login = () => {
             />
           </div>
 
-          {/* Guest button */}
-          <button
-            type="button"
-            onClick={() => navigate("/user-dashboard")}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-600 hover:border-gray-500 bg-gray-800/50 hover:bg-gray-800 text-gray-300 hover:text-white text-sm font-medium transition-all"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            Continue as Guest
-          </button>
+          
         </form>
 
         <div className="text-center space-y-2">
