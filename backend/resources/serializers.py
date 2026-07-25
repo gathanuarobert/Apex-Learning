@@ -29,20 +29,40 @@ def validate_file(file):
 
 
 class BaseFileSerializer(serializers.ModelSerializer):
-    """Used for list views — no file_url exposed."""
+    """
+    Used for list views. 'file' is write_only (admins can still upload
+    through it) so the raw file path/URL is never rendered in output —
+    it must never be used to serve paid content directly.
+    """
     def validate_file(self, value):
         return validate_file(value)
 
 
 class BaseFileDetailSerializer(BaseFileSerializer):
-    """Used for retrieve/download views — exposes file_url."""
+    """
+    Used for retrieve/download views. Exposes file_url, but ONLY when the
+    requesting user is entitled to it: admin, resource is free (price <= 0),
+    or the user has a completed purchase. Everyone else gets null and must
+    go through the gated /download/ action (which watermarks + checks payment
+    server-side). This is the fix for the direct-download payment bypass.
+    """
     file_url = serializers.SerializerMethodField()
 
     def get_file_url(self, obj):
         request = self.context.get('request')
-        if obj.file and hasattr(obj.file, 'url'):
-            return request.build_absolute_uri(obj.file.url)
-        return None
+        if not request or not obj.file or not hasattr(obj.file, 'url'):
+            return None
+
+        user = request.user
+        is_admin = bool(user and user.is_authenticated and (user.is_staff or user.is_superuser))
+        price = getattr(obj, 'price', None)
+        is_free = price is None or price <= 0
+        is_purchased = getattr(obj, 'is_purchased', False)
+
+        if not (is_admin or is_free or is_purchased):
+            return None
+
+        return request.build_absolute_uri(obj.file.url)
 
 
 # ========== Lookup Model Serializers ==========
@@ -98,6 +118,7 @@ class NoteSerializer(BaseFileSerializer):
             'content', 'description', 'price', 'file', 'created_at', 'updated_at',
             'is_purchased',
         ]
+        extra_kwargs = {'file': {'write_only': True}}
 
 
 class NoteDetailSerializer(BaseFileDetailSerializer):
@@ -121,6 +142,7 @@ class NoteDetailSerializer(BaseFileDetailSerializer):
             'content', 'description', 'price', 'file', 'file_url', 'created_at', 'updated_at',
             'is_purchased',
         ]
+        extra_kwargs = {'file': {'write_only': True}}
 
 
 # ========== PastPaper Serializers ==========
@@ -145,6 +167,7 @@ class PastPaperSerializer(BaseFileSerializer):
             'year', 'description', 'price', 'file', 'created_at',
             'is_purchased',
         ]
+        extra_kwargs = {'file': {'write_only': True}}
 
 
 class PastPaperDetailSerializer(BaseFileDetailSerializer):
@@ -168,6 +191,7 @@ class PastPaperDetailSerializer(BaseFileDetailSerializer):
             'year', 'description', 'price', 'file', 'file_url', 'created_at',
             'is_purchased',
         ]
+        extra_kwargs = {'file': {'write_only': True}}
 
 
 # ========== Exam Serializers ==========
@@ -192,6 +216,7 @@ class ExamSerializer(BaseFileSerializer):
             'date', 'description', 'price', 'file', 'created_at',
             'is_purchased',
         ]
+        extra_kwargs = {'file': {'write_only': True}}
 
 
 class ExamDetailSerializer(BaseFileDetailSerializer):
@@ -215,6 +240,7 @@ class ExamDetailSerializer(BaseFileDetailSerializer):
             'date', 'description', 'price', 'file', 'file_url', 'created_at',
             'is_purchased',
         ]
+        extra_kwargs = {'file': {'write_only': True}}
 
 
 # ========== News Serializers ==========
@@ -227,6 +253,7 @@ class NewsSerializer(BaseFileSerializer):
     class Meta:
         model = News
         fields = ['id', 'headline', 'body', 'category', 'category_id', 'file', 'published_at']
+        extra_kwargs = {'file': {'write_only': True}}
 
 
 class NewsDetailSerializer(BaseFileDetailSerializer):
@@ -238,6 +265,7 @@ class NewsDetailSerializer(BaseFileDetailSerializer):
     class Meta:
         model = News
         fields = ['id', 'headline', 'body', 'category', 'category_id', 'file', 'file_url', 'published_at']
+        extra_kwargs = {'file': {'write_only': True}}
 
 
 class NewsPostSerializer(serializers.ModelSerializer):
