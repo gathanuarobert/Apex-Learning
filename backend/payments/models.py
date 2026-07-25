@@ -55,18 +55,36 @@ class Wallet(models.Model):
         """
         Deposit money into the wallet and log a transaction.
         Usually triggered after a successful M-Pesa/Card top-up.
+
+        Idempotent per payment: if a deposit Transaction already exists for
+        this payment, we skip crediting the balance again. This is a safety
+        net in case this method is ever called twice for the same payment
+        (e.g. a retried webhook slipping past the caller's own check).
         """
         with transaction.atomic():
+            if payment is not None:
+                _, created = Transaction.objects.get_or_create(
+                    payment=payment,
+                    transaction_type="deposit",
+                    defaults={
+                        "user": self.user,
+                        "amount": amount,
+                        "status": "completed",
+                    },
+                )
+                if not created:
+                    return
+            else:
+                Transaction.objects.create(
+                    user=self.user,
+                    transaction_type="deposit",
+                    amount=amount,
+                    status="completed",
+                    payment=payment,
+                )
+
             self.balance += amount
             self.save()
-
-            Transaction.objects.create(
-                user=self.user,
-                transaction_type="deposit",
-                amount=amount,
-                status="completed",
-                payment=payment,  # optional link back to Payment
-            )
 
     def purchase(self, amount: Decimal, resource=None, resource_type=None):
         """
