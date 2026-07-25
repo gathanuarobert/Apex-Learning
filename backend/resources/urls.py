@@ -10,7 +10,8 @@ from .views import (
     MarkNewsViewedView,
     NewsPostAdminListCreateView,
     NewsPostAdminDetailView,
-    PublishedNewsListView
+    PublishedNewsListView,
+    ResourceFilterOptionsView,
 )
 
 router = DefaultRouter()
@@ -29,6 +30,9 @@ router.register(r'news-categories', NewsCategoryViewSet, basename='newscategory'
 
 urlpatterns = [
     
+
+    # Funnel filter metadata (curriculum/grade/subject combos, cheap payload)
+    path('filter-options/', ResourceFilterOptionsView.as_view(), name='resource-filter-options'),
 
     # News notification endpoints
     path('news/unread/', UnreadNewsListView.as_view(), name='news-unread'),
