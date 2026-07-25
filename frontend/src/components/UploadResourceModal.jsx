@@ -14,8 +14,6 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
   const [description,  setDescription]  = useState("");
   const [year,         setYear]         = useState("");
   const [date,         setDate]         = useState("");
-  const [headline,     setHeadline]     = useState("");
-  const [body,         setBody]         = useState("");
   const [uploading,    setUploading]    = useState(false);
   const [error,        setError]        = useState("");
 
@@ -24,29 +22,25 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
   const [grades,     setGrades]     = useState([]);
   const [subjects,   setSubjects]   = useState([]);
   const [topics,     setTopics]     = useState([]);
-  const [categories, setCategories] = useState([]);
   const [curriculum, setCurriculum] = useState("");
   const [grade,      setGrade]      = useState("");
   const [subject,    setSubject]    = useState("");
   const [topic,      setTopic]      = useState("");
-  const [category,   setCategory]   = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
     (async () => {
       try {
-        const [currRes, gradeRes, subjRes, topicRes, catRes] = await Promise.all([
+        const [currRes, gradeRes, subjRes, topicRes] = await Promise.all([
           api.get("resources/education-levels/"),
           api.get("resources/grades/"),
           api.get("resources/subjects/"),
           api.get("resources/topics/"),
-          api.get("resources/news-categories/"),
         ]);
         setCurricula(currRes.data   || []);
         setGrades(gradeRes.data     || []);
         setSubjects(subjRes.data    || []);
         setTopics(topicRes.data     || []);
-        setCategories(catRes.data   || []);
       } catch (err) { console.error(err); }
     })();
   }, [isOpen]);
@@ -54,11 +48,10 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
   useEffect(() => {
     if (editResource && isOpen) {
       setResourceType(editResource.type);
-      setTitle(editResource.title || editResource.headline || "");
+      setTitle(editResource.title || "");
       setPrice(editResource.price || "");
       setDescription(editResource.description || editResource.content || "");
       if (editResource.type === "Exam")       setDate(editResource.date || "");
-      if (editResource.type === "News")       { setHeadline(editResource.headline || ""); setBody(editResource.body || ""); }
       if (editResource.type === "PastPaper" ||
           editResource.type === "Past Paper") setYear(editResource.year || "");
     } else if (!editResource && isOpen) {
@@ -69,8 +62,8 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
   const resetForm = () => {
     setResourceType("Note"); setTitle(""); setFile(null);
     setPrice(""); setDescription(""); setCurriculum("");
-    setGrade(""); setSubject(""); setTopic(""); setCategory("");
-    setYear(""); setDate(""); setHeadline(""); setBody(""); setError("");
+    setGrade(""); setSubject(""); setTopic("");
+    setYear(""); setDate(""); setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -79,30 +72,22 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
     setUploading(true);
     try {
       const fd = new FormData();
-      if (resourceType === "News") {
-        fd.append("headline", headline);
-        fd.append("body", body);
-        if (category) fd.append("category_id", category);
-        if (file)     fd.append("file", file);
-      } else {
-        fd.append("title", title);
-        if (file)       fd.append("file", file);
-        if (price)      fd.append("price", price);
-        if (curriculum) fd.append("education_level_id", curriculum);
-        if (grade)      fd.append("grade_id", grade);
-        if (subject)    fd.append("subject_id", subject);
-        if (topic)      fd.append("topic_id", topic);
-        fd.append("description", description);
-        if (resourceType === "Note") fd.append("content", description);
-        if (resourceType === "Exam" && date) fd.append("date", date);
-        if ((resourceType === "PastPaper" || resourceType === "Past Paper") && year)
-          fd.append("year", year);
-      }
+      fd.append("title", title);
+      if (file)       fd.append("file", file);
+      if (price)      fd.append("price", price);
+      if (curriculum) fd.append("education_level_id", curriculum);
+      if (grade)      fd.append("grade_id", grade);
+      if (subject)    fd.append("subject_id", subject);
+      if (topic)      fd.append("topic_id", topic);
+      fd.append("description", description);
+      if (resourceType === "Note") fd.append("content", description);
+      if (resourceType === "Exam" && date) fd.append("date", date);
+      if ((resourceType === "PastPaper" || resourceType === "Past Paper") && year)
+        fd.append("year", year);
 
       const endpoints = {
         Note: "resources/notes/", Exam: "resources/exams/",
         PastPaper: "resources/past-papers/", "Past Paper": "resources/past-papers/",
-        News: "resources/news/",
       };
 
       if (editResource)
@@ -170,8 +155,8 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Resource Type Pills */}
-            <div className="grid grid-cols-4 gap-2 bg-[#0f172a] p-1.5 rounded-2xl border border-white/5">
-              {["Note", "Exam", "PastPaper", "News"].map((type) => (
+            <div className="grid grid-cols-3 gap-2 bg-[#0f172a] p-1.5 rounded-2xl border border-white/5">
+              {["Note", "Exam", "PastPaper"].map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -191,21 +176,20 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
               {/* ── Left column ──────────────────────────────────────────── */}
               <div className="space-y-4">
 
-                {/* Title / Headline */}
+                {/* Title */}
                 <div className="space-y-2">
-                  <label className={labelCls}>{resourceType === "News" ? "Headline" : "Title"} *</label>
+                  <label className={labelCls}>Title *</label>
                   <input
-                    value={resourceType === "News" ? headline : title}
-                    onChange={(e) => resourceType === "News" ? setHeadline(e.target.value) : setTitle(e.target.value)}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                     className={inputCls}
-                    placeholder={resourceType === "News" ? "e.g. New Curriculum Update" : "e.g. Calculus Introduction"}
+                    placeholder="e.g. Calculus Introduction"
                     required
                   />
                 </div>
 
                 {/* Curriculum + Grade */}
-                {resourceType !== "News" && (
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className={labelCls}>Curriculum</label>
                       <select value={curriculum} onChange={(e) => setCurriculum(e.target.value)} className={selectCls}>
@@ -220,12 +204,10 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                         {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                       </select>
                     </div>
-                  </div>
-                )}
+                </div>
 
                 {/* Subject + Topic */}
-                {resourceType !== "News" && (
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className={labelCls}>Subject</label>
                       <select value={subject} onChange={(e) => setSubject(e.target.value)} className={selectCls}>
@@ -240,23 +222,10 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                         {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                     </div>
-                  </div>
-                )}
-
-                {/* News category */}
-                {resourceType === "News" && (
-                  <div className="space-y-2">
-                    <label className={labelCls}>Category</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
-                      <option value="">Select...</option>
-                      {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                )}
+                </div>
 
                 {/* Price */}
-                {resourceType !== "News" && (
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     <label className={labelCls}>Pricing (KSh)</label>
                     <div className="relative">
                       <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -269,8 +238,7 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                         min="0"
                       />
                     </div>
-                  </div>
-                )}
+                </div>
 
                 {/* Exam date */}
                 {resourceType === "Exam" && (
@@ -305,9 +273,8 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
               {/* ── Right column ─────────────────────────────────────────── */}
               <div className="space-y-4">
 
-                {/* Description (Note / Exam / PastPaper) */}
-                {resourceType !== "News" && (
-                  <div className="space-y-2">
+                {/* Description */}
+                <div className="space-y-2">
                     <label className={labelCls}>Description</label>
                     <textarea
                       value={description}
@@ -316,23 +283,7 @@ export default function UploadResourceModal({ isOpen, onClose, onSuccess, editRe
                       className="w-full bg-[#0f172a] border border-white/5 p-4 rounded-2xl focus:border-blue-500 outline-none text-white text-xs leading-relaxed transition-colors resize-none"
                       placeholder="Describe what this resource covers — students see this before purchasing."
                     />
-                  </div>
-                )}
-
-                {/* News body */}
-                {resourceType === "News" && (
-                  <div className="space-y-2">
-                    <label className={labelCls}>Body *</label>
-                    <textarea
-                      value={body}
-                      onChange={(e) => setBody(e.target.value)}
-                      rows={5}
-                      required
-                      className="w-full bg-[#0f172a] border border-white/5 p-4 rounded-2xl focus:border-blue-500 outline-none text-white text-xs leading-relaxed transition-colors resize-none"
-                      placeholder="Full news content..."
-                    />
-                  </div>
-                )}
+                </div>
 
                 {/* File upload */}
                 <div className="space-y-2">
