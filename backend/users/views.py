@@ -15,6 +15,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
+from rest_framework.throttling import ScopedRateThrottle
 import requests
 import logging
 import os
@@ -95,6 +96,8 @@ def _clear_auth_cookies(response):
 # ============================================
 class GoogleLoginView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
     def post(self, request):
         credential = request.data.get("credential")
@@ -178,6 +181,8 @@ class UserDeleteView(DestroyAPIView):
 
 class RegistrationUserView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'register'
 
     def post(self, request):
         recaptcha_token = request.data.get("recaptcha")
@@ -205,6 +210,8 @@ class RegistrationUserView(APIView):
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
     def post(self, request):
         # Check reCAPTCHA
@@ -409,6 +416,8 @@ class DownloadResourceView(APIView):
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'forgot_password'
 
     def post(self, request):
         email = request.data.get("email", "").strip().lower()
@@ -445,6 +454,8 @@ class ForgotPasswordView(APIView):
 class ResetPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'reset_password'
 
     def post(self, request):
         uid          = request.data.get("uid")
