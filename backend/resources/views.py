@@ -12,6 +12,7 @@ from django.http import FileResponse
 from decimal import Decimal
 from rest_framework.views import APIView
 from django.db.models import Exists, OuterRef
+from .pagination import StandardResultsPagination
 
 
 from .models import Note, PastPaper, Exam, News, Subject, Grade, EducationLevel, Topic, NewsCategory, NewsView, NewsPost
@@ -45,12 +46,64 @@ class IsAdminOnly(permissions.BasePermission):
         return request.user.is_authenticated and request.user.is_superuser
 
 
+class ResourceFilterOptionsView(APIView):
+    """
+    Lightweight endpoint powering the curriculum -> grade -> subject funnel
+    on the frontend. Returns every distinct (education_level, grade, subject)
+    combination that actually exists for the given resource type — a small
+    payload (a handful of KB) regardless of how many items exist, so the
+    funnel stays instant even as the resource lists themselves get paginated.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    MODEL_MAP = {'note': Note, 'exam': Exam, 'pastpaper': PastPaper}
+
+    def get(self, request):
+        resource_type = request.query_params.get('resource_type', 'note')
+        model = self.MODEL_MAP.get(resource_type)
+        if model is None:
+            return Response(
+                {'error': f"resource_type must be one of {list(self.MODEL_MAP)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        combos = (
+            model.objects
+            .exclude(education_level__isnull=True)
+            .exclude(grade__isnull=True)
+            .exclude(subject__isnull=True)
+            .values(
+                'education_level_id', 'education_level__name',
+                'grade_id', 'grade__name',
+                'subject_id', 'subject__name',
+            )
+            .distinct()
+        )
+
+        results = [
+            {
+                'education_level_id': c['education_level_id'],
+                'education_level': c['education_level__name'],
+                'grade_id': c['grade_id'],
+                'grade': c['grade__name'],
+                'subject_id': c['subject_id'],
+                'subject': c['subject__name'],
+            }
+            for c in combos
+        ]
+        return Response({'combos': results})
+
+
 # ========== Lookup Model ViewSets (Read-Only for all users) ==========
+# These feed dropdowns/filters on the frontend and are small reference
+# tables, not content lists — kept unpaginated on purpose even though
+# pagination is now the global default (see settings.REST_FRAMEWORK).
 class SubjectViewSet(viewsets.ReadOnlyModelViewSet):
     """List all subjects - no authentication required for reading"""
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 class GradeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -58,6 +111,7 @@ class GradeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Grade.objects.all()
     serializer_class = GradeSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 class EducationLevelViewSet(viewsets.ReadOnlyModelViewSet):
@@ -65,6 +119,7 @@ class EducationLevelViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = EducationLevel.objects.all()
     serializer_class = EducationLevelSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 class TopicViewSet(viewsets.ReadOnlyModelViewSet):
@@ -72,6 +127,7 @@ class TopicViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 class NewsCategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -79,13 +135,15 @@ class NewsCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = NewsCategory.objects.all()
     serializer_class = NewsCategorySerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 # ========== Base Resource ViewSet ==========
 class BaseResourceViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    permission_classes = [IsAuthenticatedOrReadOnly]  
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = StandardResultsPagination  # Note/Exam/PastPaper/News list+detail views
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAdminOnly()]
@@ -268,6 +326,28 @@ class BaseResourceViewSet(viewsets.ModelViewSet):
                 status="completed"
             )
             qs = qs.annotate(is_purchased=Exists(purchased))
+
+        # Server-side filtering for the curriculum -> grade -> subject funnel.
+        # All resource models share these FK fields, so this works generically
+        # across Note/Exam/PastPaper without needing per-view overrides.
+        params = self.request.query_params
+        education_level = params.get('education_level')
+        grade = params.get('grade')
+        subject = params.get('subject')
+        topic = params.get('topic')
+        search = params.get('search')
+
+        if education_level:
+            qs = qs.filter(education_level_id=education_level)
+        if grade:
+            qs = qs.filter(grade_id=grade)
+        if subject:
+            qs = qs.filter(subject_id=subject)
+        if topic:
+            qs = qs.filter(topic_id=topic)
+        if search:
+            qs = qs.filter(title__icontains=search)
+
         return qs
 
 class UserLibraryViewSet(viewsets.ViewSet):
@@ -301,15 +381,25 @@ class UserLibraryViewSet(viewsets.ViewSet):
             "News": "news",
         }
 
+        # Batch-fetch: one query per resource TYPE (max 4), not one per
+        # transaction. Previously this did model_class.objects.get(...)
+        # inside the loop — N+1 for N purchases.
+        ids_by_type = {}
+        for tx in transactions:
+            ids_by_type.setdefault(tx.resource_type, set()).add(tx.resource_id)
+
+        resources_by_type = {}
+        for resource_type, ids in ids_by_type.items():
+            model_class = model_map.get(resource_type)
+            if not model_class:
+                continue
+            resources_by_type[resource_type] = {
+                obj.id: obj for obj in model_class.objects.filter(id__in=ids)
+            }
+
         data = []
         for tx in transactions:
-            model_class = model_map.get(tx.resource_type)
-            resource = None
-            if model_class:
-                try:
-                    resource = model_class.objects.get(id=tx.resource_id)
-                except model_class.DoesNotExist:
-                    pass
+            resource = resources_by_type.get(tx.resource_type, {}).get(tx.resource_id)
 
             data.append({
                 "transaction_id": tx.id,
@@ -337,12 +427,54 @@ class NoteViewSet(BaseResourceViewSet):
 
     @action(detail=False, methods=['get'], url_path='admin/all', permission_classes=[IsAdminOnly])
     def admin_all_resources(self, request):
-        return Response({
-            'notes':      NoteDetailSerializer(Note.objects.all(),           many=True, context={'request': request}).data,
-            'exams':      ExamDetailSerializer(Exam.objects.all(),           many=True, context={'request': request}).data,
-            'pastpapers': PastPaperDetailSerializer(PastPaper.objects.all(), many=True, context={'request': request}).data,
-            'news':       NewsDetailSerializer(News.objects.all(),           many=True, context={'request': request}).data,
-        })
+        """
+        Admin resource listing — paginated and searchable per resource type,
+        instead of loading every Note/Exam/PastPaper/News row into memory in
+        one response. As the client's content library grows this keeps the
+        admin table fast regardless of catalog size.
+
+        Query params:
+          resource_type — 'note' (default) | 'exam' | 'pastpaper' | 'news'
+          search         — matches title (or headline, for news)
+          page, page_size — standard pagination
+
+        Response also includes `counts`: total rows per type (4 cheap COUNT
+        queries), so the dashboard can still show overview numbers without
+        fetching the actual rows for types the admin isn't currently viewing.
+        """
+        type_config = {
+            'note':      (Note,      NoteDetailSerializer,      'title',    '-created_at'),
+            'exam':      (Exam,      ExamDetailSerializer,      'title',    '-created_at'),
+            'pastpaper': (PastPaper, PastPaperDetailSerializer, 'title',    '-created_at'),
+            'news':      (News,      NewsDetailSerializer,      'headline', '-published_at'),
+        }
+
+        resource_type = request.query_params.get('resource_type', 'note')
+        if resource_type not in type_config:
+            return Response(
+                {'error': f"resource_type must be one of {list(type_config)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        model, serializer_class, title_field, order_field = type_config[resource_type]
+        qs = model.objects.all().order_by(order_field)
+
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(**{f'{title_field}__icontains': search})
+
+        paginator = StandardResultsPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        serialized = serializer_class(page, many=True, context={'request': request}).data
+        response = paginator.get_paginated_response(serialized)
+
+        response.data['counts'] = {
+            'note':      Note.objects.count(),
+            'exam':      Exam.objects.count(),
+            'pastpaper': PastPaper.objects.count(),
+            'news':      News.objects.count(),
+        }
+        return response
 
 
 class PastPaperViewSet(BaseResourceViewSet):
@@ -454,4 +586,4 @@ class PublishedNewsListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return NewsPost.objects.filter(is_published=True)    
+        return NewsPost.objects.filter(is_published=True)
