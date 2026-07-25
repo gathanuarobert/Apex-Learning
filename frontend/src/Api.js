@@ -153,12 +153,22 @@ export const mpesaCallback = (data) =>
 // ------------------- RESOURCES -------------------
 export const getLibrary = () =>
   api.get("resources/library/my-downloads/", { params: { _t: Date.now() } });
-export const getNotes = () =>
-  api.get("resources/notes/", { params: { _t: Date.now() } });
-export const getExams = () =>
-  api.get("resources/exams/", { params: { _t: Date.now() } });
-export const getPastPapers = () =>
-  api.get("resources/past-papers/", { params: { _t: Date.now() } });
+
+// params: { education_level, grade, subject, topic, search, page, page_size }
+// All optional — omit for the old "give me everything" behavior (now paginated
+// server-side, first page only, since these lists can get large).
+export const getFilterOptions = (resourceType) =>
+  api.get("resources/filter-options/", {
+    params: { resource_type: resourceType, _t: Date.now() },
+  });
+export const getNotes = (params = {}) =>
+  api.get("resources/notes/", { params: { ...params, _t: Date.now() } });
+export const getExams = (params = {}) =>
+  api.get("resources/exams/", { params: { ...params, _t: Date.now() } });
+export const getPastPapers = (params = {}) =>
+  api.get("resources/past-papers/", { params: { ...params, _t: Date.now() } });
+export const getNews = (params = {}) =>
+  api.get("resources/news/", { params: { ...params, _t: Date.now() } });
 
 // ------------------- M-PESA -------------------
 const getTimestamp = () => {
