@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { walletPurchase, initiateOneTimePurchase } from "../Api";
+import { walletPurchase, initiateOneTimePurchase, getFilterOptions } from "../Api";
 import api from "../Api";
 import { useAuth } from "./useAuth";
 
 export function useResourcePage(fetchFn, resourceType, downloadPath, openAuthModal) {
   const { isGuest } = useAuth();
-  const [items,         setItems]         = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [curriculum,    setCurriculum]    = useState(null);
   const [grade,         setGrade]         = useState(null);
@@ -37,53 +36,136 @@ export function useResourcePage(fetchFn, resourceType, downloadPath, openAuthMod
       .catch(() => {}); // silently default to pesapal
   }, []);
 
-  // ── Fetch resources ───────────────────────────────────────────────────────
+  // ── Funnel state: curriculum/grade/subject are still plain NAME strings
+  // (unchanged external contract) — resolved to IDs internally via `combos`
+  // for building API filter params. Names are safe to use as the lookup key
+  // because EducationLevel/Grade/Subject names are unique in the DB.
+  const [combos,        setCombos]        = useState([]); // cheap funnel metadata
+  const [items,         setItems]         = useState([]); // leaf-level page of resources
+  const [page,          setPage]          = useState(1);
+  const [hasMore,       setHasMore]       = useState(false);
+  const [loadingMore,   setLoadingMore]   = useState(false);
+
+  const resourceTypeKey = resourceType.toLowerCase(); // "Note" -> "note" etc.
+
+  // ── Fetch funnel metadata once (tiny payload — combos of curriculum/grade/subject) ──
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         setLoading(true);
-        const res = await fetchFn();
-        const normalised = (res.data || []).map((item) => ({
-          ...item,
-          description: item.description || item.content || null,
-        }));
-        setItems(normalised);
+        const res = await getFilterOptions(resourceTypeKey);
+        if (!cancelled) setCombos(res.data.combos || []);
       } catch { /* silent */ }
-      finally { setLoading(false); }
+      finally { if (!cancelled) setLoading(false); }
     })();
-  }, [fetchFn]);
+    return () => { cancelled = true; };
+  }, [resourceTypeKey]);
 
-  // ── Filters ───────────────────────────────────────────────────────────────
-  const { curricula, grades, subjects, filtered } = useMemo(() => {
-    let f = items;
-    if (curriculum) f = f.filter((i) => i.curriculum === curriculum);
-    if (grade)      f = f.filter((i) => i.grade      === grade);
-    if (subject)    f = f.filter((i) => i.subject    === subject);
+  const curricula = useMemo(
+    () => [...new Set(combos.map((c) => c.education_level).filter(Boolean))].sort(),
+    [combos],
+  );
+  const grades = useMemo(
+    () => [...new Set(
+      combos.filter((c) => !curriculum || c.education_level === curriculum)
+            .map((c) => c.grade).filter(Boolean),
+    )].sort(),
+    [combos, curriculum],
+  );
+  const subjects = useMemo(
+    () => [...new Set(
+      combos.filter((c) =>
+        (!curriculum || c.education_level === curriculum) &&
+        (!grade      || c.grade           === grade))
+            .map((c) => c.subject).filter(Boolean),
+    )].sort(),
+    [combos, curriculum, grade],
+  );
 
-    const curricula = [...new Set(items.map((i) => i.curriculum).filter(Boolean))].sort();
-    const grades    = [...new Set(
-      items.filter((i) => !curriculum || i.curriculum === curriculum)
-           .map((i) => i.grade).filter(Boolean),
-    )].sort();
-    const subjects  = [...new Set(
-      items.filter((i) =>
-        (!curriculum || i.curriculum === curriculum) &&
-        (!grade      || i.grade      === grade))
-           .map((i) => i.subject).filter(Boolean),
-    )].sort();
-
-    return { curricula, grades, subjects, filtered: f };
-  }, [items, curriculum, grade, subject]);
+  // Resolve the selected names back to IDs for the API filter params
+  const resolveId = (nameField, idField, value) => {
+    const match = combos.find((c) => c[nameField] === value);
+    return match ? match[idField] : null;
+  };
+  const curriculumId = useMemo(
+    () => (curriculum ? resolveId('education_level', 'education_level_id', curriculum) : null),
+    [combos, curriculum],
+  );
+  const gradeId = useMemo(
+    () => (grade ? resolveId('grade', 'grade_id', grade) : null),
+    [combos, grade],
+  );
+  const subjectId = useMemo(
+    () => (subject ? resolveId('subject', 'subject_id', subject) : null),
+    [combos, subject],
+  );
 
   const step = subject ? 3 : grade ? 2 : curriculum ? 1 : 0;
 
+  const normaliseItems = (results) =>
+    (results || []).map((item) => ({
+      ...item,
+      description: item.description || item.content || null,
+    }));
+
+  // ── Fetch the actual (paginated, server-filtered) item list — only once
+  // the user has drilled down to a specific subject. Debounced so fast
+  // typing in the search box doesn't fire a request per keystroke.
+  useEffect(() => {
+    if (step !== 3 || !subjectId) { setItems([]); setHasMore(false); return; }
+
+    let cancelled = false;
+    const timeout = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const res = await fetchFn({
+          education_level: curriculumId,
+          grade: gradeId,
+          subject: subjectId,
+          search: search || undefined,
+          page: 1,
+        });
+        if (cancelled) return;
+        setItems(normaliseItems(res.data.results));
+        setPage(1);
+        setHasMore(Boolean(res.data.next));
+      } catch { /* silent */ }
+      finally { if (!cancelled) setLoading(false); }
+    }, 300);
+
+    return () => { cancelled = true; clearTimeout(timeout); };
+  }, [step, subjectId, search]);
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const res = await fetchFn({
+        education_level: curriculumId,
+        grade: gradeId,
+        subject: subjectId,
+        search: search || undefined,
+        page: nextPage,
+      });
+      setItems((prev) => [...prev, ...normaliseItems(res.data.results)]);
+      setPage(nextPage);
+      setHasMore(Boolean(res.data.next));
+    } catch { /* silent */ }
+    finally { setLoadingMore(false); }
+  };
+
+  // ── Options shown in the grid at each funnel step ───────────────────────
+  // Steps 0-2 filter the (small, already-loaded) name lists client-side.
+  // Step 3 shows the server-filtered/paginated items as-is.
   const options = useMemo(() => {
     const q = search.toLowerCase();
     if (step === 0) return curricula.filter((c) => c.toLowerCase().includes(q));
     if (step === 1) return grades.filter((g)    => g.toLowerCase().includes(q));
     if (step === 2) return subjects.filter((s)  => s.toLowerCase().includes(q));
-    return filtered.filter((i) => i.title?.toLowerCase().includes(q));
-  }, [step, curricula, grades, subjects, filtered, search]);
+    return items;
+  }, [step, curricula, grades, subjects, items, search]);
 
   const pick = (val) => {
     setSearch("");
@@ -106,7 +188,7 @@ export function useResourcePage(fetchFn, resourceType, downloadPath, openAuthMod
   ].filter(Boolean);
 
   const getRelated = (item) =>
-    filtered.filter((i) => i.subject === item.subject && i.id !== item.id).slice(0, 4);
+    items.filter((i) => i.id !== item.id).slice(0, 4);
 
   // ── Download ───────────────────────────────────────────────────────────────
   const getExtension = (contentType, filename) => {
@@ -239,7 +321,8 @@ export function useResourcePage(fetchFn, resourceType, downloadPath, openAuthMod
     loading, step, search, modal, options, breadcrumbs,
     payingWallet, payingPesapal,
     isPaying: payingWallet || payingPesapal || payingMpesa || mpesaPolling,
-    filtered,
+    filtered: items, // kept for backward compat with any external consumers
+    hasMore, loadingMore, loadMore,
     setSearch,
     setModal: handleSetModal,
     pick, clearAll, getRelated, handleDownload,
