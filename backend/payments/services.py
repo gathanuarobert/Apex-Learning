@@ -155,12 +155,27 @@ def handle_mpesa_callback(data):
         payment = Payment.objects.get(mpesa_checkout_request_id=checkout_request_id)
 
         if result_code == 0:
+            if payment.status == "completed":
+                # Safaricom retried a callback we've already processed
+                # (timeout/slow response on our end). Don't re-fulfill —
+                # just acknowledge so they stop retrying.
+                logger.info(
+                    f"Duplicate M-Pesa callback for payment {payment.id} "
+                    f"(already completed) — ignoring."
+                )
+                return {"success": True}
+
             # Payment succeeded — extract receipt number from callback metadata
             items = {
                 item["Name"]: item.get("Value")
                 for item in stk_callback.get("CallbackMetadata", {}).get("Item", [])
             }
             with db_transaction.atomic():
+                # Re-check status inside the atomic block, locking the row,
+                # in case two callbacks arrived concurrently.
+                payment = Payment.objects.select_for_update().get(id=payment.id)
+                if payment.status == "completed":
+                    return {"success": True}
                 payment.status = "completed"
                 payment.transaction_id = items.get("MpesaReceiptNumber", "")
                 payment.save()
