@@ -20,8 +20,15 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 # -------------------------------------------------------------------
 # SECURITY
 # -------------------------------------------------------------------
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-c-+p_hr9_1r1)!o#(3h#d+dz*uxfr73d07$%3&sl!b%x3no1j4')
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set. "
+        "Set it in your .env (local) or host's env config (production) — "
+        "never hardcode it in settings.py."
+    )
+
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') + [
     'thunderous-accordable-marivel.ngrok-free.dev',
@@ -157,6 +164,29 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        # Baseline — protects the whole API from abuse/scraping, generous
+        # enough not to interfere with normal guest browsing of resource lists
+        'anon': '300/hour',
+        'user': '2000/hour',
+        # Scoped — tighter limits on sensitive auth endpoints, applied via
+        # throttle_scope on the individual views (see users/views.py)
+        'login':           '10/hour',
+        'register':        '10/hour',
+        'forgot_password': '5/hour',
+        'reset_password':  '10/hour',
+    },
+    # Pagination is intentionally NOT set globally here. A global default
+    # silently paginates every ListAPIView/ViewSet in the whole project,
+    # including ones that were never designed for it (UserListView,
+    # UnreadNewsListView, PublishedNewsListView, NewsPostAdminListCreateView
+    # all broke this way once). Pagination is opt-in per view instead — see
+    # `pagination_class = StandardResultsPagination` on BaseResourceViewSet
+    # in resources/views.py.
 }
 
 # -------------------------------------------------------------------
@@ -209,6 +239,10 @@ if not DEBUG:
     CSRF_COOKIE_SECURE      = True
     SESSION_COOKIE_SAMESITE = 'None'
     CSRF_COOKIE_SAMESITE    = 'None'
+    SECURE_HSTS_SECONDS            = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD            = True
+    SECURE_CONTENT_TYPE_NOSNIFF    = True
 
 # -------------------------------------------------------------------
 # RECAPTCHA
@@ -262,8 +296,3 @@ USE_I18N      = True
 USE_TZ        = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-
-print("DATABASE_URL:", os.getenv("DATABASE_URL"))
-print("CORS_ALLOWED_ORIGINS RAW:", os.getenv('CORS_ALLOWED_ORIGINS'))
-print("DEBUG:", os.getenv('DEBUG'))
