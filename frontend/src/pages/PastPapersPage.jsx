@@ -25,6 +25,7 @@ export default function PastPapersPage({ openAuthModal }) {
   const {
     loading, step, search, modal, options, breadcrumbs,
     payingWallet, payingPesapal, isPaying,
+    hasMore, loadingMore, loadMore,
     setSearch, setModal,
     pick, clearAll, getRelated, handleDownload, payWithWallet, payWithPesapal, activeGateway,
   mpesaPhone, setMpesaPhone,
@@ -160,6 +161,20 @@ export default function PastPapersPage({ openAuthModal }) {
                 />
               );
             })}
+          </div>
+        )}
+
+        {/* ── Load More (step 3 only, when more pages exist) ── */}
+        {step === 3 && hasMore && (
+          <div className="flex justify-center mt-10">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="px-6 py-3 rounded-xl bg-slate-800/70 border border-slate-700/50 text-slate-200 font-semibold hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-wait flex items-center gap-2"
+            >
+              {loadingMore && <Loader2 size={16} className="animate-spin" />}
+              {loadingMore ? "Loading…" : "Load More"}
+            </button>
           </div>
         )}
       </div>

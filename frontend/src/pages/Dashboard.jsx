@@ -15,6 +15,7 @@ import api from "../Api";
 import UploadResourceModal from "../components/UploadResourceModal";
 import BulkUploadModal from "../components/BulkUploadModal";
 import PaymentSettingsPanel from "../components/PaymentSettingsPanel";
+import NewsComposer from "../components/NewsComposer";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -22,7 +23,20 @@ export default function AdminDashboard() {
   const [activeTab,        setActiveTab]        = useState("overview");
   const [isSidebarOpen,    setIsSidebarOpen]    = useState(true);
   const [users,            setUsers]            = useState([]);
-  const [resources,        setResources]        = useState({ notes: [], exams: [], pastpapers: [], news: [] });
+  // ── Manage Uploads: paginated per resource type instead of loading
+  // every Note/Exam/PastPaper/News row at once (client will be adding a
+  // lot of content over time, so this needs to scale) ──────────────────
+  const RESOURCE_TYPES = [
+    { key: "note",      label: "Note" },
+    { key: "exam",      label: "Exam" },
+    { key: "pastpaper", label: "Past Paper" },
+  ];
+  const [resourceType,      setResourceType]      = useState("note");
+  const [resourceSearch,    setResourceSearch]    = useState("");
+  const [uploads,           setUploads]           = useState({ results: [], count: 0, next: null, page: 1 });
+  const [uploadsLoading,    setUploadsLoading]    = useState(false);
+  const [uploadsLoadingMore,setUploadsLoadingMore]= useState(false);
+  const [resourceCounts,    setResourceCounts]    = useState({ note: 0, exam: 0, pastpaper: 0, news: 0 });
   const [transactions,     setTransactions]     = useState([]);
   const [userHistory,      setUserHistory]      = useState([]);
   const [uploadHistory,    setUploadHistory]    = useState([]);
@@ -30,12 +44,6 @@ export default function AdminDashboard() {
   const [isUploadModalOpen,setIsUploadModalOpen]= useState(false);
   const [isBulkModalOpen,  setIsBulkModalOpen]  = useState(false);
   const [editingResource,  setEditingResource]  = useState(null);
-  const [newsHeadline,     setNewsHeadline]     = useState("");
-  const [newsBody,         setNewsBody]         = useState("");
-  const [newsImage,        setNewsImage]        = useState(null);
-  const [newsCategory,     setNewsCategory]     = useState("");
-  const [categories,       setCategories]       = useState([]);
-  const [postingNews,      setPostingNews]      = useState(false);
 
   // ── Derived values ───────────────────────────────────────────────────────
   const totalRevenue = useMemo(
@@ -50,12 +58,7 @@ export default function AdminDashboard() {
     [transactions]
   );
 
-  const allUploads = useMemo(() => ([
-    ...resources.notes.map((n)     => ({ ...n, type: "Note" })),
-    ...resources.exams.map((e)     => ({ ...e, type: "Exam" })),
-    ...resources.pastpapers.map((p)=> ({ ...p, type: "Past Paper" })),
-    ...resources.news.map((n)      => ({ ...n, type: "News" })),
-  ]), [resources]);
+  const allUploads = uploads.results; // kept as an alias so the table markup below barely changes
 
   const mobileNavItems = [
     { icon: FaFileInvoiceDollar, label: "overview",      onClick: () => setActiveTab("overview") },
@@ -96,18 +99,86 @@ export default function AdminDashboard() {
   }
 
   // ── Data fetching ────────────────────────────────────────────────────────
+  const ADMIN_RESOURCES_URL = "resources/notes/admin/all/"; // same admin/all endpoint, resource_type param picks which model
+
+  const fetchUploads = async (type = resourceType, search = resourceSearch, page = 1, append = false) => {
+    if (append) setUploadsLoadingMore(true); else setUploadsLoading(true);
+    try {
+      const res = await api.get(ADMIN_RESOURCES_URL, {
+        params: { resource_type: type, search: search || undefined, page },
+        headers: { "Cache-Control": "no-cache" },
+      });
+      const label = RESOURCE_TYPES.find((t) => t.key === type)?.label || type;
+      const tagged = (res.data.results || []).map((r) => ({ ...r, type: label }));
+      setUploads((prev) => ({
+        results: append ? [...prev.results, ...tagged] : tagged,
+        count: res.data.count,
+        next: res.data.next,
+        page,
+      }));
+      if (res.data.counts) setResourceCounts(res.data.counts);
+    } catch (err) {
+      console.error("Error fetching uploads:", err);
+      if (!append) setUploads({ results: [], count: 0, next: null, page: 1 });
+    } finally {
+      if (append) setUploadsLoadingMore(false); else setUploadsLoading(false);
+    }
+  };
+
+  const loadMoreUploads = () => {
+    if (!uploads.next || uploadsLoadingMore) return;
+    fetchUploads(resourceType, resourceSearch, uploads.page + 1, true);
+  };
+
+  // Re-fetch uploads whenever the type filter or search box changes
+  // (search is debounced so fast typing doesn't fire a request per keystroke)
+  useEffect(() => {
+    const t = setTimeout(
+      () => fetchUploads(resourceType, resourceSearch, 1, false),
+      resourceSearch ? 300 : 0,
+    );
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resourceType, resourceSearch]);
+
+  // Recent-activity feed ("Recent Uploads") — a handful of the newest items
+  // per type instead of the entire catalog, combined and re-sorted by date.
+  // NewsPost is included via its own dedicated endpoint (resources/admin/news/)
+  // rather than RESOURCE_TYPES, since news no longer lives in the generic
+  // Note/Exam/PastPaper admin/all endpoint.
+  const fetchRecentUploadsActivity = async () => {
+    try {
+      const settled = await Promise.allSettled([
+        ...RESOURCE_TYPES.map((t) =>
+          api.get(ADMIN_RESOURCES_URL, { params: { resource_type: t.key, page_size: 5 } }),
+        ),
+        api.get("resources/admin/news/", { params: { page_size: 5 } }),
+      ]);
+      const combined = [];
+      settled.forEach((r) => {
+        if (r.status === "fulfilled") {
+          const rows = r.value.data.results || r.value.data || []; // paginated resources vs plain-array NewsPost
+          rows.forEach((item) => combined.push({
+            id: item.id,
+            file: item.title || item.headline || "Untitled",
+            action: "uploaded",
+            timestamp: item.created_at || item.published_at || new Date().toISOString(),
+          }));
+        }
+      });
+      combined.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      setUploadHistory(combined.slice(0, 10));
+    } catch { setUploadHistory([]); }
+  };
+
   const fetchDashboardData = async () => {
     try {
-      const [usersRes, txRes, resourcesRes, catRes] = await Promise.all([
+      const [usersRes, txRes] = await Promise.all([
         api.get("users/"),
         api.get("payments/admin/transactions/"),
-        api.get("resources/notes/admin/all/", { headers: { "Cache-Control": "no-cache" } }),
-        api.get("resources/news-categories/"),
       ]);
       setUsers(usersRes.data || []);
       setTransactions(txRes.data || []);
-      setResources(resourcesRes.data || { notes: [], exams: [], pastpapers: [], news: [] });
-      setCategories(catRes.data || []);
       setChartData(buildChartDataFromRealData(usersRes.data || [], txRes.data || []));
       setUserHistory((usersRes.data || []).map((u) => ({
         id: u.id,
@@ -115,22 +186,13 @@ export default function AdminDashboard() {
         action: "joined",
         timestamp: u.date_joined || new Date().toISOString(),
       })));
-      const allResources = [
-        ...(resourcesRes.data.notes      || []).map((r) => ({ ...r, type: "Note" })),
-        ...(resourcesRes.data.exams      || []).map((r) => ({ ...r, type: "Exam" })),
-        ...(resourcesRes.data.pastpapers || []).map((r) => ({ ...r, type: "Past Paper" })),
-        ...(resourcesRes.data.news       || []).map((r) => ({ ...r, type: "News" })),
-      ];
-      setUploadHistory(allResources.map((r) => ({
-        id: r.id,
-        file: r.title || r.headline || "Untitled",
-        action: "uploaded",
-        timestamp: r.created_at || r.published_at || new Date().toISOString(),
-      })));
+      // Uploads list refetches itself via the resourceType/resourceSearch effect
+      fetchUploads(resourceType, resourceSearch, 1, false);
+      fetchRecentUploadsActivity();
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
-      setUsers([]); setTransactions([]); setResources({ notes: [], exams: [], pastpapers: [], news: [] });
-      setCategories([]); setChartData([]); setUserHistory([]); setUploadHistory([]);
+      setUsers([]); setTransactions([]);
+      setChartData([]); setUserHistory([]); setUploadHistory([]);
     }
   };
 
@@ -151,14 +213,14 @@ export default function AdminDashboard() {
   const deleteResource = async (resource) => {
     if (!confirm(`Delete "${resource.title || resource.headline}"?`)) return;
     try {
-      const ep = { Note: "resources/notes/", Exam: "resources/exams/", "Past Paper": "resources/past-papers/", News: "resources/news/" };
+      const ep = { Note: "resources/notes/", Exam: "resources/exams/", "Past Paper": "resources/past-papers/" };
       await api.delete(`${ep[resource.type]}${resource.id}/`);
-      setResources((prev) => ({
-        notes:      resource.type === "Note"       ? prev.notes.filter((r) => r.id !== resource.id)      : prev.notes,
-        exams:      resource.type === "Exam"       ? prev.exams.filter((r) => r.id !== resource.id)      : prev.exams,
-        pastpapers: resource.type === "Past Paper" ? prev.pastpapers.filter((r) => r.id !== resource.id) : prev.pastpapers,
-        news:       resource.type === "News"       ? prev.news.filter((r) => r.id !== resource.id)       : prev.news,
+      setUploads((prev) => ({
+        ...prev,
+        results: prev.results.filter((r) => r.id !== resource.id),
+        count: Math.max(0, prev.count - 1),
       }));
+      if (resource.type === "News") setNewsList((prev) => prev.filter((n) => n.id !== resource.id));
       setUploadHistory((prev) => [...prev, { id: Date.now(), file: resource.title || resource.headline, action: "deleted", timestamp: new Date().toISOString() }]);
     } catch { alert("Failed to delete resource"); }
   };
@@ -166,24 +228,6 @@ export default function AdminDashboard() {
   const openEditModal   = (resource) => { setEditingResource(resource); setIsUploadModalOpen(true); };
   const handleUploadSuccess = () => { fetchDashboardData(); setEditingResource(null); };
   const handleBulkSuccess   = () => { fetchDashboardData(); setIsBulkModalOpen(false); };
-
-  const handlePostNews = async (e) => {
-    e.preventDefault();
-    if (!newsHeadline || !newsBody) { alert("Headline and body are required."); return; }
-    setPostingNews(true);
-    try {
-      const fd = new FormData();
-      fd.append("title", newsHeadline);
-      fd.append("body",  newsBody);
-      if (newsCategory) fd.append("category_id", newsCategory);
-      if (newsImage)    fd.append("file", newsImage);
-      await api.post("resources/admin/news/", fd, { headers: { "Content-Type": "multipart/form-data" } });
-      alert("News posted successfully!");
-      setNewsHeadline(""); setNewsBody(""); setNewsImage(null); setNewsCategory("");
-      fetchDashboardData();
-    } catch { alert("Failed to post news. Try again."); }
-    finally { setPostingNews(false); }
-  };
 
   // ── Particles ────────────────────────────────────────────────────────────
   const particlesInit    = async (engine) => { await loadSlim(engine); };
@@ -412,6 +456,31 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Type filter + search — needed now that the table is paginated per type */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="flex flex-wrap gap-2">
+                {RESOURCE_TYPES.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setResourceType(t.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border
+                      ${resourceType === t.key
+                        ? "bg-cyan-600 border-cyan-500 text-white"
+                        : "bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-700"}`}
+                  >
+                    {t.label}s{typeof resourceCounts[t.key] === "number" ? ` (${resourceCounts[t.key]})` : ""}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={resourceSearch}
+                onChange={(e) => setResourceSearch(e.target.value)}
+                placeholder={`Search ${resourceType}s by title…`}
+                className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition-colors"
+              />
+            </div>
+
             <div className="overflow-x-auto -mx-4 md:mx-0">
               <table className="w-full text-left text-sm">
                 <thead>
@@ -423,7 +492,11 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allUploads.map((resource) => (
+                  {uploadsLoading ? (
+                    <tr><td colSpan={4} className="text-center py-8 text-gray-500 text-sm">Loading…</td></tr>
+                  ) : allUploads.length === 0 ? (
+                    <tr><td colSpan={4} className="text-center py-8 text-gray-500 text-sm">No resources found.</td></tr>
+                  ) : allUploads.map((resource) => (
                     <tr key={`${resource.type}-${resource.id}`} className="border-b border-gray-800 hover:bg-gray-700/30 text-xs md:text-sm">
                       <td className="px-2 md:px-4 py-2 truncate max-w-[150px]">{resource.title || resource.headline || "Untitled"}</td>
                       <td className="px-2 md:px-4 py-2">
@@ -451,85 +524,23 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+
+            {uploads.next && (
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={loadMoreUploads}
+                  disabled={uploadsLoadingMore}
+                  className="px-5 py-2 rounded-lg bg-gray-700/70 border border-gray-600 text-gray-200 text-sm font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                >
+                  {uploadsLoadingMore ? "Loading…" : "Load More"}
+                </button>
+              </div>
+            )}
           </section>
         )}
 
         {/* ── News Composer ─────────────────────────────────────────────── */}
-        {activeTab === "newsComposer" && (
-          <section className="bg-gray-800/80 backdrop-blur-md border border-gray-700 rounded-2xl p-4 md:p-6 shadow-xl">
-            <h3 className="text-lg md:text-xl font-semibold mb-4">Post News</h3>
-            <form onSubmit={handlePostNews} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Headline *</label>
-                <input
-                  type="text"
-                  value={newsHeadline}
-                  onChange={(e) => setNewsHeadline(e.target.value)}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 md:px-4 py-2 text-white text-sm focus:outline-none focus:border-cyan-500 transition-colors"
-                  placeholder="Breaking: New policy announced..."
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Body *</label>
-                <textarea
-                  value={newsBody}
-                  onChange={(e) => setNewsBody(e.target.value)}
-                  rows={6}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 md:px-4 py-2 text-white text-sm focus:outline-none focus:border-cyan-500 resize-none transition-colors"
-                  placeholder="Write the full news article here..."
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-2">Category</label>
-                  <select
-                    value={newsCategory}
-                    onChange={(e) => setNewsCategory(e.target.value)}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 md:px-4 py-2 text-white text-sm focus:outline-none focus:border-cyan-500 transition-colors"
-                  >
-                    <option value="">Select category (optional)</option>
-                    {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-2">Featured Image</label>
-                  <input
-                    type="file"
-                    onChange={(e) => setNewsImage(e.target.files[0])}
-                    accept="image/*"
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 md:px-4 py-2 text-gray-400 text-sm focus:outline-none focus:border-cyan-500 transition-colors"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={postingNews}
-                className="w-full md:w-auto px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {postingNews ? "Posting..." : "Post News"}
-              </button>
-            </form>
-
-            <div className="mt-8">
-              <h4 className="text-base md:text-lg font-semibold mb-4">Recent News</h4>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {resources.news.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No news posted yet.</p>
-                ) : (
-                  resources.news.map((news) => (
-                    <div key={news.id} className="bg-gray-700/50 p-3 md:p-4 rounded-lg border border-gray-600">
-                      <h5 className="font-bold text-white mb-1 text-sm md:text-base">{news.headline}</h5>
-                      <p className="text-xs md:text-sm text-gray-300 mb-2 line-clamp-2">{news.body}</p>
-                      <span className="text-xs text-gray-500">{new Date(news.published_at).toLocaleString()}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
-        )}
+        {activeTab === "newsComposer" && <NewsComposer />}
       </main>
 
       {/* ── MOBILE BOTTOM NAV ────────────────────────────────────────────── */}

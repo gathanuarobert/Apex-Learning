@@ -4,6 +4,7 @@ import Particles from "react-tsparticles";
 import { loadSlim } from "tsparticles-slim";
 import api, { getCurrentUser } from "../Api";
 import SEO from "../components/SEO";
+import Footer from "../components/Footer";
 const Home = () => {
   const navigate = useNavigate();
   const [loadingUser, setLoadingUser] = useState(true);
@@ -146,6 +147,10 @@ const Home = () => {
             "Education is the passport to the future..." — Malcolm X
           </p>
         </main>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-6">
+          <Footer />
+        </div>
 
         <style>{`
         @keyframes fadeIn { 
