@@ -69,7 +69,7 @@ export default function GlobalSearchBar({
   maxResults   = 12,
 }) {
   const navigate = useNavigate();
-  const { query, setQuery, results, allLoaded, isSearching, clear } = useGlobalSearch();
+  const { query, setQuery, results, isLoading, isSearching, clear } = useGlobalSearch();
 
   const [open,          setOpen]         = useState(false);
   const [modal,         setModal]        = useState(null);   // { item }
@@ -200,25 +200,23 @@ export default function GlobalSearchBar({
         <input
           ref={inputRef}
           type="text"
-          placeholder={allLoaded ? placeholder : "Loading resources…"}
+          placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => isSearching && setOpen(true)}
           onKeyDown={handleKeyDown}
-          disabled={!allLoaded}
           className={`
             w-full pl-12 pr-10 py-3.5 rounded-2xl
             bg-slate-800/50 border border-slate-700/50
             ${accentColor}
             text-white placeholder-slate-500 outline-none
             transition-all backdrop-blur-md
-            disabled:opacity-50 disabled:cursor-wait
           `}
         />
 
         {/* Loading spinner / clear button */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
-          {!allLoaded ? (
+          {isLoading ? (
             <Loader2 size={15} className="animate-spin text-slate-500" />
           ) : query ? (
             <button
@@ -243,7 +241,12 @@ export default function GlobalSearchBar({
               animate-in fade-in slide-in-from-top-2 duration-200
             "
           >
-            {capped.length === 0 ? (
+            {isLoading && capped.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-slate-500">
+                <Loader2 size={24} className="animate-spin mb-3 opacity-60" />
+                <p className="text-sm">Searching…</p>
+              </div>
+            ) : capped.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-slate-500">
                 <Search size={28} className="mb-3 opacity-40" />
                 <p className="text-sm font-semibold">No results for "{query}"</p>
