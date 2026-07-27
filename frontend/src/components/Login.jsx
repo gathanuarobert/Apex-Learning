@@ -187,7 +187,7 @@ const Login = () => {
 <button
   type="button"
   onClick={() => navigate("/user-dashboard")}
-  className="w-full group flex items-center justify-center gap-2.5 py-3.5 rounded-xl border-2 border-cyan-500/50 bg-cyan-500/10 hover:bg-cyan-500/20 hover:border-cyan-400 text-cyan-300 hover:text-cyan-100 text-sm font-semibold transition-all transform hover:scale-[1.02] shadow-md hover:shadow-cyan-500/25"
+  className="w-full group relative flex items-center justify-center gap-2.5 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-white text-base font-bold transition-all transform hover:scale-[1.02] shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/40"
 >
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -197,6 +197,7 @@ const Login = () => {
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
   </svg>
 </button>
+<p className="text-center text-xs text-gray-500 -mt-3">No account needed — browse notes, exams & papers instantly</p>
 
 {/* Divider between guest and form */}
 <div className="relative">

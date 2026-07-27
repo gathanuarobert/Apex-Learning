@@ -44,7 +44,7 @@ export default function AppLayout({ children }) {
   const allNavItems = [
     { icon: Home, label: "Dashboard", route: "/user-dashboard" },
     { icon: FileText, label: "Notes", route: "/notes" },
-    { icon: BookOpen, label: "Exams", route: "/exams" },
+    { icon: BookOpen, label: "National Past Papers", route: "/exams" },
     { icon: FileArchive, label: "Past Papers", route: "/past-papers" },
     { icon: Video, label: "News", route: "/news" },
     {

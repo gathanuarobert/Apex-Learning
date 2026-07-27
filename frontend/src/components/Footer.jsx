@@ -45,7 +45,14 @@ export default function Footer() {
         <p>© {year} Apex Learning Hub. All rights reserved.</p>
         <p>
           Designed and Developed by{" "}
-          <span className="text-slate-400 font-semibold">Flowmerce Technologies</span>
+          <a
+            href="https://flowmerce.co.ke"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-400 hover:text-slate-300 font-semibold transition-colors"
+          >
+            Flowmerce Technologies
+          </a>
         </p>
       </div>
     </footer>
