@@ -62,7 +62,7 @@ export default function UserDashboard({ openAuthModal }) {
 
   const cards = [
     { title: "Notes",       icon: <FileText />,    color: "from-blue-600/80 to-blue-800/90",       route: "/notes" },
-    { title: "Exams",       icon: <BookOpen />,    color: "from-purple-600/80 to-purple-800/90",   route: "/exams" },
+    { title: "National Past Papers",       icon: <BookOpen />,    color: "from-purple-600/80 to-purple-800/90",   route: "/exams" },
     { title: "Past Papers", icon: <FileArchive />, color: "from-pink-600/80 to-pink-800/90",       route: "/past-papers" },
     { title: "News",        icon: <Video />,       color: "from-emerald-600/80 to-emerald-800/90", route: "/news" },
   ];
